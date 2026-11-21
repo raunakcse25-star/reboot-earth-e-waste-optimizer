@@ -280,7 +280,7 @@ export async function searchEWasteRegulations(query: string) {
           uri: c.web.uri,
         }));
 
-      return { summary, sources };
+      return { summary, answer: summary, sources };
     } catch (err: any) {
       lastError = err;
       if (!isRetryableOrFallbackError(err)) throw err;

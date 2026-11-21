@@ -766,7 +766,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
             <div className="text-sm text-slate-700 dark:text-sky-100/90 whitespace-pre-line leading-relaxed">
               {groundingResult.answer}
             </div>
-            {groundingResult.places.length > 0 && (
+            {Array.isArray(groundingResult.places) && groundingResult.places.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-sky-300/80">
                   Verified Google Maps Sources

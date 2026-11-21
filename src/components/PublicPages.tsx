@@ -789,12 +789,23 @@ export const KnowledgeHubPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<{ answer: string; sources: { title: string; uri: string }[] }>(
+      const res = await apiFetch<{
+        answer?: string;
+        summary?: string;
+        sources?: { title: string; uri: string }[];
+      }>(
         '/api/ai/regulations-search',
         { method: 'POST', body: JSON.stringify({ query: query.trim() }) },
         false
       );
-      setResult(res);
+      const answerText = (res?.answer ?? res?.summary ?? '').trim();
+      if (!answerText) {
+        throw new Error('No regulatory summary was returned. Please try again.');
+      }
+      setResult({
+        answer: answerText,
+        sources: Array.isArray(res?.sources) ? res.sources : [],
+      });
     } catch (err: any) {
       setError(err?.message || 'Unable to run Search-grounded regulation lookup.');
     } finally {
@@ -866,7 +877,7 @@ export const KnowledgeHubPage: React.FC = () => {
             <div className="text-sm text-slate-700 dark:text-sky-100/90 whitespace-pre-line leading-relaxed">
               {result.answer}
             </div>
-            {result.sources.length > 0 && (
+            {Array.isArray(result.sources) && result.sources.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-sky-300/80">
                   Cited Web Sources
