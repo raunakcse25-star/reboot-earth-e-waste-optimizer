@@ -28,14 +28,14 @@ function createProceduralEarthTextures(maxAniso: number) {
 
   // Deep emerald ocean gradient
   const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
-  oceanGrad.addColorStop(0, '#041A15');
-  oceanGrad.addColorStop(0.5, '#062820');
-  oceanGrad.addColorStop(1, '#041A15');
+  oceanGrad.addColorStop(0, '#061C33');
+  oceanGrad.addColorStop(0.5, '#0B2F54');
+  oceanGrad.addColorStop(1, '#061C33');
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, width, height);
 
   // Subtle latitude/longitude grid lines
-  ctx.strokeStyle = 'rgba(52, 211, 153, 0.09)';
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.09)';
   ctx.lineWidth = 1;
   for (let x = 0; x < width; x += 64) {
     ctx.beginPath();
@@ -97,12 +97,12 @@ function createProceduralEarthTextures(maxAniso: number) {
     rctx.closePath();
 
     const landGrad = ctx.createLinearGradient(0, 80, 0, 420);
-    landGrad.addColorStop(0, '#0D4A38');
-    landGrad.addColorStop(0.5, '#13664C');
-    landGrad.addColorStop(1, '#0C4131');
+    landGrad.addColorStop(0, '#0E4D82');
+    landGrad.addColorStop(0.5, '#156AB0');
+    landGrad.addColorStop(1, '#0A3D6B');
     ctx.fillStyle = landGrad;
     ctx.fill();
-    ctx.strokeStyle = '#34D399';
+    ctx.strokeStyle = '#38BDF8';
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -111,7 +111,7 @@ function createProceduralEarthTextures(maxAniso: number) {
   }
 
   // Printed-circuit recovery traces linking circular economy hubs
-  ctx.strokeStyle = 'rgba(110, 231, 183, 0.55)';
+  ctx.strokeStyle = 'rgba(125, 211, 252, 0.55)';
   ctx.lineWidth = 1.5;
   const hubs = [
     [665, 215], // India hub
@@ -129,7 +129,7 @@ function createProceduralEarthTextures(maxAniso: number) {
     ctx.quadraticCurveTo((x1 + x2) / 2, Math.min(y1, y2) - 24, x2, y2);
     ctx.stroke();
 
-    ctx.fillStyle = '#6EE7B7';
+    ctx.fillStyle = '#7DD3FC';
     ctx.beginPath();
     ctx.arc(x1, y1, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -261,7 +261,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
     renderer.domElement.addEventListener('webglcontextlost', onContextLost);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x04100c, 0.045);
+    scene.fog = new THREE.FogExp2(0x040e1a, 0.045);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     const envTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.04);
@@ -303,10 +303,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
     }
     scene.add(keyLight);
 
-    const hemiLight = new THREE.HemisphereLight(0x9be7d8, 0x08231b, 0.9);
+    const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x08203a, 0.9);
     scene.add(hemiLight);
 
-    const rimLight = new THREE.DirectionalLight(0x34d399, 1.4);
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.4);
     rimLight.position.set(-6, -2, -5);
     scene.add(rimLight);
 
@@ -333,7 +333,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
     // Part 2: Translucent Atmospheric Shell
     const atmoGeo = new THREE.SphereGeometry(1.74, 36, 36);
     const atmoMat = new THREE.MeshPhysicalMaterial({
-      color: 0x34d399,
+      color: 0x38bdf8,
       transparent: true,
       opacity: 0.14,
       roughness: 0.15,
@@ -367,10 +367,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
     // Part 4: Secondary Circular Recovery Track (emerald anodized metal)
     const secondaryRingGeo = new THREE.TorusGeometry(2.12, 0.018, 12, 96);
     const emeraldMetalMat = new THREE.MeshStandardMaterial({
-      color: 0x10b981,
+      color: 0x0ea5e9,
       metalness: 0.82,
       roughness: 0.25,
-      emissive: 0x065f46,
+      emissive: 0x0369a1,
       emissiveIntensity: 0.45,
     });
     const secondaryRing = new THREE.Mesh(secondaryRingGeo, emeraldMetalMat);
@@ -380,22 +380,22 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
 
     // Parts 5-7: Three Composite Orbital Recycling Satellites
     const satChassisMat = new THREE.MeshStandardMaterial({
-      color: 0xd1fae5,
+      color: 0xe0f2fe,
       metalness: 0.85,
       roughness: 0.24,
     });
     const satPanelMat = new THREE.MeshStandardMaterial({
-      color: 0x064e3b,
+      color: 0x075985,
       metalness: 0.4,
       roughness: 0.55,
-      emissive: 0x059669,
+      emissive: 0x0284c7,
       emissiveIntensity: 0.22,
     });
     const satAccentMat = new THREE.MeshStandardMaterial({
-      color: 0x34d399,
+      color: 0x38bdf8,
       metalness: 0.2,
       roughness: 0.3,
-      emissive: 0x10b981,
+      emissive: 0x0ea5e9,
       emissiveIntensity: 0.85,
     });
 
@@ -429,10 +429,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
       bevelSegments: 2,
     });
     const hubMat = new THREE.MeshStandardMaterial({
-      color: 0x34d399,
+      color: 0x38bdf8,
       metalness: 0.65,
       roughness: 0.22,
-      emissive: 0x059669,
+      emissive: 0x0284c7,
       emissiveIntensity: 0.5,
     });
 
@@ -472,10 +472,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
     particleMesh.frustumCulled = false;
 
     const palette = [
-      new THREE.Color(0x34d399), // emerald
+      new THREE.Color(0x38bdf8), // emerald
       new THREE.Color(0xf59e0b), // recovered gold/copper
       new THREE.Color(0x94a3b8), // aluminum
-      new THREE.Color(0x6ee7b7), // silicon glow
+      new THREE.Color(0x7dd3fc), // silicon glow
     ];
     const particleParams = Array.from({ length: particleCount }, (_, i) => {
       particleMesh.setColorAt(i, palette[i % palette.length]);
@@ -640,7 +640,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
 
   if (webglError) {
     return (
-      <div className={`relative rounded-2xl border border-emerald-900/50 bg-[#071C15] overflow-hidden flex items-center justify-center p-8 ${className}`}>
+      <div className={`relative rounded-2xl border border-sky-900/50 bg-[#091F38] overflow-hidden flex items-center justify-center p-8 ${className}`}>
         <img
           src="/src/assets/images/facility_recycling_hub_1795259315861.jpg"
           alt="Reboot Earth Circular Recycling Facility"
@@ -652,7 +652,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`relative rounded-2xl border border-emerald-900/50 dark:border-emerald-800/60 bg-[#04100C] overflow-hidden ${className}`}>
+    <div className={`relative rounded-2xl border border-sky-900/50 dark:border-sky-800/60 bg-[#040E1A] overflow-hidden ${className}`}>
       {/* Dedicated isolated WebGL mount node */}
       <div ref={mountRef} className="w-full h-full min-h-[420px] lg:min-h-[520px]" />
 
@@ -661,14 +661,14 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
         <button
           type="button"
           onClick={() => setControlsCollapsed((v) => !v)}
-          className="mb-1.5 px-3 py-1 rounded-md text-xs font-medium text-emerald-100 bg-[#071D16]/95 border border-emerald-800/80 hover:bg-[#0D2E23] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
+          className="mb-1.5 px-3 py-1 rounded-md text-xs font-medium text-sky-100 bg-[#09203A]/95 border border-sky-800/80 hover:bg-[#13345B] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
         >
           {controlsCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {controlsCollapsed ? 'Show 3D Controls' : 'Hide Controls'}
         </button>
 
         {!controlsCollapsed && (
-          <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-xl bg-[#071D16]/95 border border-emerald-800/80 shadow-lg">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-xl bg-[#09203A]/95 border border-sky-800/80 shadow-lg">
             {(['overview', 'orbital', 'core'] as CameraPreset[]).map((p) => (
               <button
                 key={p}
@@ -676,8 +676,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
                 onClick={() => handlePreset(p)}
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   preset === p
-                    ? 'bg-emerald-500 text-emerald-950'
-                    : 'text-emerald-100/80 hover:text-white hover:bg-emerald-900/60'
+                    ? 'bg-sky-500 text-sky-950'
+                    : 'text-sky-100/80 hover:text-white hover:bg-sky-900/60'
                 }`}
               >
                 {p === 'overview' ? 'Overview' : p === 'orbital' ? 'Orbital Fleet' : 'Hub Focus'}
@@ -688,8 +688,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
               onClick={handleToggleExploded}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1.5 whitespace-nowrap ${
                 exploded
-                  ? 'bg-emerald-400 text-emerald-950'
-                  : 'text-emerald-100/80 hover:text-white hover:bg-emerald-900/60'
+                  ? 'bg-sky-400 text-sky-950'
+                  : 'text-sky-100/80 hover:text-white hover:bg-sky-900/60'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -699,7 +699,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
               type="button"
               onClick={handleReset}
               aria-label="Reset 3D camera"
-              className="p-1.5 rounded-lg text-emerald-100/80 hover:text-white hover:bg-emerald-900/60 transition-colors"
+              className="p-1.5 rounded-lg text-sky-100/80 hover:text-white hover:bg-sky-900/60 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>

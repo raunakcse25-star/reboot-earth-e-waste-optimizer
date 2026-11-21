@@ -538,12 +538,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
 
   if (!firebaseUser) {
     return (
-      <section className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+      <section className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50">
             Schedule Doorstep E-Waste Collection
           </h3>
-          <p className="text-xs text-slate-600 dark:text-emerald-200/75 max-w-xl leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-sky-200/75 max-w-xl leading-relaxed">
             Sign in with your Google account to reserve a collection time slot from your location, attach GPS coordinates, and keep your bookings synced across sessions.
           </p>
         </div>
@@ -566,18 +566,18 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         }}
         className={`${
           compact ? '' : 'xl:col-span-7'
-        } p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-6`}
+        } p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-6`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-emerald-900/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-sky-900/50">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50">
               Schedule E-Waste Pickup
             </h3>
-            <p className="text-xs text-slate-500 dark:text-emerald-200/70 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-sky-200/70 mt-0.5">
               Choose a collection window, confirm your pickup location, and log your devices.
             </p>
           </div>
-          <label className="px-3.5 py-2 rounded-lg border border-emerald-600/50 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 cursor-pointer inline-flex items-center gap-1.5 self-start whitespace-nowrap">
+          <label className="px-3.5 py-2 rounded-lg border border-sky-600/50 text-xs font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 cursor-pointer inline-flex items-center gap-1.5 self-start whitespace-nowrap">
             {visionLoading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
@@ -608,11 +608,11 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         {confirmedBooking && (
           <div
             role="status"
-            className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/70 space-y-1.5"
+            className="p-4 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/70 space-y-1.5"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 inline-flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-xs font-semibold text-sky-900 dark:text-sky-200 inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 Pickup Slot Confirmed —{' '}
                 <span className="font-mono tabular-nums">{confirmedBooking.requestCode}</span>
               </p>
@@ -620,17 +620,17 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 type="button"
                 onClick={() => setConfirmedBooking(null)}
                 aria-label="Dismiss confirmation"
-                className="text-emerald-700 dark:text-emerald-300"
+                className="text-sky-700 dark:text-sky-300"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <p className="text-xs text-emerald-800 dark:text-emerald-200/85">
+            <p className="text-xs text-sky-800 dark:text-sky-200/85">
               {confirmedBooking.deviceName} ·{' '}
               <span className="font-mono tabular-nums">{confirmedBooking.preferredDate}</span> (
               {confirmedBooking.timeSlot})
             </p>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80">
+            <p className="text-[11px] text-sky-700 dark:text-sky-300/80">
               Location: {confirmedBooking.pickupAddress}
             </p>
             <div className="pt-1 flex flex-wrap items-center gap-2">
@@ -639,7 +639,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                   href={calendarLinks[confirmedBooking.requestCode]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 dark:text-sky-300 underline"
                 >
                   <CalendarCheck2 className="w-3.5 h-3.5" />
                   Added to Google Calendar
@@ -657,7 +657,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                       pickupAddress: confirmedBooking.pickupAddress,
                     })
                   }
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 inline-flex items-center gap-1.5"
                 >
                   <CalendarPlus className="w-3.5 h-3.5" />
                   Add to Google Calendar
@@ -666,7 +666,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 <button
                   type="button"
                   onClick={() => void signInWithGoogle()}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-600/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-500/10 inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-sky-600/50 text-sky-800 dark:text-sky-200 hover:bg-sky-500/10 inline-flex items-center gap-1.5"
                 >
                   <CalendarPlus className="w-3.5 h-3.5" />
                   Connect Google Calendar to Save Event
@@ -677,7 +677,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         )}
 
         {aiNote && (
-          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#05140F] border border-slate-200 dark:border-emerald-900/60 text-xs text-slate-700 dark:text-emerald-200">
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#061526] border border-slate-200 dark:border-sky-900/60 text-xs text-slate-700 dark:text-sky-200">
             {aiNote}
           </div>
         )}
@@ -685,8 +685,8 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         {/* Step 1: Date & Time Slot */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="text-xs font-semibold text-slate-800 dark:text-emerald-100 inline-flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <label className="text-xs font-semibold text-slate-800 dark:text-sky-100 inline-flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
               1. Select Pickup Date &amp; Time Window
             </label>
             <div className="flex items-center gap-2">
@@ -695,12 +695,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                   type="button"
                   disabled={checkingAvailability}
                   onClick={() => void handleCheckCalendarAvailability()}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-[11px] font-medium text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-sky-800 text-[11px] font-medium text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
                   {checkingAvailability ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    <CalendarCheck2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <CalendarCheck2 className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                   )}
                   {availabilityCheckedDate === preferredDate
                     ? 'Calendar Checked'
@@ -710,9 +710,9 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 <button
                   type="button"
                   onClick={() => void signInWithGoogle()}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-[11px] font-medium text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-sky-800 text-[11px] font-medium text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
-                  <Calendar className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <Calendar className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                   Connect Calendar
                 </button>
               )}
@@ -723,7 +723,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 aria-label="Custom pickup date"
                 value={preferredDate}
                 onChange={(e) => setPreferredDate(e.target.value)}
-                className="px-2.5 py-1.5 text-xs font-mono tabular-nums rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="px-2.5 py-1.5 text-xs font-mono tabular-nums rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
           </div>
@@ -738,8 +738,8 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                   onClick={() => setPreferredDate(d.iso)}
                   className={`py-2 px-1.5 rounded-lg border text-center transition-colors ${
                     selected
-                      ? 'border-emerald-500 bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950'
-                      : 'border-slate-200 dark:border-emerald-900/60 bg-slate-50 dark:bg-[#05140F] text-slate-700 dark:text-emerald-100 hover:border-emerald-500/70'
+                      ? 'border-sky-500 bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                      : 'border-slate-200 dark:border-sky-900/60 bg-slate-50 dark:bg-[#061526] text-slate-700 dark:text-sky-100 hover:border-sky-500/70'
                   }`}
                 >
                   <p className="text-[10px] opacity-80">{d.weekday}</p>
@@ -770,14 +770,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                   onClick={() => setTimeSlot(slot)}
                   className={`px-3.5 py-2.5 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 ${
                     selected
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-50'
-                      : 'border-slate-200 dark:border-emerald-900/60 bg-slate-50 dark:bg-[#05140F] text-slate-700 dark:text-emerald-100 hover:border-emerald-600/50'
+                      ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/60 text-sky-950 dark:text-sky-50'
+                      : 'border-slate-200 dark:border-sky-900/60 bg-slate-50 dark:bg-[#061526] text-slate-700 dark:text-sky-100 hover:border-sky-600/50'
                   }`}
                 >
                   <span className="inline-flex items-center gap-2 text-xs font-mono tabular-nums font-semibold">
                     <Clock
                       className={`w-3.5 h-3.5 shrink-0 ${
-                        selected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                        selected ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400'
                       }`}
                     />
                     {slot}
@@ -787,8 +787,8 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                       isChecked
                         ? hasConflict
                           ? 'text-amber-600 dark:text-amber-400 font-medium'
-                          : 'text-emerald-700 dark:text-emerald-400 font-medium'
-                        : 'text-slate-500 dark:text-emerald-200/65'
+                          : 'text-sky-700 dark:text-sky-400 font-medium'
+                        : 'text-slate-500 dark:text-sky-200/65'
                     }`}
                   >
                     {isChecked
@@ -804,25 +804,25 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         </div>
 
         {/* Step 2: Pickup Location & Contact */}
-        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-emerald-900/50">
+        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-sky-900/50">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label
               htmlFor="schedule-pickup-address"
-              className="text-xs font-semibold text-slate-800 dark:text-emerald-100 inline-flex items-center gap-1.5"
+              className="text-xs font-semibold text-slate-800 dark:text-sky-100 inline-flex items-center gap-1.5"
             >
-              <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <MapPin className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
               2. Collection Location &amp; Contact
             </label>
             <button
               type="button"
               onClick={handleUseGps}
               disabled={gpsStatus === 'locating'}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-xs font-medium text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-sky-800 text-xs font-medium text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
             >
               {gpsStatus === 'locating' ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <Compass className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
               )}
               {gpsStatus === 'locked'
                 ? `GPS Attached (${lat.toFixed(3)}, ${lng.toFixed(3)})`
@@ -839,12 +839,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             value={pickupAddress}
             onChange={(e) => setPickupAddress(e.target.value)}
             placeholder="House/Office number, street, locality, city, PIN code"
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           />
 
           {nearestFacility && (
-            <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
-              Nearest verified hub: <span className="font-medium text-slate-700 dark:text-emerald-100">{nearestFacility.facility.name}</span>{' '}
+            <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
+              Nearest verified hub: <span className="font-medium text-slate-700 dark:text-sky-100">{nearestFacility.facility.name}</span>{' '}
               · <span className="font-mono tabular-nums">{nearestFacility.distanceKm.toFixed(1)} km</span> away
             </p>
           )}
@@ -852,14 +852,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-slate-700 dark:text-emerald-200/80">
+                <label className="text-xs font-medium text-slate-700 dark:text-sky-200/80">
                   Contact Name *
                 </label>
                 {workspaceToken && (
                   <button
                     type="button"
                     onClick={() => void handleFetchContacts()}
-                    className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                    className="text-[11px] font-medium text-sky-700 dark:text-sky-400 hover:underline inline-flex items-center gap-1"
                   >
                     {loadingContacts ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -878,12 +878,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
                 placeholder="Full name"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Contact Phone *
               </label>
               <input
@@ -894,15 +894,15 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 placeholder="+91-98..."
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
           </div>
 
           {showContacts && contacts.length > 0 && (
-            <div className="p-3 rounded-lg border border-slate-200 dark:border-emerald-900/60 bg-slate-50 dark:bg-[#05140F] space-y-2">
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-sky-900/60 bg-slate-50 dark:bg-[#061526] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 dark:text-emerald-200">
+                <span className="text-xs font-semibold text-slate-700 dark:text-sky-200">
                   Select from Google Contacts
                 </span>
                 <button
@@ -923,12 +923,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                       if (c.phone) setContactPhone(c.phone);
                       setShowContacts(false);
                     }}
-                    className="p-2 rounded text-left border border-slate-200 dark:border-emerald-900/60 hover:border-emerald-500 bg-white dark:bg-[#081D16]"
+                    className="p-2 rounded text-left border border-slate-200 dark:border-sky-900/60 hover:border-sky-500 bg-white dark:bg-[#0B223B]"
                   >
-                    <p className="text-xs font-medium text-slate-900 dark:text-emerald-50 truncate">
+                    <p className="text-xs font-medium text-slate-900 dark:text-sky-50 truncate">
                       {c.name}
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-emerald-200/65 truncate">
+                    <p className="text-[11px] text-slate-500 dark:text-sky-200/65 truncate">
                       {c.phone || c.email || 'No phone'}
                     </p>
                   </button>
@@ -939,14 +939,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         </div>
 
         {/* Step 3: E-Waste Items */}
-        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-emerald-900/50">
-          <p className="text-xs font-semibold text-slate-800 dark:text-emerald-100">
+        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-sky-900/50">
+          <p className="text-xs font-semibold text-slate-800 dark:text-sky-100">
             3. Electronic Waste Details
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Device Name / Description *
               </label>
               <div className="flex gap-1.5">
@@ -958,14 +958,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                   value={deviceName}
                   onChange={(e) => setDeviceName(e.target.value)}
                   placeholder="e.g., 2x ThinkPad Laptops, Power Adapters & Old Router"
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                 />
                 <button
                   type="button"
                   onClick={() => void handleFastTriage()}
                   disabled={triageLoading || !deviceName.trim()}
                   title="Auto-categorize device"
-                  className="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                  className="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 disabled:opacity-50"
                 >
                   {triageLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -977,13 +977,13 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Category *
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               >
                 {EWASTE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -994,13 +994,13 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Condition
               </label>
               <select
                 value={condition}
                 onChange={(e) => setCondition(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               >
                 <option value="Working / Refurbishable">Working / Refurbishable</option>
                 <option value="Partially Working">Partially Working</option>
@@ -1010,7 +1010,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Quantity (units) *
               </label>
               <input
@@ -1020,12 +1020,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm font-mono tabular-nums rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Estimated Weight (kg) *
               </label>
               <input
@@ -1036,12 +1036,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 required
                 value={estimatedWeightKg}
                 onChange={(e) => setEstimatedWeightKg(Number(e.target.value))}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm font-mono tabular-nums rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 dark:text-emerald-200/80 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-sky-200/80 mb-1">
                 Handling / Access Instructions (Optional)
               </label>
               <input
@@ -1050,7 +1050,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="e.g., Security gate pass required, call 15 mins before arrival"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
             </div>
           </div>
@@ -1074,7 +1074,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-900/40 whitespace-nowrap"
+              className="px-4 py-2.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 whitespace-nowrap"
             >
               Cancel
             </button>
@@ -1082,7 +1082,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
           <button
             type="submit"
             disabled={submitting}
-            className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center gap-2 whitespace-nowrap"
+            className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-2 whitespace-nowrap"
           >
             {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Book Pickup Slot
@@ -1092,12 +1092,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
 
       {/* Right Column: Live Synced Upcoming Bookings */}
       {!compact && (
-        <aside className="xl:col-span-5 p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
-          <div className="pb-3 border-b border-slate-200 dark:border-emerald-900/50">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+        <aside className="xl:col-span-5 p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
+          <div className="pb-3 border-b border-slate-200 dark:border-sky-900/50">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
               Your Booked Pickup Slots
             </h4>
-            <p className="text-xs text-slate-500 dark:text-emerald-200/65 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-sky-200/65 mt-0.5">
               Saved to your account · Reschedule or cancel upcoming windows anytime.
             </p>
           </div>
@@ -1107,24 +1107,24 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
               {[1, 2].map((n) => (
                 <div
                   key={n}
-                  className="py-3 border-b border-slate-200 dark:border-emerald-900/50 animate-pulse space-y-2"
+                  className="py-3 border-b border-slate-200 dark:border-sky-900/50 animate-pulse space-y-2"
                 >
-                  <div className="h-3.5 w-32 rounded bg-slate-200 dark:bg-emerald-900/60" />
-                  <div className="h-3 w-full rounded bg-slate-100 dark:bg-emerald-950/70" />
+                  <div className="h-3.5 w-32 rounded bg-slate-200 dark:bg-sky-900/60" />
+                  <div className="h-3 w-full rounded bg-slate-100 dark:bg-sky-950/70" />
                 </div>
               ))}
             </div>
           ) : bookings.length === 0 ? (
-            <div className="py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-emerald-900/70 text-center space-y-1.5">
-              <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
+            <div className="py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-sky-900/70 text-center space-y-1.5">
+              <p className="text-sm font-medium text-slate-900 dark:text-sky-50">
                 No scheduled pickups yet
               </p>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs text-slate-500 dark:text-sky-200/65">
                 Pick a date and time slot on the left to reserve your first doorstep e-waste collection.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-200 dark:divide-emerald-900/50 max-h-[540px] overflow-y-auto pr-1">
+            <div className="divide-y divide-slate-200 dark:divide-sky-900/50 max-h-[540px] overflow-y-auto pr-1">
               {bookings.map((b) => {
                 const isClosed = b.status === 'Cancelled' || b.status === 'Completed';
                 const isEditing = editingId === b.id;
@@ -1134,10 +1134,10 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-x-2 text-xs">
-                          <span className="font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
+                          <span className="font-mono tabular-nums font-semibold text-sky-700 dark:text-sky-400">
                             {b.requestCode}
                           </span>
-                          <span className="text-slate-300 dark:text-emerald-800" aria-hidden="true">
+                          <span className="text-slate-300 dark:text-sky-800" aria-hidden="true">
                             ·
                           </span>
                           <span
@@ -1145,26 +1145,26 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                               b.status === 'Cancelled'
                                 ? 'text-red-600 dark:text-red-400'
                                 : b.status === 'Completed'
-                                ? 'text-emerald-700 dark:text-emerald-400'
+                                ? 'text-sky-700 dark:text-sky-400'
                                 : 'text-amber-700 dark:text-amber-300'
                             }`}
                           >
                             {b.status}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-emerald-50 mt-0.5 truncate">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-sky-50 mt-0.5 truncate">
                           {b.deviceName}
                         </p>
                       </div>
-                      <span className="font-mono tabular-nums text-xs text-slate-500 dark:text-emerald-200/70 shrink-0">
+                      <span className="font-mono tabular-nums text-xs text-slate-500 dark:text-sky-200/70 shrink-0">
                         {b.estimatedWeightKg} kg
                       </span>
                     </div>
 
-                    <p className="text-xs font-mono tabular-nums text-slate-700 dark:text-emerald-100/85">
+                    <p className="text-xs font-mono tabular-nums text-slate-700 dark:text-sky-100/85">
                       {b.preferredDate} · {b.timeSlot}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-emerald-200/65 leading-snug">
+                    <p className="text-xs text-slate-500 dark:text-sky-200/65 leading-snug">
                       {b.pickupAddress}
                     </p>
 
@@ -1177,7 +1177,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                             setEditDate(b.preferredDate);
                             setEditSlot(b.timeSlot);
                           }}
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-900/40 whitespace-nowrap"
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 whitespace-nowrap"
                         >
                           Reschedule
                         </button>
@@ -1186,7 +1186,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                             href={calendarLinks[b.requestCode]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:underline inline-flex items-center gap-1 whitespace-nowrap"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-sky-700 dark:text-sky-300 hover:underline inline-flex items-center gap-1 whitespace-nowrap"
                           >
                             <CalendarCheck2 className="w-3.5 h-3.5" />
                             In Calendar
@@ -1208,7 +1208,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                                 instructions: b.instructions,
                               });
                             }}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-emerald-600/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 inline-flex items-center gap-1 whitespace-nowrap"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-sky-600/50 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1 whitespace-nowrap"
                           >
                             <CalendarPlus className="w-3.5 h-3.5" />
                             Add to Calendar
@@ -1233,12 +1233,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                             min={todayIso}
                             value={editDate}
                             onChange={(e) => setEditDate(e.target.value)}
-                            className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                            className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                           />
                           <select
                             value={editSlot}
                             onChange={(e) => setEditSlot(e.target.value as PickupTimeSlot)}
-                            className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                            className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                           >
                             {PICKUP_TIME_SLOTS.map((s) => (
                               <option key={s} value={s}>
@@ -1252,14 +1252,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                             type="button"
                             disabled={busyBookingId === b.id}
                             onClick={() => void handleSaveReschedule(b.id)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 disabled:opacity-60"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-60"
                           >
                             {busyBookingId === b.id ? 'Saving...' : 'Save Slot'}
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditingId(null)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-emerald-200/75 hover:underline"
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-sky-200/75 hover:underline"
                           >
                             Cancel
                           </button>

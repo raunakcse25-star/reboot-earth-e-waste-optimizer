@@ -78,9 +78,9 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
     <div
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className={`relative rounded-2xl border outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+      className={`relative rounded-2xl border outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
         isDark
-          ? 'bg-[#061812] border-emerald-900/70 text-emerald-50'
+          ? 'bg-[#071A2E] border-sky-900/70 text-sky-50'
           : 'bg-white border-slate-200 text-slate-900'
       } ${className}`}
     >
@@ -114,11 +114,11 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
               className={`w-full text-left px-4 py-3.5 rounded-xl border transition-colors flex items-center justify-between gap-4 ${
                 isDark
                   ? isSelected
-                    ? 'bg-emerald-900/45 border-emerald-500/70 text-emerald-50'
-                    : 'bg-[#081D16] border-emerald-900/50 text-emerald-100 hover:border-emerald-700'
+                    ? 'bg-sky-900/45 border-sky-500/70 text-sky-50'
+                    : 'bg-[#0B223B] border-sky-900/50 text-sky-100 hover:border-sky-700'
                   : isSelected
-                  ? 'bg-emerald-50 border-emerald-400 text-slate-900'
-                  : 'bg-slate-50/70 border-slate-200 text-slate-800 hover:border-emerald-300'
+                  ? 'bg-sky-50 border-sky-400 text-slate-900'
+                  : 'bg-slate-50/70 border-slate-200 text-slate-800 hover:border-sky-300'
               }`}
             >
               <div className="min-w-0">
@@ -126,7 +126,7 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
                 {item.description && (
                   <p
                     className={`text-xs truncate mt-0.5 ${
-                      isDark ? 'text-emerald-200/70' : 'text-slate-500'
+                      isDark ? 'text-sky-200/70' : 'text-slate-500'
                     }`}
                   >
                     {item.description}
@@ -136,7 +136,7 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
               {item.meta && (
                 <span
                   className={`text-xs font-mono tabular-nums shrink-0 ${
-                    isDark ? 'text-emerald-300/80' : 'text-emerald-700'
+                    isDark ? 'text-sky-300/80' : 'text-sky-700'
                   }`}
                 >
                   {item.meta}
@@ -153,7 +153,7 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
             aria-hidden="true"
             className={`pointer-events-none absolute top-0 left-0 right-0 h-8 rounded-t-2xl transition-opacity duration-200 ${
               isDark
-                ? 'bg-gradient-to-b from-[#061812] to-transparent'
+                ? 'bg-gradient-to-b from-[#071A2E] to-transparent'
                 : 'bg-gradient-to-b from-white to-transparent'
             }`}
             style={{ opacity: topGradOpacity }}
@@ -162,7 +162,7 @@ export const AnimatedList: React.FC<AnimatedListProps> = ({
             aria-hidden="true"
             className={`pointer-events-none absolute bottom-0 left-0 right-0 h-8 rounded-b-2xl transition-opacity duration-200 ${
               isDark
-                ? 'bg-gradient-to-t from-[#061812] to-transparent'
+                ? 'bg-gradient-to-t from-[#071A2E] to-transparent'
                 : 'bg-gradient-to-t from-white to-transparent'
             }`}
             style={{ opacity: bottomGradOpacity }}

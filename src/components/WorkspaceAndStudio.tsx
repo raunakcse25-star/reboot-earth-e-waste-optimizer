@@ -242,15 +242,15 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-emerald-50">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-sky-50">
             Google Workspace Hub &amp; AI Campaign Studio
           </h3>
-          <p className="text-xs text-slate-600 dark:text-emerald-200/70">
+          <p className="text-xs text-slate-600 dark:text-sky-200/70">
             Sync e-waste pickups with Google Calendar, send recycling records via Gmail, archive ESG reports to Google Drive, notify ops in Google Chat, or create awareness visuals.
           </p>
         </div>
 
-        <div className="inline-flex flex-wrap rounded-lg border border-slate-200 dark:border-emerald-900/70 p-1 bg-slate-50 dark:bg-[#05140F] gap-1">
+        <div className="inline-flex flex-wrap rounded-lg border border-slate-200 dark:border-sky-900/70 p-1 bg-slate-50 dark:bg-[#061526] gap-1">
           {(
             [
               { id: 'calendar', label: 'Calendar', icon: Calendar },
@@ -273,8 +273,8 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 }}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
                   activeTab === t.id
-                    ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950'
-                    : 'text-slate-600 dark:text-emerald-200/75 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                    : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -321,7 +321,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
       )}
 
       {wsSuccess && (
-        <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-xs text-emerald-800 dark:text-emerald-200">
+        <div className="p-4 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/50 text-xs text-sky-800 dark:text-sky-200">
           {wsSuccess}
         </div>
       )}
@@ -329,13 +329,13 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
       {/* Google Calendar Tab */}
       {activeTab === 'calendar' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+          <div className="lg:col-span-7 p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                   Upcoming Google Calendar Events
                 </h4>
-                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+                <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
                   Review upcoming collection windows, reschedule events, or remove canceled pickups.
                 </p>
               </div>
@@ -349,7 +349,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                       setSelectedCalendarId(nextId);
                       void handleLoadCalendar(nextId);
                     }}
-                    className="px-2.5 py-1.5 rounded-lg text-xs border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-800 dark:text-emerald-100 max-w-[180px]"
+                    className="px-2.5 py-1.5 rounded-lg text-xs border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-800 dark:text-sky-100 max-w-[180px]"
                   >
                     {calendars.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -362,7 +362,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                   type="button"
                   disabled={!workspaceToken || calendarLoading}
                   onClick={() => void handleLoadCalendar()}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 disabled:opacity-50 inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
                   {calendarLoading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -375,16 +375,16 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
             </div>
 
             {calendarEvents.length === 0 ? (
-              <div className="py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-emerald-900/70 text-center space-y-1">
-                <p className="text-xs font-medium text-slate-800 dark:text-emerald-100">
+              <div className="py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-sky-900/70 text-center space-y-1">
+                <p className="text-xs font-medium text-slate-800 dark:text-sky-100">
                   No upcoming events loaded yet
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+                <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
                   Click &ldquo;Load Events&rdquo; to inspect your Google Calendar schedule or create a pickup reminder on the right.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-emerald-900/50 max-h-[460px] overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-200 dark:divide-sky-900/50 max-h-[460px] overflow-y-auto pr-1">
                 {calendarEvents.map((ev) => {
                   const isEditing = editingEventId === ev.id;
                   return (
@@ -393,14 +393,14 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                         <>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-900 dark:text-emerald-50 truncate">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-sky-50 truncate">
                                 {ev.summary}
                               </p>
-                              <p className="text-[11px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">
+                              <p className="text-[11px] font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-0.5">
                                 {formatEventWindow(ev.start, ev.end)}
                               </p>
                               {ev.location && (
-                                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65 mt-0.5 truncate">
+                                <p className="text-[11px] text-slate-500 dark:text-sky-200/65 mt-0.5 truncate">
                                   Location: {ev.location}
                                 </p>
                               )}
@@ -412,7 +412,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title="Open in Google Calendar"
-                                  className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 dark:text-emerald-300/75 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-emerald-900/40"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-sky-600 dark:text-sky-300/75 dark:hover:text-sky-300 hover:bg-slate-100 dark:hover:bg-sky-900/40"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
@@ -427,7 +427,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                                   setEditStartLocal(toLocalDateTimeInput(ev.start));
                                   setEditEndLocal(toLocalDateTimeInput(ev.end));
                                 }}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-emerald-300/75 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-emerald-900/40"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-sky-300/75 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-sky-900/40"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
@@ -459,39 +459,39 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                             </div>
                           </div>
                           {ev.description && (
-                            <p className="text-[11px] text-slate-600 dark:text-emerald-100/75 line-clamp-2">
+                            <p className="text-[11px] text-slate-600 dark:text-sky-100/75 line-clamp-2">
                               {ev.description}
                             </p>
                           )}
                         </>
                       ) : (
-                        <div className="space-y-2 p-3 rounded-lg bg-slate-50 dark:bg-[#05140F] border border-slate-200 dark:border-emerald-900/60">
+                        <div className="space-y-2 p-3 rounded-lg bg-slate-50 dark:bg-[#061526] border border-slate-200 dark:border-sky-900/60">
                           <input
                             type="text"
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
                             placeholder="Event title"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-sky-800 bg-white dark:bg-[#0B223B] text-slate-900 dark:text-sky-50"
                           />
                           <input
                             type="text"
                             value={editLocation}
                             onChange={(e) => setEditLocation(e.target.value)}
                             placeholder="Location (optional)"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-sky-800 bg-white dark:bg-[#0B223B] text-slate-900 dark:text-sky-50"
                           />
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input
                               type="datetime-local"
                               value={editStartLocal}
                               onChange={(e) => setEditStartLocal(e.target.value)}
-                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-sky-800 bg-white dark:bg-[#0B223B] text-slate-900 dark:text-sky-50"
                             />
                             <input
                               type="datetime-local"
                               value={editEndLocal}
                               onChange={(e) => setEditEndLocal(e.target.value)}
-                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-sky-800 bg-white dark:bg-[#0B223B] text-slate-900 dark:text-sky-50"
                             />
                           </div>
                           <div className="flex items-center gap-2 pt-1">
@@ -534,14 +534,14 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                                   },
                                 });
                               }}
-                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950"
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950"
                             >
                               Review &amp; Save
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingEventId(null)}
-                              className="px-3 py-1.5 rounded-lg text-xs text-slate-600 dark:text-emerald-200/75 hover:underline"
+                              className="px-3 py-1.5 rounded-lg text-xs text-slate-600 dark:text-sky-200/75 hover:underline"
                             >
                               Cancel
                             </button>
@@ -556,12 +556,12 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
           </div>
 
           {/* Create New Calendar Event Card */}
-          <div className="lg:col-span-5 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-3">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-1.5">
-              <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <div className="lg:col-span-5 p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
+              <CalendarPlus className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               Create E-Waste Calendar Event
             </h4>
-            <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+            <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
               Add a collection window, facility drop-off, or team e-waste drive directly to your Google Calendar with automatic 60-minute and 15-minute reminders.
             </p>
             <input
@@ -569,36 +569,36 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               value={calTitle}
               onChange={(e) => setCalTitle(e.target.value)}
               placeholder="Event title"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <input
               type="text"
               value={calLocation}
               onChange={(e) => setCalLocation(e.target.value)}
               placeholder="Pickup address or verified hub location"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] text-slate-500 dark:text-emerald-200/65 mb-1">
+                <label className="block text-[11px] text-slate-500 dark:text-sky-200/65 mb-1">
                   Start Time
                 </label>
                 <input
                   type="datetime-local"
                   value={calStartLocal}
                   onChange={(e) => setCalStartLocal(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-500 dark:text-emerald-200/65 mb-1">
+                <label className="block text-[11px] text-slate-500 dark:text-sky-200/65 mb-1">
                   End Time
                 </label>
                 <input
                   type="datetime-local"
                   value={calEndLocal}
                   onChange={(e) => setCalEndLocal(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                 />
               </div>
             </div>
@@ -607,7 +607,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               value={calDescription}
               onChange={(e) => setCalDescription(e.target.value)}
               placeholder="Notes, device list, or handling instructions"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <button
               type="button"
@@ -641,7 +641,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                   },
                 });
               }}
-              className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
               Review &amp; Add to Google Calendar
@@ -653,39 +653,39 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
       {/* Gmail Tab */}
       {activeTab === 'gmail' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-6 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+          <div className="lg:col-span-6 p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                 Recent E-Waste &amp; Recycling Emails
               </h4>
               <button
                 type="button"
                 disabled={!workspaceToken || gmailLoading}
                 onClick={() => void handleLoadGmail()}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 disabled:opacity-50"
               >
                 {gmailLoading ? 'Loading...' : 'Fetch Inbox'}
               </button>
             </div>
             {emails.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs text-slate-500 dark:text-sky-200/65">
                 Click &ldquo;Fetch Inbox&rdquo; to read recent recycling confirmations from your Gmail account.
               </p>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-emerald-900/50">
+              <div className="divide-y divide-slate-200 dark:divide-sky-900/50">
                 {emails.map((m) => (
                   <div key={m.id} className="py-3 space-y-1">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-emerald-50">{m.subject}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">{m.from} · {m.date}</p>
-                    <p className="text-xs text-slate-600 dark:text-emerald-100/80 line-clamp-2">{m.snippet}</p>
+                    <p className="text-xs font-semibold text-slate-900 dark:text-sky-50">{m.subject}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-sky-200/65">{m.from} · {m.date}</p>
+                    <p className="text-xs text-slate-600 dark:text-sky-100/80 line-clamp-2">{m.snippet}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="lg:col-span-6 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-3">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+          <div className="lg:col-span-6 p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
               Send Recycling Dispatch or Receipt Email
             </h4>
             <input
@@ -693,20 +693,20 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               value={gmailTo}
               onChange={(e) => setGmailTo(e.target.value)}
               placeholder="Recipient email address"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <input
               type="text"
               value={gmailSubject}
               onChange={(e) => setGmailSubject(e.target.value)}
               placeholder="Subject"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <textarea
               rows={5}
               value={gmailBody}
               onChange={(e) => setGmailBody(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
             <button
               type="button"
@@ -726,7 +726,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                   },
                 })
               }
-              className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-50 inline-flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               Review &amp; Send via Gmail
@@ -737,11 +737,11 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
 
       {/* Drive Tab */}
       {activeTab === 'drive' && (
-        <div className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+        <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
             Archive Environmental Impact Summary to Google Drive
           </h4>
-          <p className="text-xs text-slate-600 dark:text-emerald-200/75 max-w-2xl">
+          <p className="text-xs text-slate-600 dark:text-sky-200/75 max-w-2xl">
             Exports your live database environmental metrics (collected mass, material recovery breakdown, landfill diversion, and transparent CO₂e conversion methodology) directly into your Google Drive using scoped <span className="font-mono">drive.file</span> permissions.
           </p>
           <button
@@ -764,7 +764,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 },
               })
             }
-            className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 disabled:opacity-50 inline-flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-50 inline-flex items-center gap-1.5"
           >
             <CloudUpload className="w-4 h-4" />
             Save Impact Report to Google Drive
@@ -776,7 +776,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 href={driveResult.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 underline inline-flex items-center gap-1"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 underline inline-flex items-center gap-1"
               >
                 Open {driveResult.name} in Google Drive
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -788,13 +788,13 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
 
       {/* Chat Tab */}
       {activeTab === 'chat' && (
-        <div className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+        <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                 Operations Dispatch via Google Chat
               </h4>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/70">
+              <p className="text-xs text-slate-500 dark:text-sky-200/70">
                 Requires a Google Workspace Business/Enterprise account with the Chat app configured in Cloud Console.
               </p>
             </div>
@@ -802,7 +802,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               type="button"
               disabled={!workspaceToken || chatLoading}
               onClick={() => void handleLoadSpaces()}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 disabled:opacity-50"
             >
               {chatLoading ? 'Loading Spaces...' : 'Load Chat Spaces'}
             </button>
@@ -813,7 +813,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               <select
                 value={selectedSpace}
                 onChange={(e) => setSelectedSpace(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               >
                 {chatSpaces.map((s) => (
                   <option key={s.name} value={s.name}>
@@ -825,7 +825,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 rows={3}
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
               />
               <button
                 type="button"
@@ -841,7 +841,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                     },
                   })
                 }
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 inline-flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 inline-flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
                 Send Dispatch Alert
@@ -853,22 +853,22 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
 
       {/* Contacts Tab */}
       {activeTab === 'contacts' && (
-        <div className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+        <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
               Google Contacts Directory
             </h4>
             <button
               type="button"
               disabled={!workspaceToken || contactsLoading}
               onClick={() => void handleLoadContacts()}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 disabled:opacity-50"
             >
               {contactsLoading ? 'Loading...' : 'Load Contacts'}
             </button>
           </div>
           {contacts.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-emerald-200/65">
+            <p className="text-xs text-slate-500 dark:text-sky-200/65">
               Load your Google Contacts to quickly autofill pickup coordinators or facility contacts.
             </p>
           ) : (
@@ -876,11 +876,11 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               {contacts.map((c) => (
                 <div
                   key={c.resourceName}
-                  className="p-3 rounded-lg border border-slate-200 dark:border-emerald-900/60 bg-slate-50 dark:bg-[#05140F]"
+                  className="p-3 rounded-lg border border-slate-200 dark:border-sky-900/60 bg-slate-50 dark:bg-[#061526]"
                 >
-                  <p className="text-xs font-semibold text-slate-900 dark:text-emerald-50">{c.name}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">{c.email || '—'}</p>
-                  <p className="text-[11px] font-mono text-slate-600 dark:text-emerald-300/80">{c.phone || '—'}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-sky-50">{c.name}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-sky-200/65">{c.email || '—'}</p>
+                  <p className="text-[11px] font-mono text-slate-600 dark:text-sky-300/80">{c.phone || '—'}</p>
                 </div>
               ))}
             </div>
@@ -890,13 +890,13 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
 
       {/* AI Campaign Visual Studio Tab */}
       {activeTab === 'studio' && (
-        <div className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-5">
+        <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-5">
           <div>
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-emerald-500" />
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-sky-500" />
               Eco-Campaign Visual Generator (Gemini Pro Image)
             </h4>
-            <p className="text-xs text-slate-600 dark:text-emerald-200/70 mt-1">
+            <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-1">
               Create custom high-resolution awareness posters for campus, residential, or corporate e-waste drives with 1K, 2K, or 4K output.
             </p>
           </div>
@@ -907,13 +907,13 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               required
               value={studioPrompt}
               onChange={(e) => setStudioPrompt(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 dark:text-emerald-200/70">Resolution:</span>
+                  <span className="text-xs text-slate-500 dark:text-sky-200/70">Resolution:</span>
                   {(['1K', '2K', '4K'] as const).map((sz) => (
                     <button
                       key={sz}
@@ -921,8 +921,8 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                       onClick={() => setImageSize(sz)}
                       className={`px-2.5 py-1 rounded text-xs font-mono font-semibold border ${
                         imageSize === sz
-                          ? 'border-emerald-500 bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950'
-                          : 'border-slate-300 dark:border-emerald-800 text-slate-600 dark:text-emerald-200/75'
+                          ? 'border-sky-500 bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                          : 'border-slate-300 dark:border-sky-800 text-slate-600 dark:text-sky-200/75'
                       }`}
                     >
                       {sz}
@@ -931,11 +931,11 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 dark:text-emerald-200/70">Ratio:</span>
+                  <span className="text-xs text-slate-500 dark:text-sky-200/70">Ratio:</span>
                   <select
                     value={aspectRatio}
                     onChange={(e) => setAspectRatio(e.target.value as any)}
-                    className="px-2.5 py-1 text-xs rounded border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                    className="px-2.5 py-1 text-xs rounded border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
                   >
                     <option value="16:9">16:9 Banner</option>
                     <option value="1:1">1:1 Square</option>
@@ -949,7 +949,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               <button
                 type="submit"
                 disabled={studioLoading}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5"
               >
                 {studioLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                 Generate {imageSize} Visual
@@ -969,12 +969,12 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                 src={generatedImage}
                 alt="Generated e-waste awareness visual"
                 referrerPolicy="no-referrer"
-                className="w-full max-h-[460px] object-contain rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-slate-950"
+                className="w-full max-h-[460px] object-contain rounded-xl border border-slate-200 dark:border-sky-900/60 bg-slate-950"
               />
               <a
                 href={generatedImage}
                 download={`reboot-earth-campaign-${imageSize}.png`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-100"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100"
               >
                 <Download className="w-3.5 h-3.5" />
                 Download Artwork

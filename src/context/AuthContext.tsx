@@ -61,10 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
-      const saved = localStorage.getItem('reboot_earth_theme') as ThemeMode | null;
-      return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'dark';
+      const saved = localStorage.getItem('reboot_earth_theme_v2') as ThemeMode | null;
+      return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'light';
     } catch {
-      return 'dark';
+      return 'light';
     }
   });
 
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyThemeToDom(theme);
     try {
-      localStorage.setItem('reboot_earth_theme', theme);
+      localStorage.setItem('reboot_earth_theme_v2', theme);
     } catch {
       // Ignore storage failures in restricted contexts
     }

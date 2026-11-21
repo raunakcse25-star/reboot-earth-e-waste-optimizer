@@ -107,7 +107,7 @@ function MapInner({
           if (route && typeof route.createPolylines === 'function') {
             const lines: { setMap: (m: any) => void }[] = route.createPolylines({
               polylineOptions: {
-                strokeColor: '#10B981',
+                strokeColor: '#0EA5E9',
                 strokeWeight: 5,
                 strokeOpacity: 0.9,
               },
@@ -163,9 +163,9 @@ function MapInner({
           }}
         >
           <Pin
-            background={facility.verified ? '#10B981' : '#F59E0B'}
-            borderColor="#04100C"
-            glyphColor="#04100C"
+            background={facility.verified ? '#0EA5E9' : '#F59E0B'}
+            borderColor="#040E1A"
+            glyphColor="#040E1A"
           />
         </AdvancedMarker>
       ))}
@@ -180,7 +180,7 @@ function MapInner({
             setSelectedDiscovered(place);
           }}
         >
-          <Pin background="#34D399" borderColor="#064E3B" glyphColor="#04100C" />
+          <Pin background="#38BDF8" borderColor="#075985" glyphColor="#040E1A" />
         </AdvancedMarker>
       ))}
 
@@ -195,7 +195,7 @@ function MapInner({
             <p className="text-xs text-slate-700">
               Type: {selectedFacility.facilityType.replace('_', ' ')} · {selectedFacility.operatingHours}
             </p>
-            <p className="text-xs text-emerald-800 font-medium">
+            <p className="text-xs text-sky-800 font-medium">
               {selectedFacility.verified ? 'Verified Network Partner' : 'Pending Verification'}
             </p>
             {selectedFacility.verified && (
@@ -209,7 +209,7 @@ function MapInner({
               href={`https://www.google.com/maps/dir/?api=1&destination=${selectedFacility.lat},${selectedFacility.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline pt-1"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:underline pt-1"
             >
               Open Directions in Google Maps
               <ExternalLink className="w-3 h-3" />
@@ -232,7 +232,7 @@ function MapInner({
                 href={selectedDiscovered.googleMapsURI}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:underline"
               >
                 View on Google Maps
                 <ExternalLink className="w-3 h-3" />
@@ -514,19 +514,19 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
       {/* Search & Filter Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-5 relative">
-          <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-sky-600 dark:text-sky-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchCity}
             onChange={(e) => setSearchCity(e.target.value)}
             placeholder="Search by city, address, or facility name (e.g., Delhi, Noida, Bengaluru)"
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-white dark:bg-[#081C15] text-slate-900 dark:text-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-white dark:bg-[#0A213A] text-slate-900 dark:text-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="lg:col-span-2 px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-white dark:bg-[#081C15] text-slate-900 dark:text-emerald-50"
+          className="lg:col-span-2 px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-white dark:bg-[#0A213A] text-slate-900 dark:text-sky-50"
         >
           <option value="all">All Facility Types</option>
           <option value="collection_centre">Collection Centres</option>
@@ -536,7 +536,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="lg:col-span-2 px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-white dark:bg-[#081C15] text-slate-900 dark:text-emerald-50"
+          className="lg:col-span-2 px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-white dark:bg-[#0A213A] text-slate-900 dark:text-sky-50"
         >
           <option value="all">All Waste Categories</option>
           <option value="IT & Telecom">IT &amp; Telecom</option>
@@ -550,7 +550,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
             type="button"
             onClick={() => setPlacesTrigger((c) => c + 1)}
             disabled={!mapsApiKey || placesLoading}
-            className="flex-1 px-3 py-2.5 text-xs font-semibold rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-50 transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+            className="flex-1 px-3 py-2.5 text-xs font-semibold rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-50 transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5"
           >
             {placesLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {placesLoading ? 'Searching...' : 'Search Google Maps'}
@@ -559,7 +559,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
             type="button"
             onClick={handleLocateMe}
             title="Use current GPS location"
-            className="px-3 py-2.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 transition-colors"
+            className="px-3 py-2.5 rounded-lg border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/40 transition-colors"
           >
             <Compass className="w-4 h-4" />
           </button>
@@ -567,7 +567,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
       </div>
 
       {routeInfo && (
-        <div className="px-4 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/70 text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-3">
+        <div className="px-4 py-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800/70 text-xs text-sky-900 dark:text-sky-200 flex items-center justify-between gap-3">
           <span>{routeInfo}</span>
           <button
             type="button"
@@ -588,7 +588,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
 
       {/* Map + Directory Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-7 rounded-xl overflow-hidden border border-slate-200 dark:border-emerald-900/70 bg-slate-100 dark:bg-[#071A14] h-[480px]">
+        <div className="lg:col-span-7 rounded-xl overflow-hidden border border-slate-200 dark:border-sky-900/70 bg-slate-100 dark:bg-[#091E36] h-[480px]">
           {mapsApiKey ? (
             <APIProvider apiKey={mapsApiKey} language="en" region="IN">
               <GoogleMap
@@ -623,18 +623,18 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
             </APIProvider>
           ) : mapsKeyChecking ? (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2">
-              <Loader2 className="w-7 h-7 text-emerald-500 animate-spin" />
-              <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
+              <Loader2 className="w-7 h-7 text-sky-500 animate-spin" />
+              <p className="text-sm font-medium text-slate-900 dark:text-sky-50">
                 Loading interactive map...
               </p>
             </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2">
-              <MapPin className="w-8 h-8 text-emerald-500" />
-              <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
+              <MapPin className="w-8 h-8 text-sky-500" />
+              <p className="text-sm font-medium text-slate-900 dark:text-sky-50">
                 Interactive map is currently unavailable
               </p>
-              <p className="text-xs text-slate-600 dark:text-emerald-200/70 max-w-md">
+              <p className="text-xs text-slate-600 dark:text-sky-200/70 max-w-md">
                 Use the verified directory list or live Google Maps Grounding explorer below to discover e-waste drop-off facilities.
               </p>
             </div>
@@ -644,7 +644,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
         {/* Facility Directory List */}
         <div className="lg:col-span-5 h-[480px] overflow-y-auto pr-1 space-y-3">
           {filteredFacilities.length === 0 ? (
-            <div className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 text-sm text-slate-600 dark:text-emerald-200/70">
+            <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 text-sm text-slate-600 dark:text-sky-200/70">
               No network facilities matched your filters. Try clearing filters or searching Google Maps directly.
             </div>
           ) : (
@@ -660,17 +660,17 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
                   }}
                   className={`p-4 rounded-xl border cursor-pointer transition-colors ${
                     isSelected
-                      ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/50'
-                      : 'border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] hover:border-emerald-600/60'
+                      ? 'border-sky-500 bg-sky-50/60 dark:bg-sky-950/50'
+                      : 'border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-600/60'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-semibold text-sm text-slate-900 dark:text-emerald-50">{f.name}</h4>
-                    <span className="text-xs font-mono tabular-nums text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                    <h4 className="font-semibold text-sm text-slate-900 dark:text-sky-50">{f.name}</h4>
+                    <span className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 whitespace-nowrap">
                       {f.distanceKm !== null ? `${f.distanceKm.toFixed(1)} km` : f.city}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-emerald-200/65">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-sky-200/65">
                     <span>
                       {f.facilityType.replace('_', ' ')} · {f.verified ? 'Verified' : 'Pending verification'} · {f.operatingHours}
                     </span>
@@ -683,18 +683,18 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-slate-700 dark:text-emerald-100/80">{f.address}</p>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-emerald-200/65">
+                  <p className="mt-2 text-xs text-slate-700 dark:text-sky-100/80">{f.address}</p>
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-sky-200/65">
                     Accepts: {f.acceptedCategories}
                   </p>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex justify-between text-[11px] font-mono tabular-nums text-slate-500 dark:text-emerald-200/70 mb-1">
+                      <div className="flex justify-between text-[11px] font-mono tabular-nums text-slate-500 dark:text-sky-200/70 mb-1">
                         <span>Capacity load</span>
                         <span>{f.currentLoadKg.toLocaleString()} / {f.capacityKg.toLocaleString()} kg ({utilPct}%)</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-slate-200 dark:bg-emerald-950 overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${utilPct}%` }} />
+                      <div className="h-1.5 rounded-full bg-slate-200 dark:bg-sky-950 overflow-hidden">
+                        <div className="h-full bg-sky-500 rounded-full" style={{ width: `${utilPct}%` }} />
                       </div>
                     </div>
                     <button
@@ -703,7 +703,7 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
                         e.stopPropagation();
                         setRouteTarget({ lat: f.lat, lng: f.lng, name: f.name });
                       }}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-600/20 inline-flex items-center gap-1 whitespace-nowrap"
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-sky-600/10 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300 hover:bg-sky-600/20 inline-flex items-center gap-1 whitespace-nowrap"
                     >
                       <Navigation className="w-3 h-3" />
                       Route
@@ -726,14 +726,14 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
       )}
 
       {/* Gemini Google Maps Grounding Explorer */}
-      <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+      <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-sky-500" />
               Live Google Maps Grounded E-Waste Locator
             </h3>
-            <p className="text-xs text-slate-600 dark:text-emerald-200/70 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-0.5">
               Ask Gemini with real-time Google Maps grounding to find genuine local recycling drop-off points and open links directly in Google Maps.
             </p>
           </div>
@@ -745,12 +745,12 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
             value={groundingQuery}
             onChange={(e) => setGroundingQuery(e.target.value)}
             placeholder="e.g., Where can I drop off old laptops and lithium batteries in Pune?"
-            className="flex-1 px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+            className="flex-1 px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
           />
           <button
             type="submit"
             disabled={groundingLoading}
-            className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center justify-center gap-2 whitespace-nowrap"
+            className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center justify-center gap-2 whitespace-nowrap"
           >
             {groundingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
             Find Real Places
@@ -762,13 +762,13 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
         )}
 
         {groundingResult && (
-          <div className="pt-3 border-t border-slate-200 dark:border-emerald-900/50 space-y-3">
-            <div className="text-sm text-slate-700 dark:text-emerald-100/90 whitespace-pre-line leading-relaxed">
+          <div className="pt-3 border-t border-slate-200 dark:border-sky-900/50 space-y-3">
+            <div className="text-sm text-slate-700 dark:text-sky-100/90 whitespace-pre-line leading-relaxed">
               {groundingResult.answer}
             </div>
             {groundingResult.places.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-emerald-300/80">
+                <p className="text-xs font-semibold text-slate-500 dark:text-sky-300/80">
                   Verified Google Maps Sources
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
@@ -778,19 +778,19 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
                       href={p.uri}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-3 rounded-lg border border-slate-200 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] hover:border-emerald-500 transition-colors flex items-start justify-between gap-2"
+                      className="p-3 rounded-lg border border-slate-200 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] hover:border-sky-500 transition-colors flex items-start justify-between gap-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-emerald-100 truncate">
+                        <p className="text-sm font-medium text-slate-900 dark:text-sky-100 truncate">
                           {p.title}
                         </p>
                         {p.snippet && (
-                          <p className="text-xs text-slate-500 dark:text-emerald-200/65 line-clamp-2 mt-0.5">
+                          <p className="text-xs text-slate-500 dark:text-sky-200/65 line-clamp-2 mt-0.5">
                             {p.snippet}
                           </p>
                         )}
                       </div>
-                      <ExternalLink className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <ExternalLink className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
                     </a>
                   ))}
                 </div>

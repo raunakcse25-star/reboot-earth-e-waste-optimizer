@@ -373,18 +373,18 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
   return (
     <section
       aria-label={`Ratings and reviews for ${facility.name}`}
-      className="p-6 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-6"
+      className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-6"
     >
       {/* Header Row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-emerald-900/50">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-sky-900/50">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50 truncate">
+            <MessageSquare className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+            <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 truncate">
               Community Ratings &amp; Reviews — {facility.name}
             </h3>
           </div>
-          <p className="text-xs text-slate-500 dark:text-emerald-200/70 mt-1">
+          <p className="text-xs text-slate-500 dark:text-sky-200/70 mt-1">
             {facility.city}, {facility.state}
             <span aria-hidden="true"> · </span>
             {facility.facilityType.replace('_', ' ')}
@@ -397,7 +397,7 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <label
               htmlFor={`rating-sort-${facility.id}`}
-              className="text-xs text-slate-500 dark:text-emerald-200/70 whitespace-nowrap"
+              className="text-xs text-slate-500 dark:text-sky-200/70 whitespace-nowrap"
             >
               Sort by
             </label>
@@ -405,7 +405,7 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
               id={`rating-sort-${facility.id}`}
               value={reviewSort}
               onChange={(e) => setReviewSort(e.target.value as 'newest' | 'highest' | 'lowest')}
-              className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               <option value="newest">Newest First</option>
               <option value="highest">Highest Rated</option>
@@ -433,8 +433,8 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
           <div className="lg:col-span-5 space-y-6">
             {/* Summary Histogram */}
             <div className="flex items-center gap-5">
-              <div className="text-center pr-5 border-r border-slate-200 dark:border-emerald-900/60 shrink-0">
-                <p className="text-3xl font-bold font-mono tabular-nums text-slate-900 dark:text-emerald-50">
+              <div className="text-center pr-5 border-r border-slate-200 dark:border-sky-900/60 shrink-0">
+                <p className="text-3xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50">
                   {mergedReviews.length > 0 ? averageRating.toFixed(1) : '—'}
                 </p>
                 <div className="flex items-center justify-center gap-0.5 mt-1">
@@ -444,12 +444,12 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                       className={`w-3.5 h-3.5 ${
                         star <= Math.round(averageRating)
                           ? 'fill-amber-400 text-amber-400'
-                          : 'text-slate-300 dark:text-emerald-900'
+                          : 'text-slate-300 dark:text-sky-900'
                       }`}
                     />
                   ))}
                 </div>
-                <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-emerald-200/65 mt-1">
+                <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-sky-200/65 mt-1">
                   {mergedReviews.length} review{mergedReviews.length === 1 ? '' : 's'}
                 </p>
               </div>
@@ -464,14 +464,14 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                       key={star}
                       className="flex items-center gap-2 text-xs font-mono tabular-nums"
                     >
-                      <span className="w-5 text-slate-600 dark:text-emerald-200/75">{star}★</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-emerald-950 overflow-hidden">
+                      <span className="w-5 text-slate-600 dark:text-sky-200/75">{star}★</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-sky-950 overflow-hidden">
                         <div
                           className="h-full bg-amber-400 rounded-full transition-all duration-200"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="w-6 text-right text-slate-500 dark:text-emerald-200/60">
+                      <span className="w-6 text-right text-slate-500 dark:text-sky-200/60">
                         {count}
                       </span>
                     </div>
@@ -484,10 +484,10 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
             {firebaseUser ? (
               <form
                 onSubmit={handleSubmit}
-                className="pt-5 border-t border-slate-200 dark:border-emerald-900/50 space-y-4"
+                className="pt-5 border-t border-slate-200 dark:border-sky-900/50 space-y-4"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                     {myExistingReview ? 'Update Your Review' : 'Write a Review'}
                   </span>
                   <span className="text-xs font-mono tabular-nums text-amber-600 dark:text-amber-400 font-semibold">
@@ -514,13 +514,13 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                         onMouseEnter={() => setHoverRating(star)}
                         onMouseLeave={() => setHoverRating(0)}
                         onKeyDown={(e) => handleStarKeyDown(e, star)}
-                        className="p-1.5 rounded-lg hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-transform"
+                        className="p-1.5 rounded-lg hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-transform"
                       >
                         <Star
                           className={`w-6 h-6 transition-colors ${
                             active
                               ? 'fill-amber-400 text-amber-400'
-                              : 'text-slate-300 dark:text-emerald-800'
+                              : 'text-slate-300 dark:text-sky-800'
                           }`}
                         />
                       </button>
@@ -544,9 +544,9 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                     value={commentInput}
                     onChange={(e) => setCommentInput(e.target.value)}
                     placeholder="Share your experience with drop-off speed, staff support, weighing transparency, or receipt handling..."
-                    className="w-full px-3.5 py-2.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50 placeholder:text-slate-400 dark:placeholder:text-emerald-200/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="w-full px-3.5 py-2.5 text-xs rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 placeholder:text-slate-400 dark:placeholder:text-sky-200/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                   />
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-emerald-200/55 mt-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-sky-200/55 mt-1.5">
                     <span>Published under your display name</span>
                     <span className="font-mono tabular-nums">{commentInput.length}/600</span>
                   </div>
@@ -558,7 +558,7 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                   </p>
                 )}
                 {successMsg && (
-                  <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                  <p role="status" className="text-xs text-sky-700 dark:text-sky-400 font-medium">
                     {successMsg}
                   </p>
                 )}
@@ -566,15 +566,15 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full px-4 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+                  className="w-full px-4 py-2.5 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {myExistingReview ? 'Update Review' : 'Submit Review'}
                 </button>
               </form>
             ) : (
-              <div className="pt-5 border-t border-slate-200 dark:border-emerald-900/50 space-y-3">
-                <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">
+              <div className="pt-5 border-t border-slate-200 dark:border-sky-900/50 space-y-3">
+                <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                   Sign in with your account to submit a 5-star rating and review for this collection facility.
                 </p>
                 <GoogleSignInButton
@@ -593,25 +593,25 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                 {[1, 2].map((skeleton) => (
                   <div
                     key={skeleton}
-                    className="py-4 border-b border-slate-200 dark:border-emerald-900/50 animate-pulse space-y-2"
+                    className="py-4 border-b border-slate-200 dark:border-sky-900/50 animate-pulse space-y-2"
                   >
-                    <div className="h-3.5 w-36 rounded bg-slate-200 dark:bg-emerald-900/60" />
-                    <div className="h-3 w-full rounded bg-slate-100 dark:bg-emerald-950/80" />
-                    <div className="h-3 w-4/5 rounded bg-slate-100 dark:bg-emerald-950/80" />
+                    <div className="h-3.5 w-36 rounded bg-slate-200 dark:bg-sky-900/60" />
+                    <div className="h-3 w-full rounded bg-slate-100 dark:bg-sky-950/80" />
+                    <div className="h-3 w-4/5 rounded bg-slate-100 dark:bg-sky-950/80" />
                   </div>
                 ))}
               </div>
             ) : mergedReviews.length === 0 ? (
-              <div className="py-10 px-6 rounded-xl border border-dashed border-slate-300 dark:border-emerald-900/70 text-center space-y-1.5">
-                <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
+              <div className="py-10 px-6 rounded-xl border border-dashed border-slate-300 dark:border-sky-900/70 text-center space-y-1.5">
+                <p className="text-sm font-medium text-slate-900 dark:text-sky-50">
                   No reviews yet for {facility.name}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-emerald-200/65 max-w-md mx-auto">
+                <p className="text-xs text-slate-500 dark:text-sky-200/65 max-w-md mx-auto">
                   Be the first community member to rate this collection facility and help others plan their e-waste drop-off.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-emerald-900/50 max-h-[380px] overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-200 dark:divide-sky-900/50 max-h-[380px] overflow-y-auto pr-1">
                 {mergedReviews.map((rev) => {
                   const isOwn = firebaseUser?.uid === rev.userId;
                   const canDelete = Boolean(
@@ -623,18 +623,18 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                            <span className="font-semibold text-slate-900 dark:text-emerald-50">
+                            <span className="font-semibold text-slate-900 dark:text-sky-50">
                               {rev.authorName}
                             </span>
                             {isOwn && (
-                              <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                              <span className="text-sky-700 dark:text-sky-400 font-medium">
                                 You
                               </span>
                             )}
-                            <span className="text-slate-400 dark:text-emerald-200/40" aria-hidden="true">
+                            <span className="text-slate-400 dark:text-sky-200/40" aria-hidden="true">
                               ·
                             </span>
-                            <span className="font-mono tabular-nums text-slate-500 dark:text-emerald-200/60">
+                            <span className="font-mono tabular-nums text-slate-500 dark:text-sky-200/60">
                               {rev.dateLabel}
                             </span>
                           </div>
@@ -646,11 +646,11 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                                 className={`w-3.5 h-3.5 ${
                                   s <= rev.rating
                                     ? 'fill-amber-400 text-amber-400'
-                                    : 'text-slate-300 dark:text-emerald-900'
+                                    : 'text-slate-300 dark:text-sky-900'
                                 }`}
                               />
                             ))}
-                            <span className="ml-1.5 text-[11px] font-mono tabular-nums text-slate-500 dark:text-emerald-200/65">
+                            <span className="ml-1.5 text-[11px] font-mono tabular-nums text-slate-500 dark:text-sky-200/65">
                               {rev.rating}.0
                             </span>
                           </div>
@@ -674,7 +674,7 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
                         )}
                       </div>
 
-                      <p className="text-xs text-slate-700 dark:text-emerald-100/85 leading-relaxed whitespace-pre-line">
+                      <p className="text-xs text-slate-700 dark:text-sky-100/85 leading-relaxed whitespace-pre-line">
                         {rev.comment}
                       </p>
                     </article>

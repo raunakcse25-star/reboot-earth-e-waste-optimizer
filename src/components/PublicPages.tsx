@@ -200,15 +200,15 @@ export const HomePage: React.FC<HomePageProps> = ({
               transition={{ duration: 0.55 }}
               className="lg:col-span-6 flex flex-col justify-center space-y-6 py-4"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
                 Intelligent E-Waste Logistics &amp; Recovery Network
               </p>
 
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-bold tracking-tight leading-[1.08] text-slate-900 dark:text-emerald-50">
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-bold tracking-tight leading-[1.08] text-slate-900 dark:text-sky-50">
                 Recycle Technology. Restart Tomorrow.
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 dark:text-emerald-100/80 leading-relaxed max-w-xl">
+              <p className="text-base sm:text-lg text-slate-600 dark:text-sky-100/80 leading-relaxed max-w-xl">
                 Reboot Earth connects households, enterprises, verified recyclers, and low-emission fleets on one auditable platform—from AI-assisted pickup scheduling to 2-opt route optimization and material recovery analytics.
               </p>
 
@@ -216,7 +216,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <button
                   type="button"
                   onClick={onOpenDashboard}
-                  className="px-6 py-3.5 rounded-lg text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors inline-flex items-center gap-2"
+                  className="px-6 py-3.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors inline-flex items-center gap-2"
                 >
                   Schedule E-Waste Pickup
                   <ArrowRight className="w-4 h-4" />
@@ -224,9 +224,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('centres')}
-                  className="px-5 py-3.5 rounded-lg text-sm font-semibold border border-slate-300 dark:border-emerald-800 text-slate-800 dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-900/40 transition-colors inline-flex items-center gap-2"
+                  className="px-5 py-3.5 rounded-lg text-sm font-semibold border border-slate-300 dark:border-sky-800 text-slate-800 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 transition-colors inline-flex items-center gap-2"
                 >
-                  <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                   Find Collection Centres
                 </button>
               </div>
@@ -245,50 +245,50 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* 2. Full-Width Database-Driven Platform Statistics Strip */}
-      <section className="border-y border-slate-200 dark:border-emerald-900/60 bg-slate-50/80 dark:bg-[#061812]">
+      <section className="border-y border-sky-200/80 dark:border-sky-900/60 bg-sky-100/55 dark:bg-[#071A2E]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
                 E-Waste Tracked
               </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-emerald-50 mt-1">
+              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
                 {analytics ? `${analytics.totalCollectedKg.toLocaleString()} kg` : '—'}
               </p>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/60 mt-1">
+              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
                 Across {analytics?.totalPickups ?? 0} verified pickup requests
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
                 Estimated CO₂e Avoided
               </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-sky-700 dark:text-sky-400 mt-1">
                 {analytics ? `${analytics.estimatedCo2AvoidedKg.toLocaleString()} kg` : '—'}
               </p>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/60 mt-1">
+              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
                 From recycling &amp; optimized routing
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
                 Landfill Diversion
               </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-emerald-50 mt-1">
+              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
                 {analytics ? `${analytics.landfillDiversionPct}%` : '—'}
               </p>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/60 mt-1">
+              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
                 {analytics?.reusableDevices ?? 0} devices refurbished for reuse
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-emerald-200/65">
+              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
                 Verified Network Facilities
               </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-emerald-50 mt-1">
+              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
                 {analytics ? `${analytics.verifiedFacilities} / ${analytics.totalFacilities}` : '—'}
               </p>
-              <p className="text-xs text-slate-500 dark:text-emerald-200/60 mt-1">
+              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
                 Active centres, recyclers &amp; refurbishers
               </p>
             </div>
@@ -300,10 +300,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div
           style={{ width: '100%', height: '600px', position: 'relative' }}
-          className="rounded-3xl overflow-hidden border border-slate-200 dark:border-emerald-900/70"
+          className="rounded-3xl overflow-hidden border border-slate-200 dark:border-sky-900/70"
         >
           <FluxLines
-            colors={['#ffffff', '#ffffff', '#ffffff']}
+            colors={['#bae6fd', '#38bdf8', '#e0f2fe']}
             glow={2}
             rimWidth={0.2}
             lineWidth={1}
@@ -312,9 +312,9 @@ export const HomePage: React.FC<HomePageProps> = ({
             clickSwirl
           />
 
-          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-6 sm:p-10 bg-gradient-to-t from-[#04100C]/90 via-[#04100C]/35 to-transparent">
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-6 sm:p-10 bg-gradient-to-t from-[#040E1A]/90 via-[#040E1A]/35 to-transparent">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xs font-mono uppercase tracking-[0.22em] text-emerald-300/90">
+              <span className="text-xs font-mono uppercase tracking-[0.22em] text-sky-300/90">
                 Interactive Circular Flow Field
               </span>
               <span className="text-[11px] font-mono text-white/75 hidden sm:inline">
@@ -336,7 +336,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <h2 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
                     Real-Time Reverse Logistics Built for Zero-Landfill Electronics
                   </h2>
-                  <p className="text-sm sm:text-base text-emerald-100/85 max-w-xl leading-relaxed mt-3">
+                  <p className="text-sm sm:text-base text-sky-100/85 max-w-xl leading-relaxed mt-3">
                     Every pickup, route optimization run, and verified community review strengthens India&apos;s formal e-waste recovery ecosystem.
                   </p>
                 </AnimatedContent>
@@ -345,12 +345,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <SpecularButton
                     size="md"
                     radius={18}
-                    tint="#10b981"
+                    tint="#0EA5E9"
                     tintOpacity={0.2}
                     blur={10}
                     textColor="#f5f5f5"
                     lineColor="#7df9ff"
-                    baseColor="#1f4d3b"
+                    baseColor="#1E4D7B"
                     onClick={onOpenDashboard}
                   >
                     Launch Operations Portal
@@ -371,7 +371,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 >
                   <div
                     style={{ width: 300, height: 360, borderRadius: 24 }}
-                    className="bg-[#061812]/90 backdrop-blur-md p-6 flex flex-col justify-between text-emerald-50"
+                    className="bg-[#071A2E]/90 backdrop-blur-md p-6 flex flex-col justify-between text-sky-50"
                   >
                     <div className="space-y-2">
                       <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cyan-300">
@@ -380,26 +380,26 @@ export const HomePage: React.FC<HomePageProps> = ({
                       <h3 className="font-display text-2xl font-bold leading-snug">
                         {analytics ? `${analytics.landfillDiversionPct}%` : '95.1%'} Diverted
                       </h3>
-                      <p className="text-xs text-emerald-100/75 leading-relaxed">
+                      <p className="text-xs text-sky-100/75 leading-relaxed">
                         High-purity copper, aluminum, and precious metals recovered across verified facilities with transparent CO₂e accounting.
                       </p>
                     </div>
 
-                    <div className="space-y-2.5 pt-4 border-t border-emerald-800/70 text-xs font-mono tabular-nums">
+                    <div className="space-y-2.5 pt-4 border-t border-sky-800/70 text-xs font-mono tabular-nums">
                       <div className="flex justify-between">
-                        <span className="text-emerald-200/70">CO₂e Avoided</span>
+                        <span className="text-sky-200/70">CO₂e Avoided</span>
                         <span className="text-cyan-300 font-semibold">
                           {analytics ? `${analytics.estimatedCo2AvoidedKg.toLocaleString()} kg` : '1,826.6 kg'}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-emerald-200/70">Refurbished</span>
-                        <span className="text-emerald-300 font-semibold">
+                        <span className="text-sky-200/70">Refurbished</span>
+                        <span className="text-sky-300 font-semibold">
                           {analytics?.reusableDevices ?? 43} units
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-emerald-200/70">Verified Hubs</span>
+                        <span className="text-sky-200/70">Verified Hubs</span>
                         <span className="text-white font-semibold">
                           {analytics?.verifiedFacilities ?? 4} active
                         </span>
@@ -432,18 +432,18 @@ export const HomePage: React.FC<HomePageProps> = ({
               stagger={0.08}
               threshold={0.1}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
                 Quick Ecosystem Navigator
               </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-emerald-50 mt-2">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-sky-50 mt-2">
                 Jump Straight Into Live Operations
               </h2>
-              <p className="text-sm text-slate-600 dark:text-emerald-100/80 leading-relaxed mt-2">
+              <p className="text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed mt-2">
                 Use arrow keys or click any module below to explore verified collection centres, run route optimizations, review CPCB standards, or schedule a pickup.
               </p>
             </AnimatedContent>
             {selectedActivity && (
-              <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400">
+              <p className="text-xs font-mono text-sky-700 dark:text-sky-400">
                 {selectedActivity}
               </p>
             )}
@@ -467,35 +467,35 @@ export const HomePage: React.FC<HomePageProps> = ({
               src="/src/assets/images/facility_recycling_hub_1795259315861.jpg"
               alt="Clean modern electronic waste dismantling and sorting facility"
               referrerPolicy="no-referrer"
-              className="w-full aspect-video object-cover rounded-2xl border border-slate-200 dark:border-emerald-900/60"
+              className="w-full aspect-video object-cover rounded-2xl border border-slate-200 dark:border-sky-900/60"
             />
           </div>
           <div className="lg:col-span-6 space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
               Built for Circular Infrastructure
             </p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-emerald-50">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
               Give Every Circuit Board a Traceable Second Life.
             </h2>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
               Informal burning and landfill dumping destroy critical metals while releasing toxic heavy metals into urban soil and groundwater. Reboot Earth digitizes the entire reverse-logistics chain—uniting citizens, bulk IT consumers, collection centres, recyclers, refurbishers, transporters, producers, and administrators in one role-secured workspace.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-                  <Route className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+                  <Route className="w-4 h-4 text-sky-500" />
                   Multi-Objective VRP Optimizer
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-emerald-200/70 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-sky-200/70 leading-relaxed">
                   Balance INR dispatch cost, road kilometers, and fleet CO₂e emissions with real capacity constraints.
                 </p>
               </div>
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sky-500" />
                   Role-Gated Auditability
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-emerald-200/70 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-sky-200/70 leading-relaxed">
                   Every facility approval, pickup transition, and recovery batch is recorded with actor attribution.
                 </p>
               </div>
@@ -508,17 +508,17 @@ export const HomePage: React.FC<HomePageProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-2 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
               Platform Capabilities
             </p>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-emerald-50">
+            <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
               End-to-End Tools for Every Role in the E-Waste Ecosystem
             </h2>
           </div>
           <button
             type="button"
             onClick={() => onNavigate('optimizer')}
-            className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1.5 self-start md:self-auto"
+            className="text-sm font-semibold text-sky-700 dark:text-sky-400 hover:underline inline-flex items-center gap-1.5 self-start md:self-auto"
           >
             Try Live Smart Optimizer
             <ArrowRight className="w-4 h-4" />
@@ -526,7 +526,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] overflow-hidden flex flex-col">
+          <div className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col">
             <img
               src="/src/assets/images/refurbishment_lab_1795259340405.jpg"
               alt="Certified electronics refurbishment and diagnostics laboratory"
@@ -535,24 +535,24 @@ export const HomePage: React.FC<HomePageProps> = ({
             />
             <div className="p-6 space-y-2.5 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-emerald-50">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50">
                   AI Device Scanning &amp; Doorstep Pickup Workflows
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
                   Photograph discarded laptops, routers, or appliances to auto-classify e-waste category, estimate weight, flag lithium battery hazards, and schedule verified doorstep pickups with printable QR tracking receipts.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onOpenDashboard}
-                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1 pt-2 hover:underline"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1 pt-2 hover:underline"
               >
                 Open Pickup Manager <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] overflow-hidden flex flex-col">
+          <div className="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col">
             <img
               src="/src/assets/images/material_recovery_macro_1795259341769.jpg"
               alt="Recovered copper, aluminum, and circuit board materials"
@@ -561,17 +561,17 @@ export const HomePage: React.FC<HomePageProps> = ({
             />
             <div className="p-6 space-y-2.5 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-emerald-50">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50">
                   Precision Material Recovery Accounting
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
                   Recyclers and refurbishers log batch-level outputs for copper, aluminum, industrial plastics, precious metals, and refurbished devices—feeding transparent ESG analytics and Google Drive exports.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onNavigate('knowledge')}
-                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1 pt-2 hover:underline"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1 pt-2 hover:underline"
               >
                 Explore Recovery Guides &amp; Rules <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -583,10 +583,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 5. 8-Step Circular Workflow */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-2 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
             Core Workflow
           </p>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-emerald-50">
+          <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
             Identify to Impact in Eight Audited Stages
           </h2>
         </div>
@@ -595,13 +595,19 @@ export const HomePage: React.FC<HomePageProps> = ({
           {WORKFLOW_STEPS.map((w) => (
             <div
               key={w.step}
-              className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2"
+              className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
             >
-              <span className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              />
+              <span className="inline-block font-mono text-xs font-semibold text-sky-700 dark:text-sky-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-sky-600 dark:group-hover:text-sky-300">
                 {w.step}
               </span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-emerald-50">{w.title}</h3>
-              <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">{w.desc}</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                {w.title}
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">{w.desc}</p>
             </div>
           ))}
         </div>
@@ -610,10 +616,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 6. E-Waste Categories Accepted */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-2 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
             E-Waste Streams
           </p>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-emerald-50">
+          <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
             Supported Electronic Waste Categories
           </h2>
         </div>
@@ -623,12 +629,18 @@ export const HomePage: React.FC<HomePageProps> = ({
             return (
               <div
                 key={c.title}
-                className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2.5"
+                className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2.5 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
               >
-                <Icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">{c.title}</h3>
-                <p className="text-xs text-slate-600 dark:text-emerald-100/80">{c.items}</p>
-                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65 pt-1 border-t border-slate-100 dark:border-emerald-900/50">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                />
+                <Icon className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3 group-hover:text-sky-500 dark:group-hover:text-sky-300" />
+                <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                  {c.title}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-sky-100/80">{c.items}</p>
+                <p className="text-[11px] text-slate-500 dark:text-sky-200/65 pt-2 border-t border-slate-100 dark:border-sky-900/50 transition-colors duration-200 group-hover:border-sky-200/80 dark:group-hover:border-sky-800/70">
                   Handling note: {c.hazard}
                 </p>
               </div>
@@ -642,13 +654,13 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* FAQs */}
           <div className="lg:col-span-7 space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
               Frequently Asked Questions
             </p>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-emerald-50">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-sky-50">
               Clarity on Compliance, Routing &amp; Data Safety
             </h2>
-            <div className="divide-y divide-slate-200 dark:divide-emerald-900/60 border-y border-slate-200 dark:border-emerald-900/60">
+            <div className="divide-y divide-slate-200 dark:divide-sky-900/60 border-y border-slate-200 dark:border-sky-900/60">
               {FAQS.map((item, idx) => {
                 const isOpen = openFaq === idx;
                 return (
@@ -658,17 +670,17 @@ export const HomePage: React.FC<HomePageProps> = ({
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
                       className="w-full flex items-center justify-between gap-4 text-left"
                     >
-                      <span className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                         {item.q}
                       </span>
                       {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <ChevronUp className="w-4 h-4 text-sky-500 shrink-0" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                       )}
                     </button>
                     {isOpen && (
-                      <p className="mt-2.5 text-xs sm:text-sm text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+                      <p className="mt-2.5 text-xs sm:text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
                         {item.a}
                       </p>
                     )}
@@ -682,13 +694,13 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="lg:col-span-5">
             <form
               onSubmit={handleSupportSubmit}
-              className="p-6 rounded-2xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4"
+              className="p-6 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-sky-400/75 dark:hover:border-sky-600/70 hover:shadow-[0_18px_38px_-18px_rgba(14,165,233,0.22)] dark:hover:shadow-[0_18px_38px_-18px_rgba(14,165,233,0.26)] focus-within:border-sky-500/80 dark:focus-within:border-sky-500/70 focus-within:shadow-[0_18px_38px_-18px_rgba(14,165,233,0.26)]"
             >
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-emerald-50">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-sky-50">
                   Contact &amp; Bulk Pickup Desk
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-emerald-200/70 mt-0.5">
+                <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-0.5">
                   Need corporate IT decommissioning, facility onboarding, or platform support?
                 </p>
               </div>
@@ -698,7 +710,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 value={supportName}
                 onChange={(e) => setSupportName(e.target.value)}
                 placeholder="Your Full Name"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
               />
               <input
                 type="email"
@@ -706,12 +718,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 value={supportEmail}
                 onChange={(e) => setSupportEmail(e.target.value)}
                 placeholder="Work or Personal Email"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
               />
               <select
                 value={supportCategory}
                 onChange={(e) => setSupportCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38] cursor-pointer"
               >
                 <option>Bulk Pickup / Corporate</option>
                 <option>Facility Onboarding</option>
@@ -724,7 +736,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 value={supportSubject}
                 onChange={(e) => setSupportSubject(e.target.value)}
                 placeholder="Subject"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
               />
               <textarea
                 rows={3}
@@ -732,19 +744,23 @@ export const HomePage: React.FC<HomePageProps> = ({
                 value={supportMessage}
                 onChange={(e) => setSupportMessage(e.target.value)}
                 placeholder="Share your location, estimated weight, or inquiry..."
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
               />
               {supportStatus && (
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
                   {supportStatus}
                 </p>
               )}
               <button
                 type="submit"
                 disabled={supportBusy}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                className="group w-full py-2.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:bg-sky-700 dark:hover:bg-sky-400 hover:shadow-lg hover:shadow-sky-600/25 active:translate-y-0 disabled:opacity-60 disabled:hover:translate-y-0 inline-flex items-center justify-center gap-2 cursor-pointer"
               >
-                {supportBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {supportBusy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                )}
                 Submit Support Request
               </button>
             </form>
@@ -789,54 +805,54 @@ export const KnowledgeHubPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
       <div className="space-y-3 max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
           E-Waste Knowledge Centre &amp; Policy Reference
         </p>
-        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-emerald-50">
+        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
           India E-Waste (Management) Rules, 2022 &amp; Safe Handling
         </h1>
-        <p className="text-sm sm:text-base text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+        <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
           Understand Extended Producer Responsibility (EPR), safe storage of lithium batteries, and mandatory channelization through CPCB-registered recyclers.
         </p>
       </div>
 
       {/* Statutory Distinction Notice */}
-      <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-800/70 bg-slate-50 dark:bg-[#081D16] space-y-2">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-          <Scale className="w-4 h-4 text-emerald-500" />
+      <div className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-800/70 bg-sky-50/80 dark:bg-[#0B223B] space-y-2">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+          <Scale className="w-4 h-4 text-sky-500" />
           Important Statutory Compliance Notice
         </h2>
-        <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
           Reboot Earth provides digital collection records, logistics optimization, and material recovery tracking to support responsible e-waste workflows. Reboot Earth is an independent software platform—not a government agency. Official EPR registrations, quarterly/annual returns, and statutory EPR certificates under India&apos;s E-Waste (Management) Rules, 2022 must be obtained directly from the Central Pollution Control Board (CPCB) portal.
         </p>
       </div>
 
       {/* Live Gemini Search-Grounded Regulatory Research */}
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+      <div className="p-6 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-500" />
+          <h2 className="text-base font-bold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-sky-500" />
             Live Regulatory &amp; Standards Lookup (Google Search Grounded)
           </h2>
-          <p className="text-xs text-slate-600 dark:text-emerald-200/70 mt-1">
+          <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-1">
             Query up-to-date CPCB notifications, EPR recycling percentage schedules, or battery safety guidelines with linked public web sources.
           </p>
         </div>
 
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2.5">
           <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-sky-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-60 inline-flex items-center justify-center gap-2 whitespace-nowrap"
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:bg-sky-700 dark:hover:bg-sky-400 hover:shadow-lg hover:shadow-sky-600/25 active:translate-y-0 disabled:opacity-60 disabled:hover:translate-y-0 inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Research Rules
@@ -846,13 +862,13 @@ export const KnowledgeHubPage: React.FC = () => {
         {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
         {result && (
-          <div className="pt-4 border-t border-slate-200 dark:border-emerald-900/50 space-y-4">
-            <div className="text-sm text-slate-700 dark:text-emerald-100/90 whitespace-pre-line leading-relaxed">
+          <div className="pt-4 border-t border-slate-200 dark:border-sky-900/50 space-y-4">
+            <div className="text-sm text-slate-700 dark:text-sky-100/90 whitespace-pre-line leading-relaxed">
               {result.answer}
             </div>
             {result.sources.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-emerald-300/80">
+                <p className="text-xs font-semibold text-slate-500 dark:text-sky-300/80">
                   Cited Web Sources
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -862,7 +878,7 @@ export const KnowledgeHubPage: React.FC = () => {
                       href={s.uri}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-xs text-emerald-700 dark:text-emerald-300 hover:border-emerald-500 inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-xs text-sky-700 dark:text-sky-300 transition-all duration-150 hover:-translate-y-0.5 hover:border-sky-500 hover:shadow-sm inline-flex items-center gap-1.5"
                     >
                       <span className="truncate max-w-[260px]">{s.title}</span>
                       <ExternalLink className="w-3 h-3 shrink-0" />
@@ -877,30 +893,42 @@ export const KnowledgeHubPage: React.FC = () => {
 
       {/* Key Regulatory Pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-          <Recycle className="w-5 h-5 text-emerald-500" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          />
+          <Recycle className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Extended Producer Responsibility
           </h3>
-          <p className="text-xs text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-sky-100/80 leading-relaxed">
             Manufacturers, producers, importers, and brand owners placing notified electrical and electronic equipment on the market must meet progressive annual recycling targets through registered recyclers.
           </p>
         </div>
-        <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-          <ShieldCheck className="w-5 h-5 text-emerald-500" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          />
+          <ShieldCheck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Bulk Consumer Obligations
           </h3>
-          <p className="text-xs text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-sky-100/80 leading-relaxed">
             Enterprises, hospitals, universities, and public offices must ensure e-waste generated on-site is handed over exclusively to registered producers, refurbishers, or authorized recyclers—never unorganized scrap dealers.
           </p>
         </div>
-        <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-          <Leaf className="w-5 h-5 text-emerald-500" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          />
+          <Leaf className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-6" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Battery &amp; Hazardous Safety
           </h3>
-          <p className="text-xs text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-sky-100/80 leading-relaxed">
             Never place lithium-ion batteries, CRT monitors, or fluorescent lamps into household municipal bins. Insulate battery terminals with non-conductive tape and keep damaged packs isolated from moisture and heat.
           </p>
         </div>
@@ -916,36 +944,54 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
       {section === 'about' ? (
         <>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
               About Reboot Earth
             </p>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-emerald-50">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50">
               Engineering Trust &amp; Efficiency into Electronic Waste Recovery
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-emerald-100/80 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
               Reboot Earth was created to bridge the operational gap between responsible device owners and verified recycling infrastructure. By combining Geospatial discovery, multi-objective vehicle route optimization, batch-level material recovery tracking, and practical AI assistance, we help communities divert hazardous electronics away from landfills while cutting avoidable fleet emissions.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-              <Truck className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">Transparent Math</h3>
-              <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">
+            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              />
+              <Truck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:translate-x-0.5" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                Transparent Math
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                 Every CO₂e saving, road circuity multiplier, and recovery yield is computed from actual database rows with disclosed assumptions.
               </p>
             </div>
-            <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">Zero-Trust Access</h3>
-              <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">
+            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              />
+              <ShieldCheck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                Zero-Trust Access
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                 Eight distinct user roles enforce least-privilege access on both API endpoints and Firestore security rules.
               </p>
             </div>
-            <div className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-2">
-              <Globe className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50">Open Interoperability</h3>
-              <p className="text-xs text-slate-600 dark:text-emerald-200/75 leading-relaxed">
+            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              />
+              <Globe className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                Open Interoperability
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                 Export optimization sheets, ESG analytics, and collection receipts to CSV, Print/PDF, Gmail, Google Drive, or Google Chat.
               </p>
             </div>
@@ -954,23 +1000,23 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
       ) : (
         <div className="space-y-8">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
               Legal &amp; Data Governance
             </p>
-            <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-emerald-50">
+            <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-sky-50">
               Privacy Policy &amp; Terms of Service
             </h1>
           </div>
 
-          <div className="space-y-4 text-sm text-slate-700 dark:text-emerald-100/85 leading-relaxed">
-            <h2 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+          <div className="space-y-4 text-sm text-slate-700 dark:text-sky-100/85 leading-relaxed">
+            <h2 className="text-base font-bold text-slate-900 dark:text-sky-50">
               1. Data Collection &amp; Workspace Permissions
             </h2>
             <p>
               Reboot Earth stores your profile details, pickup requests, facility records, and inventory logs to operate e-waste collection and optimization workflows. When you connect Google Workspace permissions (Gmail, Google Drive, Google Chat, Contacts), OAuth access tokens remain strictly in browser memory for your active session and are never persisted to localStorage or server databases. Every outbound Workspace action requires explicit user confirmation.
             </p>
 
-            <h2 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+            <h2 className="text-base font-bold text-slate-900 dark:text-sky-50">
               2. Google Maps Platform Terms &amp; Privacy
             </h2>
             <p>
@@ -979,7 +1025,7 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
                 href="https://www.google.com/intl/en_us/help/terms_maps/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-700 dark:text-emerald-400 underline"
+                className="text-sky-700 dark:text-sky-400 underline"
               >
                 Google Maps/Google Earth Additional Terms of Service
               </a>{' '}
@@ -988,14 +1034,14 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
                 href="https://policies.google.com/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-700 dark:text-emerald-400 underline"
+                className="text-sky-700 dark:text-sky-400 underline"
               >
                 Google Privacy Policy
               </a>
               .
             </p>
 
-            <h2 className="text-base font-bold text-slate-900 dark:text-emerald-50">
+            <h2 className="text-base font-bold text-slate-900 dark:text-sky-50">
               3. Statutory Regulatory Disclaimer
             </h2>
             <p>

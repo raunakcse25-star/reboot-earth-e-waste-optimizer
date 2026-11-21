@@ -33,14 +33,14 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#04100C] text-[#EAF5F0] p-6">
-          <div className="max-w-lg w-full border border-emerald-900/60 bg-[#0A1F18] rounded-xl p-6 space-y-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#040E1A] text-[#EAF4FF] p-6">
+          <div className="max-w-lg w-full border border-sky-900/60 bg-[#0C2542] rounded-xl p-6 space-y-4">
             <h1 className="text-xl font-semibold">Reboot Earth encountered a runtime error</h1>
-            <p className="text-sm text-emerald-100/75 break-words">{this.state.message}</p>
+            <p className="text-sm text-sky-100/75 break-words">{this.state.message}</p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="px-4 py-2 text-sm font-medium bg-emerald-500 text-emerald-950 rounded-lg hover:bg-emerald-400 transition-colors"
+              className="px-4 py-2 text-sm font-medium bg-sky-500 text-sky-950 rounded-lg hover:bg-sky-400 transition-colors"
             >
               Reload Application
             </button>

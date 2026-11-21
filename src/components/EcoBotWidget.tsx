@@ -64,12 +64,12 @@ function renderFormattedText(text: string): React.ReactNode {
         const line = rawLine.trim();
         if (!line) return <div key={idx} className="h-1" />;
         if (/^(\*\*\*|---)$/.test(line)) {
-          return <hr key={idx} className="my-1.5 border-slate-200 dark:border-emerald-800/60" />;
+          return <hr key={idx} className="my-1.5 border-slate-200 dark:border-sky-800/60" />;
         }
         const headingMatch = line.match(/^#{1,4}\s+(.*)$/);
         if (headingMatch) {
           return (
-            <p key={idx} className="font-semibold text-slate-900 dark:text-emerald-100 pt-1">
+            <p key={idx} className="font-semibold text-slate-900 dark:text-sky-100 pt-1">
               {renderInlineBold(headingMatch[1])}
             </p>
           );
@@ -78,7 +78,7 @@ function renderFormattedText(text: string): React.ReactNode {
         if (bulletMatch) {
           return (
             <div key={idx} className="flex items-start gap-2 pl-1">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
               <span>{renderInlineBold(bulletMatch[1])}</span>
             </div>
           );
@@ -211,18 +211,18 @@ export const EcoBotWidget: React.FC = () => {
   return (
     <div className="fixed bottom-5 right-5 z-40">
       {open && (
-        <div className="mb-3 w-[360px] sm:w-[410px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[80vh] rounded-2xl border border-slate-200 dark:border-emerald-800/80 bg-white dark:bg-[#071A14] shadow-2xl flex flex-col overflow-hidden">
+        <div className="mb-3 w-[360px] sm:w-[410px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[80vh] rounded-2xl border border-slate-200 dark:border-sky-800/80 bg-white dark:bg-[#091E36] shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-200 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#0A221A] flex items-center justify-between gap-2">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-sky-900/70 bg-slate-50 dark:bg-[#0D2744] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 truncate">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50 truncate">
                   EcoBot Assistant
                 </h3>
-                <p className="text-[11px] text-slate-500 dark:text-emerald-200/70 truncate">
+                <p className="text-[11px] text-slate-500 dark:text-sky-200/70 truncate">
                   E-Waste Guidance &amp; Search Grounding
                 </p>
               </div>
@@ -232,7 +232,7 @@ export const EcoBotWidget: React.FC = () => {
                 type="button"
                 onClick={clearChat}
                 title="Clear conversation"
-                className="p-1.5 rounded-lg text-slate-500 dark:text-emerald-200/70 hover:bg-slate-200/60 dark:hover:bg-emerald-900/50"
+                className="p-1.5 rounded-lg text-slate-500 dark:text-sky-200/70 hover:bg-slate-200/60 dark:hover:bg-sky-900/50"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -240,7 +240,7 @@ export const EcoBotWidget: React.FC = () => {
                 type="button"
                 onClick={() => setOpen(false)}
                 title="Close EcoBot"
-                className="p-1.5 rounded-lg text-slate-500 dark:text-emerald-200/70 hover:bg-slate-200/60 dark:hover:bg-emerald-900/50"
+                className="p-1.5 rounded-lg text-slate-500 dark:text-sky-200/70 hover:bg-slate-200/60 dark:hover:bg-sky-900/50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -248,7 +248,7 @@ export const EcoBotWidget: React.FC = () => {
           </div>
 
           {/* Language & Search Grounding Bar */}
-          <div className="px-3.5 py-2 border-b border-slate-200 dark:border-emerald-900/50 flex items-center justify-between gap-2 text-xs bg-white dark:bg-[#061611]">
+          <div className="px-3.5 py-2 border-b border-slate-200 dark:border-sky-900/50 flex items-center justify-between gap-2 text-xs bg-white dark:bg-[#07182B]">
             <div className="flex items-center gap-1">
               {(['en', 'hi', 'hinglish'] as const).map((lang) => (
                 <button
@@ -257,22 +257,22 @@ export const EcoBotWidget: React.FC = () => {
                   onClick={() => setLanguage(lang)}
                   className={`px-2 py-1 rounded-md font-medium transition-colors ${
                     language === lang
-                      ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950'
-                      : 'text-slate-600 dark:text-emerald-200/70 hover:bg-slate-100 dark:hover:bg-emerald-900/40'
+                      ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                      : 'text-slate-600 dark:text-sky-200/70 hover:bg-slate-100 dark:hover:bg-sky-900/40'
                   }`}
                 >
                   {lang === 'en' ? 'EN' : lang === 'hi' ? 'हिन्दी' : 'Hinglish'}
                 </button>
               ))}
             </div>
-            <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-emerald-200/80 cursor-pointer select-none">
+            <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-sky-200/80 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={useSearch}
                 onChange={(e) => setUseSearch(e.target.checked)}
-                className="accent-emerald-500 rounded"
+                className="accent-sky-500 rounded"
               />
-              <Globe className="w-3.5 h-3.5 text-emerald-500" />
+              <Globe className="w-3.5 h-3.5 text-sky-500" />
               <span>Web Grounding</span>
             </label>
           </div>
@@ -289,19 +289,19 @@ export const EcoBotWidget: React.FC = () => {
                   <div
                     className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                       msg.role === 'user'
-                        ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 font-medium'
-                        : 'bg-slate-100 dark:bg-[#0C251C] text-slate-800 dark:text-emerald-50 border border-slate-200 dark:border-emerald-900/60'
+                        ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 font-medium'
+                        : 'bg-slate-100 dark:bg-[#102D4F] text-slate-800 dark:text-sky-50 border border-slate-200 dark:border-sky-900/60'
                     }`}
                   >
                     {renderFormattedText(msg.text)}
                     {msg.searchFallback && (
-                      <p className="mt-2 pt-1.5 border-t border-slate-200 dark:border-emerald-800/60 text-[11px] text-slate-500 dark:text-emerald-300/70">
+                      <p className="mt-2 pt-1.5 border-t border-slate-200 dark:border-sky-800/60 text-[11px] text-slate-500 dark:text-sky-300/70">
                         Live web search grounding was temporarily unavailable; answered from EcoBot knowledge.
                       </p>
                     )}
                     {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-emerald-800/60 space-y-1">
-                        <p className="text-[11px] font-semibold text-slate-500 dark:text-emerald-300/80">
+                      <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-sky-800/60 space-y-1">
+                        <p className="text-[11px] font-semibold text-slate-500 dark:text-sky-300/80">
                           Grounded Web Sources
                         </p>
                         {msg.sources.slice(0, 3).map((src, sIdx) => (
@@ -310,7 +310,7 @@ export const EcoBotWidget: React.FC = () => {
                             href={src.uri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300 hover:underline truncate"
+                            className="flex items-center gap-1 text-xs text-sky-700 dark:text-sky-300 hover:underline truncate"
                           >
                             <ExternalLink className="w-3 h-3 shrink-0" />
                             <span className="truncate">{src.title}</span>
@@ -321,20 +321,20 @@ export const EcoBotWidget: React.FC = () => {
                   </div>
 
                   {msg.role === 'model' && idx > 0 && (
-                    <div className="mt-1 flex items-center gap-2 text-slate-400 dark:text-emerald-200/50">
+                    <div className="mt-1 flex items-center gap-2 text-slate-400 dark:text-sky-200/50">
                       <button
                         type="button"
                         onClick={() => handleCopy(idx, msg.text)}
-                        className="hover:text-emerald-500 inline-flex items-center gap-1 text-[11px]"
+                        className="hover:text-sky-500 inline-flex items-center gap-1 text-[11px]"
                       >
-                        {copiedIdx === idx ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                        {copiedIdx === idx ? <Check className="w-3 h-3 text-sky-500" /> : <Copy className="w-3 h-3" />}
                         {copiedIdx === idx ? 'Copied' : 'Copy'}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleFeedback(idx, 'up')}
                         aria-label="Helpful response"
-                        className={`hover:text-emerald-500 ${msg.feedback === 'up' ? 'text-emerald-500' : ''}`}
+                        className={`hover:text-sky-500 ${msg.feedback === 'up' ? 'text-sky-500' : ''}`}
                       >
                         <ThumbsUp className="w-3 h-3" />
                       </button>
@@ -353,8 +353,8 @@ export const EcoBotWidget: React.FC = () => {
             })}
 
             {loading && (
-              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-[#0C251C] text-xs text-slate-600 dark:text-emerald-200">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-[#102D4F] text-xs text-slate-600 dark:text-sky-200">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-500" />
                 EcoBot is researching your question...
               </div>
             )}
@@ -378,14 +378,14 @@ export const EcoBotWidget: React.FC = () => {
           </div>
 
           {/* Suggested Prompts */}
-          <div className="px-3.5 py-2 border-t border-slate-200 dark:border-emerald-900/50 flex gap-1.5 overflow-x-auto bg-slate-50/70 dark:bg-[#061611]">
+          <div className="px-3.5 py-2 border-t border-slate-200 dark:border-sky-900/50 flex gap-1.5 overflow-x-auto bg-slate-50/70 dark:bg-[#07182B]">
             {SUGGESTED_QUESTIONS[language].map((q, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => void sendMessage(q)}
                 disabled={loading}
-                className="px-2.5 py-1 rounded-md text-[11px] bg-white dark:bg-[#0C251C] border border-slate-200 dark:border-emerald-800/70 text-slate-700 dark:text-emerald-100 hover:border-emerald-500 disabled:opacity-50 whitespace-nowrap shrink-0 transition-colors"
+                className="px-2.5 py-1 rounded-md text-[11px] bg-white dark:bg-[#102D4F] border border-slate-200 dark:border-sky-800/70 text-slate-700 dark:text-sky-100 hover:border-sky-500 disabled:opacity-50 whitespace-nowrap shrink-0 transition-colors"
               >
                 {q}
               </button>
@@ -398,20 +398,20 @@ export const EcoBotWidget: React.FC = () => {
               e.preventDefault();
               void sendMessage();
             }}
-            className="p-3 border-t border-slate-200 dark:border-emerald-900/70 bg-white dark:bg-[#071A14] flex gap-2"
+            className="p-3 border-t border-slate-200 dark:border-sky-900/70 bg-white dark:bg-[#091E36] flex gap-2"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask EcoBot anything about e-waste..."
-              className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900 bg-slate-50 dark:bg-[#04100C] text-slate-900 dark:text-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900 bg-slate-50 dark:bg-[#040E1A] text-slate-900 dark:text-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Send message"
-              className="px-3.5 py-2 rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-50 transition-colors"
+              className="px-3.5 py-2 rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-50 transition-colors"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -422,7 +422,7 @@ export const EcoBotWidget: React.FC = () => {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-12 px-4 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors inline-flex items-center gap-2 font-semibold text-sm"
+        className="h-12 px-4 rounded-full bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 shadow-lg hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors inline-flex items-center gap-2 font-semibold text-sm"
       >
         {open ? <X className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
         <span>{open ? 'Close EcoBot' : 'Ask EcoBot'}</span>
