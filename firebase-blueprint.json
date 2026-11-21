@@ -1,0 +1,203 @@
+{
+  "entities": {
+    "UserPreference": {
+      "title": "UserPreference",
+      "description": "User UI theme, language, and notification settings stored per authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["dark", "light", "system"],
+          "maxLength": 16
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "hi", "hinglish"],
+          "maxLength": 16
+        },
+        "emailAlerts": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "theme", "language", "emailAlerts", "createdAt", "updatedAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "Real-time operational notifications for pickup updates, optimization alerts, and role approvals.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "category": {
+          "type": "string",
+          "enum": ["pickup", "optimization", "facility", "system"],
+          "maxLength": 32
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "title", "message", "category", "read", "createdAt"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "EcoBot conversation history for an authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "hi", "hinglish"],
+          "maxLength": 16
+        },
+        "messages": {
+          "type": "array",
+          "description": "Bounded list of recent chat turns (max 40)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "title", "language", "messages", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted admin allowlist document keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "grantedAt"]
+    },
+    "FacilityReview": {
+      "title": "FacilityReview",
+      "description": "Community 5-star rating and review submitted by an authenticated user for a verified collection centre.",
+      "type": "object",
+      "properties": {
+        "facilityId": {
+          "type": "integer",
+          "description": "Numeric identifier of the verified collection centre."
+        },
+        "facilityName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Integer star rating from 1 to 5."
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 600
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "facilityId",
+        "facilityName",
+        "userId",
+        "authorName",
+        "rating",
+        "comment",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/userPreferences/{userId}": {
+      "schema": { "$ref": "#/entities/UserPreference" },
+      "description": "Per-user UI preferences (theme, language, alerts)."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationItem" },
+      "description": "Real-time user notifications."
+    },
+    "/chatSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "EcoBot AI assistant chat histories."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Admin role membership records."
+    },
+    "/facilityReviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/FacilityReview" },
+      "description": "Public community ratings and reviews for verified collection centres."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+# Reboot Earth Firestore Security Specification (Phase 0 TDD)
+
+## 1. Data Invariants
+1. **Strict Ownership & PII Isolation**: `userPreferences/{userId}`, `notifications/{notificationId}`, and `chatSessions/{sessionId}` are strictly scoped to `resource.data.userId == request.auth.uid` (or a verified administrator). No unauthenticated or cross-user reads or list queries are allowed.
+2. **Temporal & Schema Integrity**: Every created document must match its exact allowed key set (`hasAll` + `hasOnly`), enforce server timestamps (`request.time`), enforce explicit `.size()` bounds on every string and array, and preserve immutable `userId` and `createdAt` fields on updates.
+3. **Zero Privilege Escalation**: Users cannot write to `/admins/{uid}` or spoof `request.auth.token.email` without `request.auth.token.email_verified == true`.
+4. **Path Variable Hardening**: Every single-document target (`get`, `create`, `update`, `delete`) validates document IDs via `isValidId()` (`^[a-zA-Z0-9_\-]+$`, `<= 128` chars).
+5. **Verified Collection Centre Reviews (`/facilityReviews/{reviewId}`)**: Reviews contain zero PII (no emails/phones/addresses). Only verified authenticated users may create, update, or delete their own review (`reviewId == 'rev_f' + string(facilityId) + '_' + request.auth.uid`, `rating` integer 1–5, `comment` 3–600 chars, immutable `facilityId`/`userId`/`createdAt`). Admins may moderate/delete any review.
+
+## 2. The "Dirty Dozen" Attack Payloads (All Must Yield PERMISSION_DENIED)
+1. **Unauthenticated read of `/userPreferences/uid1`**: Blocked by `isSignedIn()`.
+2. **Cross-user read of `/notifications/n1` owned by `uid2`**: Blocked by `existing().userId == request.auth.uid`.
+3. **Blanket list query on `/notifications` without owner filter**: Blocked by `allow list` evaluating `resource.data.userId == request.auth.uid`.
+4. **Shadow field injection (`isAdmin: true`) on `/userPreferences/{uid}` or `/facilityReviews/{id}` create**: Blocked by `hasOnly(...)`.
+5. **Identity spoofing (`userId: "victimUid"`) on `/chatSessions/s1` or `/facilityReviews/rev_f1_victimUid` create**: Blocked by `data.userId == request.auth.uid` and deterministic doc ID enforcement.
+6. **Client-forged timestamp (`createdAt: 2020-01-01`) on create**: Blocked by `data.createdAt == request.time`.
+7. **Immutable field tampering (`createdAt`, `facilityId`, or `userId` modified on update)**: Blocked by `affectedKeys().hasOnly(...)` + immutability check.
+8. **Resource exhaustion (10,000-char string in `title` or `comment`)**: Blocked by `.size() <= 140` / `.size() <= 600`.
+9. **Out-of-range or non-integer rating (`rating: 6` or `rating: 4.5` or `rating: "5"`)**: Blocked by `data.rating is int && data.rating >= 1 && data.rating <= 5`.
+10. **Path ID poisoning (200-char doc ID with `$` / spaces)**: Blocked by `isValidId()`.
+11. **Unverified email write or admin spoof (`email_verified: false`)**: Blocked by `isVerified()`.
+12. **Cross-user review edit/delete (user A editing user B's review)**: Blocked by `existing().userId == request.auth.uid || isAdmin()`.

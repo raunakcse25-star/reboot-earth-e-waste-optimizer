@@ -1,0 +1,6 @@
+{
+  "name": "Reboot Earth",
+  "description": "Intelligent E-Waste Management, Smart Route Optimization & Circular Recycling Platform — Recycle Technology. Restart Tomorrow.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
