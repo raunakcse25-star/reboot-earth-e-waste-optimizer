@@ -38,6 +38,7 @@ import { runSmartOptimization, type OptimizationObjective } from './src/server/o
 import {
   chatWithEcoBot,
   fastDeviceTriage,
+  formatGeminiError,
   generateCampaignVisual,
   identifyDeviceFromImage,
   mapsGroundedFacilitySearch,
@@ -700,11 +701,11 @@ async function startServer() {
   app.post('/api/ai/chat', rateLimit(25), async (req, res) => {
     try {
       const { message, history = [], language = 'en', useSearch = false } = req.body || {};
-      if (!message || typeof message !== 'string') {
+      if (!message || typeof message !== 'string' || !message.trim()) {
         return res.status(400).json({ error: 'A chat message is required.' });
       }
       const data = await chatWithEcoBot({
-        message: message.slice(0, 1500),
+        message: message.trim().slice(0, 1500),
         history: Array.isArray(history) ? history : [],
         language: String(language),
         useSearch: Boolean(useSearch),
@@ -712,11 +713,11 @@ async function startServer() {
       res.json(data);
     } catch (error: any) {
       console.error('EcoBot AI error:', error);
-      res.status(502).json({
-        error:
-          error?.message ||
-          'EcoBot could not reach the Gemini service. Please verify your API key in Settings > Secrets.',
-      });
+      const formatted = formatGeminiError(
+        error,
+        'EcoBot could not reach the Gemini service. Please verify your API key in Settings > Secrets.'
+      );
+      res.status(formatted.status).json({ error: formatted.message });
     }
   });
 
@@ -730,7 +731,8 @@ async function startServer() {
       res.json(data);
     } catch (error: any) {
       console.error('Regulations search error:', error);
-      res.status(502).json({ error: error?.message || 'Unable to fetch search-grounded regulations.' });
+      const formatted = formatGeminiError(error, 'Unable to fetch search-grounded regulations.');
+      res.status(formatted.status).json({ error: formatted.message });
     }
   });
 
@@ -748,7 +750,8 @@ async function startServer() {
       res.json(data);
     } catch (error: any) {
       console.error('Maps grounding error:', error);
-      res.status(502).json({ error: error?.message || 'Unable to query Google Maps grounding.' });
+      const formatted = formatGeminiError(error, 'Unable to query Google Maps grounding.');
+      res.status(formatted.status).json({ error: formatted.message });
     }
   });
 
@@ -766,7 +769,8 @@ async function startServer() {
       res.json(result);
     } catch (error: any) {
       console.error('Device identification error:', error);
-      res.status(502).json({ error: error?.message || 'Unable to analyze device image.' });
+      const formatted = formatGeminiError(error, 'Unable to analyze device image.');
+      res.status(formatted.status).json({ error: formatted.message });
     }
   });
 
@@ -777,7 +781,8 @@ async function startServer() {
       const result = await fastDeviceTriage(String(description).slice(0, 400));
       res.json(result);
     } catch (error: any) {
-      res.status(502).json({ error: error?.message || 'Unable to run fast device triage.' });
+      const formatted = formatGeminiError(error, 'Unable to run fast device triage.');
+      res.status(formatted.status).json({ error: formatted.message });
     }
   });
 
