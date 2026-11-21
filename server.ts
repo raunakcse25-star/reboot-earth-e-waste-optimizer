@@ -77,6 +77,12 @@ async function startServer() {
     res.json({ status: 'ok', service: 'Reboot Earth API' });
   });
 
+  app.get('/api/config/maps', (_req, res) => {
+    const apiKey =
+      process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+    res.json({ apiKey });
+  });
+
   app.get('/api/analytics/summary', async (_req, res) => {
     try {
       const summary = await computeEnvironmentalAnalytics();

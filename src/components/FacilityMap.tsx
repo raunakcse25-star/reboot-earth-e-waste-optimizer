@@ -27,7 +27,7 @@ import {
 } from '../lib/firebase';
 import { FacilityRating } from './FacilityRating';
 
-const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const INITIAL_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 interface DiscoveredPlace {
   id: string;
@@ -250,11 +250,13 @@ function PlacesSearchTrigger({
   triggerCount,
   onResults,
   onError,
+  onLoadingChange,
 }: {
   queryText: string;
   triggerCount: number;
   onResults: (places: DiscoveredPlace[]) => void;
   onError: (msg: string | null) => void;
+  onLoadingChange: (loading: boolean) => void;
 }) {
   const placesLib = useMapsLibrary('places') as any;
   const map = useMap();
@@ -265,10 +267,11 @@ function PlacesSearchTrigger({
 
     async function searchPlacesNew() {
       onError(null);
+      onLoadingChange(true);
       try {
         const PlaceClass = placesLib.Place;
         if (!PlaceClass || typeof PlaceClass.searchByText !== 'function') {
-          onError('Places API (New) library is still initializing.');
+          onError('Places search is still initializing. Please try again in a moment.');
           return;
         }
         const { places } = await PlaceClass.searchByText({
@@ -291,6 +294,8 @@ function PlacesSearchTrigger({
         if (mapped.length > 0 && map) {
           map.panTo({ lat: mapped[0].lat, lng: mapped[0].lng });
           map.setZoom(11);
+        } else if (mapped.length === 0) {
+          onError('No live Google Maps places matched that search. Try a broader city name.');
         }
       } catch (err: any) {
         const msg = String(err?.message || err);
@@ -298,6 +303,8 @@ function PlacesSearchTrigger({
           window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
         }
         onError('Unable to fetch live Places results right now. Use AI Maps Grounding or directory search below.');
+      } finally {
+        if (active) onLoadingChange(false);
       }
     }
 
@@ -305,7 +312,7 @@ function PlacesSearchTrigger({
     return () => {
       active = false;
     };
-  }, [triggerCount, placesLib, queryText, map, onResults, onError]);
+  }, [triggerCount, placesLib, queryText, map, onResults, onError, onLoadingChange]);
 
   return null;
 }
@@ -316,16 +323,41 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
   onSelectFacility,
 }) => {
   const { firebaseUser, authReady } = useAuth();
+  const [mapsApiKey, setMapsApiKey] = useState(INITIAL_MAPS_API_KEY);
+  const [mapsKeyChecking, setMapsKeyChecking] = useState(!INITIAL_MAPS_API_KEY);
   const [searchCity, setSearchCity] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [placesTrigger, setPlacesTrigger] = useState(0);
+  const [placesLoading, setPlacesLoading] = useState(false);
   const [discoveredPlaces, setDiscoveredPlaces] = useState<DiscoveredPlace[]>([]);
   const [placesError, setPlacesError] = useState<string | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [activeFacility, setActiveFacility] = useState<Facility | null>(null);
   const [routeTarget, setRouteTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [routeInfo, setRouteInfo] = useState<string | null>(null);
+
+  // Hydrate runtime-injected Google Maps API key if not present at Vite bundle time
+  useEffect(() => {
+    if (mapsApiKey) {
+      setMapsKeyChecking(false);
+      return;
+    }
+    let active = true;
+    void apiFetch<{ apiKey?: string }>('/api/config/maps', {}, false)
+      .then((res) => {
+        if (active && res?.apiKey) {
+          setMapsApiKey(res.apiKey);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setMapsKeyChecking(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mapsApiKey]);
 
   // Community Ratings & Reviews live summary feed
   const [allReviews, setAllReviews] = useState<FacilityReview[]>([]);
@@ -517,10 +549,11 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
           <button
             type="button"
             onClick={() => setPlacesTrigger((c) => c + 1)}
-            disabled={!MAPS_API_KEY}
-            className="flex-1 px-3 py-2.5 text-xs font-semibold rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-50 transition-colors whitespace-nowrap"
+            disabled={!mapsApiKey || placesLoading}
+            className="flex-1 px-3 py-2.5 text-xs font-semibold rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 disabled:opacity-50 transition-colors whitespace-nowrap inline-flex items-center justify-center gap-1.5"
           >
-            Search Google Maps
+            {placesLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {placesLoading ? 'Searching...' : 'Search Google Maps'}
           </button>
           <button
             type="button"
@@ -556,8 +589,8 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
       {/* Map + Directory Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <div className="lg:col-span-7 rounded-xl overflow-hidden border border-slate-200 dark:border-emerald-900/70 bg-slate-100 dark:bg-[#071A14] h-[480px]">
-          {MAPS_API_KEY ? (
-            <APIProvider apiKey={MAPS_API_KEY} language="en" region="IN">
+          {mapsApiKey ? (
+            <APIProvider apiKey={mapsApiKey} language="en" region="IN">
               <GoogleMap
                 style={{ width: '100%', height: '100%' }}
                 defaultCenter={{ lat: 28.58, lng: 77.22 }}
@@ -584,17 +617,25 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
                   triggerCount={placesTrigger}
                   onResults={setDiscoveredPlaces}
                   onError={setPlacesError}
+                  onLoadingChange={setPlacesLoading}
                 />
               </GoogleMap>
             </APIProvider>
+          ) : mapsKeyChecking ? (
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2">
+              <Loader2 className="w-7 h-7 text-emerald-500 animate-spin" />
+              <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
+                Loading interactive map...
+              </p>
+            </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-2">
               <MapPin className="w-8 h-8 text-emerald-500" />
               <p className="text-sm font-medium text-slate-900 dark:text-emerald-50">
-                Interactive Google Map requires VITE_GOOGLE_MAPS_API_KEY
+                Interactive map is currently unavailable
               </p>
               <p className="text-xs text-slate-600 dark:text-emerald-200/70 max-w-md">
-                Use the verified directory list or AI Google Maps Grounding below to discover e-waste drop-off facilities.
+                Use the verified directory list or live Google Maps Grounding explorer below to discover e-waste drop-off facilities.
               </p>
             </div>
           )}

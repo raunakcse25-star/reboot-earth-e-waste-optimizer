@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Menu, Moon, Recycle, Sun, X } from 'lucide-react';
+import { Menu, Moon, Recycle, Sun, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { apiFetch } from './lib/api';
 import type { AnalyticsSummary, Facility } from './types';
@@ -92,20 +92,20 @@ export default function App() {
       {mapsQuotaExceeded && (
         <div
           role="alert"
-          className="sticky top-0 z-50 bg-amber-500 text-slate-950 px-4 py-2.5 text-xs font-medium flex flex-wrap items-center justify-center gap-x-3 gap-y-1 shadow-md"
+          className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm"
         >
-          <span className="inline-flex items-center gap-1.5 font-semibold">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            Google Maps API quota exceeded for the demo key.
+          <span>
+            Google Maps Platform quota reached. If you are the app owner, visit{' '}
+            <a
+              href={QUOTA_DOC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-amber-950 hover:text-amber-800"
+            >
+              maps developer site
+            </a>{' '}
+            for instructions to update your account.
           </span>
-          <a
-            href={QUOTA_DOC_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline font-bold"
-          >
-            Learn how to configure your own Maps API key →
-          </a>
         </div>
       )}
 
