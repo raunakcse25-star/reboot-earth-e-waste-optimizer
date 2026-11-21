@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  Calendar,
+  CalendarPlus,
   CloudUpload,
   Download,
   ExternalLink,
@@ -7,32 +9,92 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  Pencil,
+  RefreshCw,
   Send,
   Sparkles,
+  Trash2,
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import {
   CHAT_CONSOLE_CONFIG_URL,
+  createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+  listGoogleCalendars,
   listGoogleChatSpaces,
   listGoogleContacts,
   listRecentGmailMessages,
+  listUpcomingCalendarEvents,
   saveFileToGoogleDrive,
   sendGmailMessage,
   sendGoogleChatMessage,
+  updateGoogleCalendarEvent,
+  type CalendarEventSummary,
+  type CalendarListItem,
   type ChatSpace,
   type GmailSummary,
   type GoogleContact,
 } from '../lib/workspace';
 import { ConfirmDialog } from './ConfirmDialog';
+import { GoogleSignInButton } from './GoogleSignInButton';
 import type { AnalyticsSummary } from '../types';
+
+function toLocalDateTimeInput(isoOrDate: string): string {
+  const d = new Date(isoOrDate);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatEventWindow(start: string, end: string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  if (Number.isNaN(s.getTime())) return start;
+  const datePart = s.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  if (!start.includes('T')) return `${datePart} (All day)`;
+  const startTime = s.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const endTime = Number.isNaN(e.getTime())
+    ? ''
+    : ` – ${e.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  return `${datePart} · ${startTime}${endTime}`;
+}
 
 export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }> = ({
   analytics,
 }) => {
-  const { workspaceToken, firebaseUser, signInWithGoogle } = useAuth();
-  const [activeTab, setActiveTab] = useState<'gmail' | 'drive' | 'chat' | 'contacts' | 'studio'>('gmail');
+  const { workspaceToken, firebaseUser, signingIn, signInWithGoogle } = useAuth();
+  const [activeTab, setActiveTab] = useState<'calendar' | 'gmail' | 'drive' | 'chat' | 'contacts' | 'studio'>('calendar');
+
+  // Google Calendar state
+  const [calendars, setCalendars] = useState<CalendarListItem[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState('primary');
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventSummary[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const defaultStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  defaultStart.setHours(10, 0, 0, 0);
+  const defaultEnd = new Date(defaultStart.getTime() + 2 * 60 * 60 * 1000);
+
+  const [calTitle, setCalTitle] = useState('Reboot Earth — E-Waste Pickup Window');
+  const [calLocation, setCalLocation] = useState('');
+  const [calDescription, setCalDescription] = useState(
+    'Scheduled doorstep e-waste collection and handoff via Reboot Earth.'
+  );
+  const [calStartLocal, setCalStartLocal] = useState(() => toLocalDateTimeInput(defaultStart.toISOString()));
+  const [calEndLocal, setCalEndLocal] = useState(() => toLocalDateTimeInput(defaultEnd.toISOString()));
+
+  // Inline edit state for an existing calendar event
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editStartLocal, setEditStartLocal] = useState('');
+  const [editEndLocal, setEditEndLocal] = useState('');
 
   // Gmail state
   const [emails, setEmails] = useState<GmailSummary[]>([]);
@@ -91,6 +153,24 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
     } finally {
       setActionBusy(false);
       setPendingAction(null);
+    }
+  };
+
+  const handleLoadCalendar = async (targetCalendarId = selectedCalendarId) => {
+    if (!workspaceToken) return;
+    setCalendarLoading(true);
+    setWsError(null);
+    try {
+      const [calList, evList] = await Promise.all([
+        listGoogleCalendars(workspaceToken),
+        listUpcomingCalendarEvents(workspaceToken, targetCalendarId, 15),
+      ]);
+      setCalendars(calList);
+      setCalendarEvents(evList);
+    } catch (err: any) {
+      setWsError(err?.message || 'Unable to load Google Calendar events.');
+    } finally {
+      setCalendarLoading(false);
     }
   };
 
@@ -166,13 +246,14 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
             Google Workspace Hub &amp; AI Campaign Studio
           </h3>
           <p className="text-xs text-slate-600 dark:text-emerald-200/70">
-            Send recycling records via Gmail, archive ESG reports to Google Drive, notify ops in Google Chat, or create awareness visuals.
+            Sync e-waste pickups with Google Calendar, send recycling records via Gmail, archive ESG reports to Google Drive, notify ops in Google Chat, or create awareness visuals.
           </p>
         </div>
 
         <div className="inline-flex flex-wrap rounded-lg border border-slate-200 dark:border-emerald-900/70 p-1 bg-slate-50 dark:bg-[#05140F] gap-1">
           {(
             [
+              { id: 'calendar', label: 'Calendar', icon: Calendar },
               { id: 'gmail', label: 'Gmail', icon: Mail },
               { id: 'drive', label: 'Drive', icon: CloudUpload },
               { id: 'chat', label: 'Chat', icon: MessageSquare },
@@ -211,16 +292,14 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               Connect Google Workspace Session
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-200/80 mt-0.5">
-              Workspace access tokens are kept strictly in memory for security. Re-authorize with Google to enable Gmail, Drive, Chat, and Contacts actions.
+              Workspace access tokens are kept strictly in memory for security. Sign in with Google to enable Calendar, Gmail, Drive, Chat, and Contacts actions.
             </p>
           </div>
-          <button
-            type="button"
+          <GoogleSignInButton
             onClick={() => void signInWithGoogle()}
-            className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap self-start sm:self-auto"
-          >
-            Authorize Workspace
-          </button>
+            loading={signingIn}
+            label="Sign in with Google"
+          />
         </div>
       )}
 
@@ -244,6 +323,330 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
       {wsSuccess && (
         <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-xs text-emerald-800 dark:text-emerald-200">
           {wsSuccess}
+        </div>
+      )}
+
+      {/* Google Calendar Tab */}
+      {activeTab === 'calendar' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-7 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
+                  Upcoming Google Calendar Events
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+                  Review upcoming collection windows, reschedule events, or remove canceled pickups.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {calendars.length > 0 && (
+                  <select
+                    aria-label="Select Google Calendar"
+                    value={selectedCalendarId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setSelectedCalendarId(nextId);
+                      void handleLoadCalendar(nextId);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg text-xs border border-slate-300 dark:border-emerald-800 bg-slate-50 dark:bg-[#05140F] text-slate-800 dark:text-emerald-100 max-w-[180px]"
+                  >
+                    {calendars.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.primary ? `${c.summary} (Primary)` : c.summary}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  disabled={!workspaceToken || calendarLoading}
+                  onClick={() => void handleLoadCalendar()}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-200 disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  {calendarLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  {calendarLoading ? 'Syncing...' : 'Load Events'}
+                </button>
+              </div>
+            </div>
+
+            {calendarEvents.length === 0 ? (
+              <div className="py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-emerald-900/70 text-center space-y-1">
+                <p className="text-xs font-medium text-slate-800 dark:text-emerald-100">
+                  No upcoming events loaded yet
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+                  Click &ldquo;Load Events&rdquo; to inspect your Google Calendar schedule or create a pickup reminder on the right.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200 dark:divide-emerald-900/50 max-h-[460px] overflow-y-auto pr-1">
+                {calendarEvents.map((ev) => {
+                  const isEditing = editingEventId === ev.id;
+                  return (
+                    <div key={ev.id} className="py-3.5 first:pt-0 last:pb-0 space-y-2">
+                      {!isEditing ? (
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-emerald-50 truncate">
+                                {ev.summary}
+                              </p>
+                              <p className="text-[11px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">
+                                {formatEventWindow(ev.start, ev.end)}
+                              </p>
+                              {ev.location && (
+                                <p className="text-[11px] text-slate-500 dark:text-emerald-200/65 mt-0.5 truncate">
+                                  Location: {ev.location}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {ev.htmlLink && (
+                                <a
+                                  href={ev.htmlLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Open in Google Calendar"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 dark:text-emerald-300/75 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-emerald-900/40"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                title="Edit event"
+                                onClick={() => {
+                                  setEditingEventId(ev.id);
+                                  setEditTitle(ev.summary);
+                                  setEditLocation(ev.location);
+                                  setEditStartLocal(toLocalDateTimeInput(ev.start));
+                                  setEditEndLocal(toLocalDateTimeInput(ev.end));
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-emerald-300/75 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-emerald-900/40"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Delete event"
+                                onClick={() =>
+                                  setPendingAction({
+                                    title: 'Delete Google Calendar Event',
+                                    description: `Are you sure you want to permanently delete "${ev.summary}" (${formatEventWindow(ev.start, ev.end)}) from your Google Calendar?`,
+                                    confirmLabel: 'Delete Event',
+                                    run: async () => {
+                                      await deleteGoogleCalendarEvent(
+                                        workspaceToken!,
+                                        ev.id,
+                                        ev.calendarId
+                                      );
+                                      setCalendarEvents((prev) =>
+                                        prev.filter((item) => item.id !== ev.id)
+                                      );
+                                      setWsSuccess(`Deleted "${ev.summary}" from Google Calendar.`);
+                                    },
+                                  })
+                                }
+                                className="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          {ev.description && (
+                            <p className="text-[11px] text-slate-600 dark:text-emerald-100/75 line-clamp-2">
+                              {ev.description}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="space-y-2 p-3 rounded-lg bg-slate-50 dark:bg-[#05140F] border border-slate-200 dark:border-emerald-900/60">
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Event title"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                          />
+                          <input
+                            type="text"
+                            value={editLocation}
+                            onChange={(e) => setEditLocation(e.target.value)}
+                            placeholder="Location (optional)"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                          />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="datetime-local"
+                              value={editStartLocal}
+                              onChange={(e) => setEditStartLocal(e.target.value)}
+                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                            />
+                            <input
+                              type="datetime-local"
+                              value={editEndLocal}
+                              onChange={(e) => setEditEndLocal(e.target.value)}
+                              className="px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-800 bg-white dark:bg-[#081D16] text-slate-900 dark:text-emerald-50"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const startDate = new Date(editStartLocal);
+                                const endDate = new Date(editEndLocal);
+                                if (
+                                  !editTitle.trim() ||
+                                  Number.isNaN(startDate.getTime()) ||
+                                  Number.isNaN(endDate.getTime()) ||
+                                  endDate <= startDate
+                                ) {
+                                  setWsError('Enter a valid event title and end time after start time.');
+                                  return;
+                                }
+                                setPendingAction({
+                                  title: 'Confirm Google Calendar Update',
+                                  description: `Update event "${ev.summary}" to "${editTitle.trim()}" (${startDate.toLocaleString()} – ${endDate.toLocaleTimeString()}) on Google Calendar?`,
+                                  confirmLabel: 'Update Event',
+                                  run: async () => {
+                                    const updated = await updateGoogleCalendarEvent(
+                                      workspaceToken!,
+                                      {
+                                        calendarId: ev.calendarId,
+                                        eventId: ev.id,
+                                        summary: editTitle.trim(),
+                                        location: editLocation.trim(),
+                                        description: ev.description,
+                                        startIso: startDate.toISOString(),
+                                        endIso: endDate.toISOString(),
+                                      }
+                                    );
+                                    setCalendarEvents((prev) =>
+                                      prev.map((item) => (item.id === ev.id ? updated : item))
+                                    );
+                                    setEditingEventId(null);
+                                    setWsSuccess(`Updated "${updated.summary}" on Google Calendar.`);
+                                  },
+                                });
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950"
+                            >
+                              Review &amp; Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingEventId(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs text-slate-600 dark:text-emerald-200/75 hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Create New Calendar Event Card */}
+          <div className="lg:col-span-5 p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] space-y-3">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50 inline-flex items-center gap-1.5">
+              <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              Create E-Waste Calendar Event
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-emerald-200/65">
+              Add a collection window, facility drop-off, or team e-waste drive directly to your Google Calendar with automatic 60-minute and 15-minute reminders.
+            </p>
+            <input
+              type="text"
+              value={calTitle}
+              onChange={(e) => setCalTitle(e.target.value)}
+              placeholder="Event title"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+            />
+            <input
+              type="text"
+              value={calLocation}
+              onChange={(e) => setCalLocation(e.target.value)}
+              placeholder="Pickup address or verified hub location"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] text-slate-500 dark:text-emerald-200/65 mb-1">
+                  Start Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={calStartLocal}
+                  onChange={(e) => setCalStartLocal(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-slate-500 dark:text-emerald-200/65 mb-1">
+                  End Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={calEndLocal}
+                  onChange={(e) => setCalEndLocal(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+                />
+              </div>
+            </div>
+            <textarea
+              rows={3}
+              value={calDescription}
+              onChange={(e) => setCalDescription(e.target.value)}
+              placeholder="Notes, device list, or handling instructions"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+            />
+            <button
+              type="button"
+              disabled={!workspaceToken || !calTitle.trim()}
+              onClick={() => {
+                const startDate = new Date(calStartLocal);
+                const endDate = new Date(calEndLocal);
+                if (
+                  Number.isNaN(startDate.getTime()) ||
+                  Number.isNaN(endDate.getTime()) ||
+                  endDate <= startDate
+                ) {
+                  setWsError('Please select a valid start time and an end time after it.');
+                  return;
+                }
+                setPendingAction({
+                  title: 'Add Event to Google Calendar',
+                  description: `Create "${calTitle.trim()}" on your Google Calendar?\nTime: ${startDate.toLocaleString()} – ${endDate.toLocaleTimeString()}${calLocation.trim() ? `\nLocation: ${calLocation.trim()}` : ''}`,
+                  confirmLabel: 'Create Calendar Event',
+                  run: async () => {
+                    const created = await createGoogleCalendarEvent(workspaceToken!, {
+                      calendarId: selectedCalendarId,
+                      summary: calTitle.trim(),
+                      location: calLocation.trim(),
+                      description: calDescription.trim(),
+                      startIso: startDate.toISOString(),
+                      endIso: endDate.toISOString(),
+                    });
+                    setCalendarEvents((prev) => [created, ...prev]);
+                    setWsSuccess(`Added "${created.summary}" to your Google Calendar.`);
+                  },
+                });
+              }}
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              Review &amp; Add to Google Calendar
+            </button>
+          </div>
         </div>
       )}
 

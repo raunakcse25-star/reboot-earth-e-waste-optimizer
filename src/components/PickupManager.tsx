@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
+  CalendarPlus,
   CheckCircle2,
+  ExternalLink,
   FileText,
   Mail,
   Plus,
@@ -18,7 +20,11 @@ import {
   type PickupRequest,
   type Vehicle,
 } from '../types';
-import { sendGmailMessage } from '../lib/workspace';
+import {
+  createGoogleCalendarEvent,
+  pickupSlotToIsoWindow,
+  sendGmailMessage,
+} from '../lib/workspace';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SchedulePickup } from './SchedulePickup';
 
@@ -73,7 +79,7 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
   vehicles,
   onDataChanged,
 }) => {
-  const { dbUser, firebaseUser, workspaceToken } = useAuth();
+  const { dbUser, firebaseUser, workspaceToken, signInWithGoogle } = useAuth();
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
@@ -87,6 +93,11 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
   const [emailConfirmOpen, setEmailConfirmOpen] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailFeedback, setEmailFeedback] = useState<string | null>(null);
+
+  // Google Calendar sync confirmation
+  const [calendarTarget, setCalendarTarget] = useState<PickupRequest | null>(null);
+  const [calendarBusy, setCalendarBusy] = useState(false);
+  const [calendarSyncedLinks, setCalendarSyncedLinks] = useState<Record<string, string>>({});
 
   // Reschedule modal
   const [rescheduleTarget, setRescheduleTarget] = useState<PickupRequest | null>(null);
@@ -197,6 +208,40 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
     } finally {
       setEmailBusy(false);
       setEmailConfirmOpen(false);
+    }
+  };
+
+  const handleConfirmAddCalendar = async () => {
+    if (!workspaceToken || !calendarTarget) return;
+    setCalendarBusy(true);
+    setFormError(null);
+    try {
+      const win = pickupSlotToIsoWindow(calendarTarget.preferredDate, calendarTarget.timeSlot);
+      const created = await createGoogleCalendarEvent(workspaceToken, {
+        summary: `Reboot Earth Pickup: ${calendarTarget.deviceName} (${calendarTarget.requestCode})`,
+        location: calendarTarget.pickupAddress,
+        description: [
+          `Tracking Code: ${calendarTarget.requestCode}`,
+          `Category: ${calendarTarget.category} · ${calendarTarget.estimatedWeightKg} kg`,
+          `Contact: ${calendarTarget.contactName} (${calendarTarget.contactPhone})`,
+          calendarTarget.instructions ? `Notes: ${calendarTarget.instructions}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        startIso: win.startIso,
+        endIso: win.endIso,
+        timeZone: win.timeZone,
+      });
+      setCalendarSyncedLinks((prev) => ({
+        ...prev,
+        [calendarTarget.requestCode]: created.htmlLink || 'https://calendar.google.com',
+      }));
+      setCalendarTarget(null);
+    } catch (err: any) {
+      setFormError(err?.message || 'Unable to create Google Calendar event.');
+      setCalendarTarget(null);
+    } finally {
+      setCalendarBusy(false);
     }
   };
 
@@ -356,18 +401,46 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
                     </button>
 
                     {!isCancelled && p.status !== 'Completed' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRescheduleTarget(p);
-                          setNewDate(p.preferredDate);
-                          setNewSlot(p.timeSlot);
-                        }}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1"
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        Reschedule
-                      </button>
+                      <>
+                        {calendarSyncedLinks[p.requestCode] ? (
+                          <a
+                            href={calendarSyncedLinks[p.requestCode]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-500/60 text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            In Calendar
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!workspaceToken) {
+                                void signInWithGoogle();
+                                return;
+                              }
+                              setCalendarTarget(p);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-600/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 inline-flex items-center gap-1"
+                          >
+                            <CalendarPlus className="w-3.5 h-3.5" />
+                            Add to Calendar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRescheduleTarget(p);
+                            setNewDate(p.preferredDate);
+                            setNewSlot(p.timeSlot);
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-emerald-800 text-slate-700 dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1"
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          Reschedule
+                        </button>
+                      </>
                     )}
 
                     {isOperator && nextStatus && !isCancelled && (
@@ -591,6 +664,20 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
         busy={emailBusy}
         onConfirm={() => void handleSendReceiptEmail()}
         onCancel={() => setEmailConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(calendarTarget)}
+        title="Add Pickup to Google Calendar"
+        description={
+          calendarTarget
+            ? `Create an event on your primary Google Calendar?\n\nEvent: Reboot Earth Pickup: ${calendarTarget.deviceName} (${calendarTarget.requestCode})\nDate & Window: ${calendarTarget.preferredDate} · ${calendarTarget.timeSlot}\nLocation: ${calendarTarget.pickupAddress}`
+            : ''
+        }
+        confirmLabel="Add to Google Calendar"
+        busy={calendarBusy}
+        onConfirm={() => void handleConfirmAddCalendar()}
+        onCancel={() => setCalendarTarget(null)}
       />
     </div>
   );

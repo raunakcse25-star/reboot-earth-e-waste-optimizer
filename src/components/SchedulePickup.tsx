@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
+  CalendarCheck2,
+  CalendarPlus,
   Camera,
   CheckCircle2,
   Clock,
   Compass,
+  ExternalLink,
   Loader2,
   MapPin,
   Sparkles,
@@ -19,7 +22,14 @@ import {
   rescheduleScheduledPickup,
   subscribeUserScheduledPickups,
 } from '../lib/firebase';
-import { listGoogleContacts, type GoogleContact } from '../lib/workspace';
+import {
+  checkCalendarFreeBusy,
+  createGoogleCalendarEvent,
+  listGoogleContacts,
+  pickupSlotToIsoWindow,
+  type CalendarBusyPeriod,
+  type GoogleContact,
+} from '../lib/workspace';
 import {
   EWASTE_CATEGORIES,
   PICKUP_TIME_SLOTS,
@@ -28,6 +38,7 @@ import {
   type PickupTimeSlot,
   type ScheduledPickupBooking,
 } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 export interface SchedulePickupProps {
@@ -143,6 +154,21 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
   const [editDate, setEditDate] = useState('');
   const [editSlot, setEditSlot] = useState<PickupTimeSlot>('10:00 AM - 01:00 PM');
   const [busyBookingId, setBusyBookingId] = useState<string | null>(null);
+
+  // Google Calendar availability & sync state
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [busyPeriods, setBusyPeriods] = useState<CalendarBusyPeriod[] | null>(null);
+  const [availabilityCheckedDate, setAvailabilityCheckedDate] = useState<string | null>(null);
+  const [calendarLinks, setCalendarLinks] = useState<Record<string, string>>({});
+  const [calendarPending, setCalendarPending] = useState<null | {
+    requestCode: string;
+    deviceName: string;
+    preferredDate: string;
+    timeSlot: string;
+    pickupAddress: string;
+    instructions?: string;
+  }>(null);
+  const [calendarSyncBusy, setCalendarSyncBusy] = useState(false);
 
   useEffect(() => {
     if (dbUser || firebaseUser) {
@@ -304,6 +330,81 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
       setFormError(err?.message || 'Unable to read Google Contacts.');
     } finally {
       setLoadingContacts(false);
+    }
+  };
+
+  const handleCheckCalendarAvailability = async () => {
+    if (!workspaceToken) {
+      setFormError('Sign in with Google Calendar access to check your free/busy availability.');
+      return;
+    }
+    setCheckingAvailability(true);
+    setFormError(null);
+    try {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(preferredDate);
+      if (!match) return;
+      const dayStart = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 0, 0, 0);
+      const dayEnd = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+      const periods = await checkCalendarFreeBusy(workspaceToken, {
+        timeMin: dayStart.toISOString(),
+        timeMax: dayEnd.toISOString(),
+      });
+      setBusyPeriods(periods);
+      setAvailabilityCheckedDate(preferredDate);
+    } catch (err: any) {
+      setFormError(err?.message || 'Unable to check Google Calendar availability.');
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const slotConflictMap = useMemo(() => {
+    const conflicts: Record<string, boolean> = {};
+    if (!busyPeriods || availabilityCheckedDate !== preferredDate) return conflicts;
+    for (const slot of PICKUP_TIME_SLOTS) {
+      const win = pickupSlotToIsoWindow(preferredDate, slot);
+      const sStart = new Date(win.startIso).getTime();
+      const sEnd = new Date(win.endIso).getTime();
+      conflicts[slot] = busyPeriods.some((b) => {
+        const bStart = new Date(b.start).getTime();
+        const bEnd = new Date(b.end).getTime();
+        return bStart < sEnd && bEnd > sStart;
+      });
+    }
+    return conflicts;
+  }, [busyPeriods, availabilityCheckedDate, preferredDate]);
+
+  const handleConfirmAddToCalendar = async () => {
+    if (!workspaceToken || !calendarPending) return;
+    setCalendarSyncBusy(true);
+    setFormError(null);
+    try {
+      const win = pickupSlotToIsoWindow(calendarPending.preferredDate, calendarPending.timeSlot);
+      const created = await createGoogleCalendarEvent(workspaceToken, {
+        summary: `Reboot Earth Pickup: ${calendarPending.deviceName} (${calendarPending.requestCode})`,
+        location: calendarPending.pickupAddress,
+        description: [
+          `Tracking Code: ${calendarPending.requestCode}`,
+          `Device: ${calendarPending.deviceName}`,
+          `Pickup Window: ${calendarPending.preferredDate} (${calendarPending.timeSlot})`,
+          calendarPending.instructions ? `Instructions: ${calendarPending.instructions}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        startIso: win.startIso,
+        endIso: win.endIso,
+        timeZone: win.timeZone,
+      });
+      setCalendarLinks((prev) => ({
+        ...prev,
+        [calendarPending.requestCode]: created.htmlLink || 'https://calendar.google.com',
+      }));
+      setCalendarPending(null);
+    } catch (err: any) {
+      setFormError(err?.message || 'Unable to add pickup to Google Calendar.');
+      setCalendarPending(null);
+    } finally {
+      setCalendarSyncBusy(false);
     }
   };
 
@@ -532,6 +633,46 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
             <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80">
               Location: {confirmedBooking.pickupAddress}
             </p>
+            <div className="pt-1 flex flex-wrap items-center gap-2">
+              {calendarLinks[confirmedBooking.requestCode] ? (
+                <a
+                  href={calendarLinks[confirmedBooking.requestCode]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 underline"
+                >
+                  <CalendarCheck2 className="w-3.5 h-3.5" />
+                  Added to Google Calendar
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : workspaceToken ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCalendarPending({
+                      requestCode: confirmedBooking.requestCode,
+                      deviceName: confirmedBooking.deviceName,
+                      preferredDate: confirmedBooking.preferredDate,
+                      timeSlot: confirmedBooking.timeSlot,
+                      pickupAddress: confirmedBooking.pickupAddress,
+                    })
+                  }
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950 hover:bg-emerald-700 dark:hover:bg-emerald-400 inline-flex items-center gap-1.5"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  Add to Google Calendar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void signInWithGoogle()}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-600/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-500/10 inline-flex items-center gap-1.5"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  Connect Google Calendar to Save Event
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -548,15 +689,43 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
               <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               1. Select Pickup Date &amp; Time Window
             </label>
-            <input
-              type="date"
-              min={todayIso}
-              required
-              aria-label="Custom pickup date"
-              value={preferredDate}
-              onChange={(e) => setPreferredDate(e.target.value)}
-              className="px-2.5 py-1.5 text-xs font-mono tabular-nums rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
-            />
+            <div className="flex items-center gap-2">
+              {workspaceToken ? (
+                <button
+                  type="button"
+                  disabled={checkingAvailability}
+                  onClick={() => void handleCheckCalendarAvailability()}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-[11px] font-medium text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  {checkingAvailability ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <CalendarCheck2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  )}
+                  {availabilityCheckedDate === preferredDate
+                    ? 'Calendar Checked'
+                    : 'Check Calendar'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void signInWithGoogle()}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-emerald-800 text-[11px] font-medium text-slate-700 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-900/40 inline-flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <Calendar className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  Connect Calendar
+                </button>
+              )}
+              <input
+                type="date"
+                min={todayIso}
+                required
+                aria-label="Custom pickup date"
+                value={preferredDate}
+                onChange={(e) => setPreferredDate(e.target.value)}
+                className="px-2.5 py-1.5 text-xs font-mono tabular-nums rounded-lg border border-slate-300 dark:border-emerald-900/70 bg-slate-50 dark:bg-[#05140F] text-slate-900 dark:text-emerald-50"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
@@ -590,6 +759,8 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
           >
             {PICKUP_TIME_SLOTS.map((slot) => {
               const selected = timeSlot === slot;
+              const hasConflict = slotConflictMap[slot];
+              const isChecked = availabilityCheckedDate === preferredDate;
               return (
                 <button
                   key={slot}
@@ -611,8 +782,20 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                     />
                     {slot}
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-emerald-200/65 whitespace-nowrap">
-                    {SLOT_DESCRIPTIONS[slot]}
+                  <span
+                    className={`text-[11px] whitespace-nowrap ${
+                      isChecked
+                        ? hasConflict
+                          ? 'text-amber-600 dark:text-amber-400 font-medium'
+                          : 'text-emerald-700 dark:text-emerald-400 font-medium'
+                        : 'text-slate-500 dark:text-emerald-200/65'
+                    }`}
+                  >
+                    {isChecked
+                      ? hasConflict
+                        ? 'Busy on Calendar'
+                        : 'Free on Calendar'
+                      : SLOT_DESCRIPTIONS[slot]}
                   </span>
                 </button>
               );
@@ -986,7 +1169,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                     </p>
 
                     {!isClosed && !isEditing && (
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => {
@@ -998,6 +1181,39 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
                         >
                           Reschedule
                         </button>
+                        {calendarLinks[b.requestCode] ? (
+                          <a
+                            href={calendarLinks[b.requestCode]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:underline inline-flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <CalendarCheck2 className="w-3.5 h-3.5" />
+                            In Calendar
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!workspaceToken) {
+                                void signInWithGoogle();
+                                return;
+                              }
+                              setCalendarPending({
+                                requestCode: b.requestCode,
+                                deviceName: b.deviceName,
+                                preferredDate: b.preferredDate,
+                                timeSlot: b.timeSlot,
+                                pickupAddress: b.pickupAddress,
+                                instructions: b.instructions,
+                              });
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-emerald-600/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 inline-flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <CalendarPlus className="w-3.5 h-3.5" />
+                            Add to Calendar
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={busyBookingId === b.id}
@@ -1057,6 +1273,20 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
           )}
         </aside>
       )}
+
+      <ConfirmDialog
+        open={Boolean(calendarPending)}
+        title="Add Pickup to Google Calendar"
+        description={
+          calendarPending
+            ? `Create an event on your primary Google Calendar?\n\nEvent: Reboot Earth Pickup: ${calendarPending.deviceName} (${calendarPending.requestCode})\nDate & Window: ${calendarPending.preferredDate} · ${calendarPending.timeSlot}\nLocation: ${calendarPending.pickupAddress}`
+            : ''
+        }
+        confirmLabel="Add to Google Calendar"
+        busy={calendarSyncBusy}
+        onConfirm={() => void handleConfirmAddToCalendar()}
+        onCancel={() => setCalendarPending(null)}
+      />
     </div>
   );
 };

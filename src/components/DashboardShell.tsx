@@ -397,7 +397,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                   Workspace Hub &amp; Visual Studio
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-emerald-200/70">
-                  Export ESG data to Google Drive, send Gmail receipts, or craft campaign art.
+                  Sync pickups with Google Calendar, export ESG data to Drive, send Gmail receipts, or craft campaign art.
                 </p>
               </button>
             </div>
