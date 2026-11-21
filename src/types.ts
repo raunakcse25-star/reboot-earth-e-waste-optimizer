@@ -155,6 +155,37 @@ export interface FacilityReview {
   updatedAt?: any;
 }
 
+export const PICKUP_TIME_SLOTS = [
+  '09:00 AM - 12:00 PM',
+  '10:00 AM - 01:00 PM',
+  '02:00 PM - 05:00 PM',
+  '05:00 PM - 08:00 PM',
+] as const;
+
+export type PickupTimeSlot = (typeof PICKUP_TIME_SLOTS)[number];
+
+export interface ScheduledPickupBooking {
+  id: string;
+  userId: string;
+  requestCode: string;
+  deviceName: string;
+  category: string;
+  quantity: number;
+  estimatedWeightKg: number;
+  condition: string;
+  pickupAddress: string;
+  lat: number;
+  lng: number;
+  preferredDate: string;
+  timeSlot: PickupTimeSlot;
+  contactName: string;
+  contactPhone: string;
+  instructions: string;
+  status: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export const EWASTE_CATEGORIES = [
   'IT & Telecom',
   'Consumer Electronics',

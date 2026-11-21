@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   Boxes,
+  CalendarClock,
   Check,
   Cloud,
   LayoutDashboard,
@@ -29,6 +30,7 @@ import {
   type Vehicle,
 } from '../types';
 import { PickupManager } from './PickupManager';
+import { SchedulePickup } from './SchedulePickup';
 import { OptimizerStudio } from './OptimizerStudio';
 import { FacilityMap } from './FacilityMap';
 import {
@@ -41,6 +43,7 @@ import { WorkspaceAndStudio } from './WorkspaceAndStudio';
 
 type DashTab =
   | 'overview'
+  | 'schedule'
   | 'pickups'
   | 'optimizer'
   | 'facilities'
@@ -122,6 +125,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
   const navItems: { id: DashTab; label: string; icon: React.ComponentType<any>; visible: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, visible: true },
+    { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
     { id: 'facilities', label: 'Facility Map', icon: MapPin, visible: true },
@@ -359,15 +363,15 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
                 type="button"
-                onClick={() => setActiveTab('pickups')}
+                onClick={() => setActiveTab('schedule')}
                 className="p-5 rounded-xl border border-slate-200 dark:border-emerald-900/60 bg-white dark:bg-[#081D16] hover:border-emerald-500 text-left space-y-1.5 transition-colors"
               >
-                <PackageCheck className="w-5 h-5 text-emerald-500" />
+                <CalendarClock className="w-5 h-5 text-emerald-500" />
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-emerald-50">
-                  Schedule or Track Pickups
+                  Schedule Doorstep Pickup
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-emerald-200/70">
-                  Use AI photo scanning, print QR receipts, or advance lifecycle stages.
+                  Reserve a collection time slot from your location with GPS pinning and live sync.
                 </p>
               </button>
               <button
@@ -438,6 +442,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               </table>
             </div>
           </div>
+        )}
+
+        {activeTab === 'schedule' && (
+          <SchedulePickup
+            facilities={facilities}
+            onBooked={() => {
+              void loadDashData();
+              onRefreshGlobal();
+            }}
+          />
         )}
 
         {activeTab === 'pickups' && (

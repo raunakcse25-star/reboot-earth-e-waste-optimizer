@@ -23,7 +23,14 @@ import {
   where,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import type { EcoChatMessage, FacilityReview, FirestoreNotification } from '../types';
+import {
+  PICKUP_TIME_SLOTS,
+  type EcoChatMessage,
+  type FacilityReview,
+  type FirestoreNotification,
+  type PickupTimeSlot,
+  type ScheduledPickupBooking,
+} from '../types';
 
 export const WORKSPACE_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -387,5 +394,144 @@ export async function deleteFacilityReview(reviewId: string) {
     await deleteDoc(doc(db, 'facilityReviews', safeId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// --- Scheduled E-Waste Pickup Time-Slot Bookings (Owner-Scoped PII) ---
+
+function normalizeTimeSlot(slot: string): PickupTimeSlot {
+  return (PICKUP_TIME_SLOTS as readonly string[]).includes(slot)
+    ? (slot as PickupTimeSlot)
+    : '10:00 AM - 01:00 PM';
+}
+
+export function subscribeUserScheduledPickups(
+  uid: string,
+  onData: (items: ScheduledPickupBooking[]) => void
+) {
+  const path = 'scheduledPickups';
+  const q = query(collection(db, path), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: ScheduledPickupBooking[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<ScheduledPickupBooking, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.updatedAt?.toMillis?.() ?? a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.updatedAt?.toMillis?.() ?? b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  );
+}
+
+export async function createScheduledPickup(
+  uid: string,
+  payload: {
+    requestCode: string;
+    deviceName: string;
+    category: string;
+    quantity: number;
+    estimatedWeightKg: number;
+    condition: string;
+    pickupAddress: string;
+    lat: number;
+    lng: number;
+    preferredDate: string;
+    timeSlot: string;
+    contactName: string;
+    contactPhone: string;
+    instructions?: string;
+  }
+): Promise<string> {
+  const safeCode = payload.requestCode
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 32) || `RBE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const bookingId = `pkp_${safeCode.replace(/-/g, '_')}_${Date.now().toString(36)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `scheduledPickups/${bookingId}`;
+
+  const cleanDate = /^\d{4}-\d{2}-\d{2}$/.test(payload.preferredDate)
+    ? payload.preferredDate
+    : new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+
+  const cleanLat = Number.isFinite(payload.lat) ? Math.max(-90, Math.min(90, Number(payload.lat))) : 28.6139;
+  const cleanLng = Number.isFinite(payload.lng) ? Math.max(-180, Math.min(180, Number(payload.lng))) : 77.209;
+  const cleanQty = Math.max(1, Math.min(5000, Math.round(Number(payload.quantity) || 1)));
+  const cleanWeight = Math.max(0.1, Math.min(50000, Number(payload.estimatedWeightKg) || 1));
+
+  try {
+    await setDoc(doc(db, 'scheduledPickups', bookingId), {
+      userId: uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128),
+      requestCode: safeCode,
+      deviceName: (payload.deviceName.trim() || 'Electronic Waste Item').slice(0, 140),
+      category: (payload.category.trim() || 'IT & Telecom').slice(0, 60),
+      quantity: cleanQty,
+      estimatedWeightKg: cleanWeight,
+      condition: (payload.condition.trim() || 'Non-working').slice(0, 60),
+      pickupAddress: (payload.pickupAddress.trim() || 'Address Pending').slice(0, 300),
+      lat: cleanLat,
+      lng: cleanLng,
+      preferredDate: cleanDate,
+      timeSlot: normalizeTimeSlot(payload.timeSlot),
+      contactName: (payload.contactName.trim() || 'Account Holder').slice(0, 120),
+      contactPhone: (payload.contactPhone.trim() || '0000000000').slice(0, 40),
+      instructions: (payload.instructions || '').trim().slice(0, 500),
+      status: 'Submitted',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return bookingId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function rescheduleScheduledPickup(
+  bookingId: string,
+  preferredDate: string,
+  timeSlot: string,
+  instructions?: string
+) {
+  const safeId = bookingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `scheduledPickups/${safeId}`;
+  const cleanDate = /^\d{4}-\d{2}-\d{2}$/.test(preferredDate)
+    ? preferredDate
+    : new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+
+  const patch: Record<string, unknown> = {
+    preferredDate: cleanDate,
+    timeSlot: normalizeTimeSlot(timeSlot),
+    updatedAt: serverTimestamp(),
+  };
+  if (instructions !== undefined) {
+    patch.instructions = instructions.trim().slice(0, 500);
+  }
+
+  try {
+    await updateDoc(doc(db, 'scheduledPickups', safeId), patch);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function cancelScheduledPickup(bookingId: string) {
+  const safeId = bookingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `scheduledPickups/${safeId}`;
+  try {
+    await updateDoc(doc(db, 'scheduledPickups', safeId), {
+      status: 'Cancelled',
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
