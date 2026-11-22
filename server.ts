@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import { optionalAuth, requireAuth, requireRoles, type AuthRequest } from './src/middleware/auth.ts';
 import {
   approveOptimizationRun,
@@ -47,7 +46,7 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Lightweight in-memory rate limiter for public & AI endpoints
 const rateBucket = new Map<string, { count: number; resetAt: number }>();
@@ -819,6 +818,7 @@ async function startServer() {
 
   // --- Vite Middleware (Dev) or Static Dist (Prod) ---
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
