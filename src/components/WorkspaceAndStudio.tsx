@@ -222,7 +222,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
     setStudioLoading(true);
     setStudioError(null);
     try {
-      const res = await apiFetch<{ dataUrl: string }>(
+      const res = await apiFetch<{ dataUrl?: string; imageUrl?: string }>(
         '/api/ai/generate-image',
         {
           method: 'POST',
@@ -230,7 +230,11 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
         },
         false
       );
-      setGeneratedImage(res.dataUrl);
+      const url = res.dataUrl || res.imageUrl;
+      if (!url) {
+        throw new Error('No image data was returned by the generator.');
+      }
+      setGeneratedImage(url);
     } catch (err: any) {
       setStudioError(err?.message || 'Unable to generate campaign visual.');
     } finally {

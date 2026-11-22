@@ -9,6 +9,7 @@ import { OptimizerStudio } from './components/OptimizerStudio';
 import { DashboardShell } from './components/DashboardShell';
 import { GoogleSignInButton } from './components/GoogleSignInButton';
 import { EcoBotWidget } from './components/EcoBotWidget';
+import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
 
 const QUOTA_DOC_URL =
   'https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors';
@@ -23,6 +24,14 @@ export default function App() {
 
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+
+  // Global header search deep-link state for Find Centres & Knowledge Hub
+  const [searchFacilityId, setSearchFacilityId] = useState<number | null>(null);
+  const [searchCategoryFilter, setSearchCategoryFilter] = useState<string>('all');
+  const [searchCityQuery, setSearchCityQuery] = useState<string>('');
+  const [centresFilterVersion, setCentresFilterVersion] = useState<number>(0);
+  const [knowledgeQuery, setKnowledgeQuery] = useState<string>('');
+  const [knowledgeSearchNonce, setKnowledgeSearchNonce] = useState<number>(0);
 
   const loadPublicData = useCallback(async () => {
     try {
@@ -61,6 +70,41 @@ export default function App() {
     setInDashboard(false);
     setRoute(target);
     setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleGlobalSearchSelect = (selection: GlobalSearchSelection) => {
+    setInDashboard(false);
+    setMobileMenuOpen(false);
+
+    if (selection.type === 'facility') {
+      setSearchFacilityId(selection.facility.id);
+      setSearchCategoryFilter('all');
+      setSearchCityQuery('');
+      setCentresFilterVersion((v) => v + 1);
+      setRoute('centres');
+    } else if (selection.type === 'category') {
+      setSearchFacilityId(null);
+      setSearchCategoryFilter(selection.category.filterValue);
+      setSearchCityQuery('');
+      setCentresFilterVersion((v) => v + 1);
+      setRoute('centres');
+    } else if (selection.type === 'centres-query') {
+      setSearchFacilityId(null);
+      setSearchCategoryFilter('all');
+      setSearchCityQuery(selection.query);
+      setCentresFilterVersion((v) => v + 1);
+      setRoute('centres');
+    } else if (selection.type === 'knowledge') {
+      setKnowledgeQuery(selection.topic.query);
+      setKnowledgeSearchNonce((n) => n + 1);
+      setRoute('knowledge');
+    } else if (selection.type === 'knowledge-query') {
+      setKnowledgeQuery(selection.query);
+      setKnowledgeSearchNonce((n) => n + 1);
+      setRoute('knowledge');
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -123,7 +167,7 @@ export default function App() {
           </button>
 
           {/* Zone 2: Clean Single-Line Nav Links */}
-          <nav className="hidden md:flex items-center gap-7">
+          <nav className="hidden md:flex items-center gap-5 lg:gap-6">
             {navLinks.map((item) => {
               const active = !inDashboard && route === item.id;
               return (
@@ -143,8 +187,13 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: Theme Toggle + Primary CTA */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Zone 3: Global Search + Theme Toggle + Primary CTA */}
+          <div className="flex items-center gap-2 shrink-0">
+            <GlobalHeaderSearch
+              facilities={facilities}
+              onSelect={handleGlobalSearchSelect}
+            />
+
             <button
               type="button"
               onClick={toggleQuickTheme}
@@ -191,7 +240,7 @@ export default function App() {
       </header>
 
       {/* Main Content Switch */}
-      <div className="flex-1">
+      <div className="relative z-10 flex-1">
         {inDashboard && firebaseUser ? (
           <DashboardShell
             analytics={analytics}
@@ -222,7 +271,13 @@ export default function App() {
                     Explore registered partner centres, calculate road routes, search live Google Maps places, or query Gemini with real-time Google Maps grounding.
                   </p>
                 </div>
-                <FacilityMap facilities={facilities} />
+                <FacilityMap
+                  facilities={facilities}
+                  selectedFacilityId={searchFacilityId}
+                  initialCategoryFilter={searchCategoryFilter}
+                  initialSearchQuery={searchCityQuery}
+                  filterVersion={centresFilterVersion}
+                />
               </div>
             )}
 
@@ -243,7 +298,12 @@ export default function App() {
               </div>
             )}
 
-            {route === 'knowledge' && <KnowledgeHubPage />}
+            {route === 'knowledge' && (
+              <KnowledgeHubPage
+                initialQuery={knowledgeQuery || undefined}
+                searchNonce={knowledgeSearchNonce}
+              />
+            )}
 
             {(route === 'about' || route === 'legal') && (
               <AboutAndLegalPage section={route} />

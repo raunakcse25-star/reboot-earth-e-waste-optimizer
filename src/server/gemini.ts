@@ -290,6 +290,29 @@ export async function searchEWasteRegulations(query: string) {
   throw lastError || new Error('Unable to fetch regulatory summary.');
 }
 
+function parseJsonResponse<T>(response: any, fallback: T): T {
+  const raw = extractResponseText(response);
+  if (!raw) return fallback;
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(cleaned.slice(start, end + 1)) as T;
+      } catch {
+        return fallback;
+      }
+    }
+    return fallback;
+  }
+}
+
 export async function mapsGroundedFacilitySearch(params: {
   query: string;
   lat?: number;
@@ -308,21 +331,38 @@ export async function mapsGroundedFacilitySearch(params: {
       }
     : undefined;
 
-  const attempts = [
-    { model: PRIMARY_TEXT_MODEL, thinkingLow: true },
-    { model: FALLBACK_TEXT_MODEL, thinkingLow: false },
+  const coordHint = hasCoords
+    ? ` (near coordinates ${params.lat!.toFixed(4)}, ${params.lng!.toFixed(4)})`
+    : '';
+
+  const attempts: Array<{
+    model: string;
+    tool: 'maps' | 'search' | 'none';
+    thinkingLow?: boolean;
+  }> = [
+    { model: 'gemini-2.5-flash', tool: 'maps' },
+    { model: PRIMARY_TEXT_MODEL, tool: 'maps', thinkingLow: true },
+    { model: PRIMARY_TEXT_MODEL, tool: 'search', thinkingLow: true },
+    { model: FALLBACK_TEXT_MODEL, tool: 'search' },
+    { model: FALLBACK_TEXT_MODEL, tool: 'none' },
   ];
 
   let lastError: any = null;
   for (const attempt of attempts) {
     try {
+      const promptText =
+        attempt.tool === 'maps'
+          ? params.query
+          : `Find authorized or notable e-waste collection centres and recycling drop-off facilities for this query: ${params.query}${coordHint}. List specific facility names, localities, and practical drop-off advice.`;
+
       const response = await ai.models.generateContent({
         model: attempt.model,
-        contents: params.query,
+        contents: promptText,
         config: {
-          tools: [{ googleMaps: {} }],
+          ...(attempt.tool === 'maps' ? { tools: [{ googleMaps: {} }] } : {}),
+          ...(attempt.tool === 'search' ? { tools: [{ googleSearch: {} }] } : {}),
           ...(attempt.thinkingLow ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
-          ...(toolConfig ? { toolConfig } : {}),
+          ...(attempt.tool === 'maps' && toolConfig ? { toolConfig } : {}),
         },
       });
 
@@ -337,6 +377,11 @@ export async function mapsGroundedFacilitySearch(params: {
             uri: chunk.maps.uri,
             snippet: reviewSnippet,
           });
+        } else if (chunk.web?.uri) {
+          places.push({
+            title: chunk.web.title || chunk.web.uri,
+            uri: chunk.web.uri,
+          });
         }
       }
 
@@ -345,13 +390,19 @@ export async function mapsGroundedFacilitySearch(params: {
         continue;
       }
 
+      const finalAnswer = answer || 'Nearby e-waste locations found via Google Maps.';
       return {
-        answer: answer || 'Nearby e-waste locations found via Google Maps.',
+        answer: finalAnswer,
+        summary: finalAnswer,
         places,
       };
     } catch (err: any) {
       lastError = err;
-      if (!isRetryableOrFallbackError(err)) throw err;
+      const info = parseErrorInfo(err);
+      // Also fall back if googleMaps tool is unsupported on a specific model (400 / 404)
+      if (!isRetryableOrFallbackError(err) && info.code !== 400 && info.code !== 404) {
+        throw err;
+      }
     }
   }
 
@@ -364,84 +415,132 @@ export async function identifyDeviceFromImage(params: {
   notes?: string;
 }) {
   const ai = getAiClient();
-  const response = await ai.models.generateContent({
-    model: 'gemini-4-hydrogen',
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType: params.mimeType,
-            data: params.imageBase64,
-          },
-        },
-        {
-          text: `Identify the electronic device(s) in this photo for responsible e-waste pickup scheduling. ${
-            params.notes ? `User notes: ${params.notes}` : ''
-          } Return accurate JSON matching the schema.`,
-        },
-      ],
-    },
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          deviceName: { type: Type.STRING, description: 'Concise name of the electronic device' },
-          category: {
-            type: Type.STRING,
-            description:
-              'One of: IT & Telecom, Consumer Electronics, Large Appliances, Small Appliances, Batteries & Power, PCB & Components, Medical & Lab, Solar & Energy',
-          },
-          estimatedWeightKg: { type: Type.NUMBER, description: 'Estimated weight in kilograms' },
-          condition: {
-            type: Type.STRING,
-            description: 'One of: Working, Partially Working, Refurbishable, Non-working, Damaged / Hazardous',
-          },
-          hazardousMaterials: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: 'List of potential hazardous materials present (e.g., Lithium-ion battery, Lead solder)',
-          },
-          refurbishmentViability: { type: Type.STRING, description: 'Short assessment of refurbishment vs material recovery' },
-          safeHandlingTip: { type: Type.STRING, description: 'One actionable safe-handling tip before pickup' },
-        },
-        required: [
-          'deviceName',
-          'category',
-          'estimatedWeightKg',
-          'condition',
-          'hazardousMaterials',
-          'refurbishmentViability',
-          'safeHandlingTip',
-        ],
-      },
-    },
-  });
+  const models = [PRIMARY_TEXT_MODEL, FALLBACK_TEXT_MODEL];
+  let lastError: any = null;
 
-  const raw = (response.text || '{}').trim();
-  return JSON.parse(raw);
+  for (const model of models) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                mimeType: params.mimeType,
+                data: params.imageBase64,
+              },
+            },
+            {
+              text: `Identify the electronic device(s) in this photo for responsible e-waste pickup scheduling. ${
+                params.notes ? `User notes: ${params.notes}` : ''
+              } Return accurate JSON matching the schema.`,
+            },
+          ],
+        },
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              deviceName: { type: Type.STRING, description: 'Concise name of the electronic device' },
+              category: {
+                type: Type.STRING,
+                description:
+                  'One of: IT & Telecom, Consumer Electronics, Large Appliances, Small Appliances, Batteries & Power, PCB & Components, Medical & Lab, Solar & Energy',
+              },
+              estimatedWeightKg: { type: Type.NUMBER, description: 'Estimated weight in kilograms' },
+              condition: {
+                type: Type.STRING,
+                description: 'One of: Working, Partially Working, Refurbishable, Non-working, Damaged / Hazardous',
+              },
+              hazardousMaterials: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'List of potential hazardous materials present (e.g., Lithium-ion battery, Lead solder)',
+              },
+              refurbishmentViability: { type: Type.STRING, description: 'Short assessment of refurbishment vs material recovery' },
+              safeHandlingTip: { type: Type.STRING, description: 'One actionable safe-handling tip before pickup' },
+            },
+            required: [
+              'deviceName',
+              'category',
+              'estimatedWeightKg',
+              'condition',
+              'hazardousMaterials',
+              'refurbishmentViability',
+              'safeHandlingTip',
+            ],
+          },
+        },
+      });
+
+      const parsed = parseJsonResponse<any>(response, {});
+      const hazardousMaterials = Array.isArray(parsed.hazardousMaterials)
+        ? parsed.hazardousMaterials
+        : Array.isArray(parsed.hazards)
+          ? parsed.hazards
+          : [];
+
+      return {
+        ...parsed,
+        hazardousMaterials,
+        hazards: hazardousMaterials,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (!isRetryableOrFallbackError(err)) throw err;
+    }
+  }
+
+  throw lastError || new Error('Unable to analyze device image.');
 }
 
 export async function fastDeviceTriage(deviceDescription: string) {
   const ai = getAiClient();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite',
-    contents: `Classify this e-waste item and provide a 2-sentence safe handling and data-wipe checklist: "${deviceDescription}".`,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          suggestedCategory: { type: Type.STRING },
-          estimatedWeightKg: { type: Type.NUMBER },
-          hazardLevel: { type: Type.STRING },
-          checklist: { type: Type.STRING },
+  const models = [FALLBACK_TEXT_MODEL, PRIMARY_TEXT_MODEL];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Classify this e-waste item into one of [IT & Telecom, Consumer Electronics, Large Appliances, Small Appliances, Batteries & Power, PCB & Components, Medical & Lab, Solar & Energy] and provide a concise 2-sentence safe handling and data-wipe checklist: "${deviceDescription}".`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              suggestedCategory: { type: Type.STRING },
+              estimatedWeightKg: { type: Type.NUMBER },
+              hazardLevel: { type: Type.STRING },
+              checklist: { type: Type.STRING },
+            },
+            required: ['suggestedCategory', 'estimatedWeightKg', 'hazardLevel', 'checklist'],
+          },
         },
-        required: ['suggestedCategory', 'estimatedWeightKg', 'hazardLevel', 'checklist'],
-      },
-    },
-  });
-  return JSON.parse((response.text || '{}').trim());
+      });
+
+      const parsed = parseJsonResponse<any>(response, {});
+      const category = parsed.suggestedCategory || parsed.category || 'IT & Telecom';
+      const hazardLevel = parsed.hazardLevel || parsed.priority || 'Standard';
+      const checklist = parsed.checklist || parsed.note || 'Back up and wipe personal data, and keep batteries insulated before pickup.';
+
+      return {
+        suggestedCategory: category,
+        category,
+        estimatedWeightKg: Number(parsed.estimatedWeightKg) || 2.5,
+        hazardLevel,
+        priority: hazardLevel,
+        checklist,
+        note: checklist,
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (!isRetryableOrFallbackError(err)) throw err;
+    }
+  }
+
+  throw lastError || new Error('Unable to run fast device triage.');
 }
 
 export async function generateCampaignVisual(params: {
@@ -450,34 +549,53 @@ export async function generateCampaignVisual(params: {
   aspectRatio: '1:1' | '16:9' | '4:3' | '3:4' | '9:16';
 }) {
   const ai = getAiClient();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-image-preview',
-    contents: {
-      parts: [{ text: params.prompt }],
-    },
-    config: {
-      imageConfig: {
-        aspectRatio: params.aspectRatio,
-        imageSize: params.imageSize,
-      },
-    },
-  });
+  const attempts = [
+    { model: 'gemini-3-pro-image-preview', withImageSize: true },
+    { model: 'gemini-3.1-flash-image-preview', withImageSize: true },
+    { model: 'gemini-2.5-flash-image', withImageSize: false },
+  ];
 
-  let imageUrl: string | null = null;
-  let caption = '';
+  let lastError: any = null;
+  for (const attempt of attempts) {
+    try {
+      const response = await ai.models.generateContent({
+        model: attempt.model,
+        contents: {
+          parts: [{ text: params.prompt }],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: params.aspectRatio,
+            ...(attempt.withImageSize ? { imageSize: params.imageSize } : {}),
+          },
+        },
+      });
 
-  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
-    if (part.inlineData?.data) {
-      const mime = part.inlineData.mimeType ?? 'image/png';
-      imageUrl = `data:${mime};base64,${part.inlineData.data}`;
-    } else if (part.text) {
-      caption += part.text;
+      let imageUrl: string | null = null;
+      let caption = '';
+
+      for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+          const mime = part.inlineData.mimeType ?? 'image/png';
+          imageUrl = `data:${mime};base64,${part.inlineData.data}`;
+        } else if (part.text) {
+          caption += part.text;
+        }
+      }
+
+      if (imageUrl) {
+        return { imageUrl, dataUrl: imageUrl, caption };
+      }
+
+      lastError = new Error('The image model completed without returning image bytes.');
+    } catch (err: any) {
+      lastError = err;
+      const info = parseErrorInfo(err);
+      if (!isRetryableOrFallbackError(err) && info.code !== 403 && info.code !== 404) {
+        throw err;
+      }
     }
   }
 
-  if (!imageUrl) {
-    throw new Error('The image model completed without returning image bytes.');
-  }
-
-  return { imageUrl, caption };
+  throw lastError || new Error('The image model completed without returning image bytes.');
 }

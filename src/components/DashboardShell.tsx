@@ -173,7 +173,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-slate-50 dark:bg-[#040E1A]">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-[#EFF7FF] dark:bg-[#040E1A]">
       {/* Left Sidebar */}
       <aside className="lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#071A2E] p-4 flex flex-col justify-between gap-6">
         <div className="space-y-5">

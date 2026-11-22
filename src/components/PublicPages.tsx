@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
@@ -24,7 +24,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { EarthCanvas } from './EarthCanvas';
-import DotField from './DotField';
 import FluxLines from './FluxLines';
 import ElectricBorder from './ElectricBorder';
 import SpecularButton from './SpecularButton';
@@ -191,27 +190,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="space-y-24 pb-20">
-      {/* 1. Asymmetric Hero Section with Interactive DotField Background & 3D Earth */}
+      {/* 1. Asymmetric Hero Section with 3D Earth over Global DotGrid */}
       <section className="relative overflow-hidden min-h-[600px] flex items-center pt-8 lg:pt-12 pb-8">
-        <div
-          style={{ width: '100%', height: '600px', position: 'absolute', inset: 0 }}
-          className="min-h-full"
-        >
-          <DotField
-            gradientFrom="#5227FF"
-            gradientTo="#FF9FFC"
-            dotRadius={1.5}
-            dotSpacing={14}
-            cursorRadius={240}
-            bulgeStrength={0.6}
-            glowRadius={160}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#EFF7FF]/25 to-[#EFF7FF] dark:via-[#040E1A]/25 dark:to-[#040E1A]"
-          />
-        </div>
-
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
             <motion.div
@@ -792,9 +772,12 @@ export const HomePage: React.FC<HomePageProps> = ({
 };
 
 /* -------------------- Knowledge Hub & India Regulations Page -------------------- */
-export const KnowledgeHubPage: React.FC = () => {
+export const KnowledgeHubPage: React.FC<{
+  initialQuery?: string;
+  searchNonce?: number;
+}> = ({ initialQuery, searchNonce = 0 }) => {
   const [query, setQuery] = useState(
-    'India E-Waste Management Rules 2022 CPCB EPR targets for electronics producers'
+    initialQuery || 'India E-Waste Management Rules 2022 CPCB EPR targets for electronics producers'
   );
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -803,9 +786,9 @@ export const KnowledgeHubPage: React.FC = () => {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const runLookup = useCallback(async (searchText: string) => {
+    const cleaned = searchText.trim();
+    if (!cleaned) return;
     setLoading(true);
     setError(null);
     try {
@@ -815,7 +798,7 @@ export const KnowledgeHubPage: React.FC = () => {
         sources?: { title: string; uri: string }[];
       }>(
         '/api/ai/regulations-search',
-        { method: 'POST', body: JSON.stringify({ query: query.trim() }) },
+        { method: 'POST', body: JSON.stringify({ query: cleaned }) },
         false
       );
       const answerText = (res?.answer ?? res?.summary ?? '').trim();
@@ -831,6 +814,18 @@ export const KnowledgeHubPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (searchNonce > 0 && initialQuery && initialQuery.trim()) {
+      setQuery(initialQuery);
+      void runLookup(initialQuery);
+    }
+  }, [searchNonce, initialQuery, runLookup]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runLookup(query);
   };
 
   return (

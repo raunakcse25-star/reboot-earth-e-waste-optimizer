@@ -42,6 +42,9 @@ interface FacilityMapProps {
   facilities: Facility[];
   selectedFacilityId?: number | null;
   onSelectFacility?: (facility: Facility) => void;
+  initialCategoryFilter?: string;
+  initialSearchQuery?: string;
+  filterVersion?: number;
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -321,13 +324,16 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
   facilities,
   selectedFacilityId,
   onSelectFacility,
+  initialCategoryFilter = 'all',
+  initialSearchQuery = '',
+  filterVersion = 0,
 }) => {
   const { firebaseUser, authReady } = useAuth();
   const [mapsApiKey, setMapsApiKey] = useState(INITIAL_MAPS_API_KEY);
   const [mapsKeyChecking, setMapsKeyChecking] = useState(!INITIAL_MAPS_API_KEY);
-  const [searchCity, setSearchCity] = useState('');
+  const [searchCity, setSearchCity] = useState(initialSearchQuery);
   const [typeFilter, setTypeFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter);
   const [placesTrigger, setPlacesTrigger] = useState(0);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [discoveredPlaces, setDiscoveredPlaces] = useState<DiscoveredPlace[]>([]);
@@ -336,6 +342,15 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
   const [activeFacility, setActiveFacility] = useState<Facility | null>(null);
   const [routeTarget, setRouteTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [routeInfo, setRouteInfo] = useState<string | null>(null);
+
+  // Sync incoming global search filters whenever a new search selection is triggered
+  useEffect(() => {
+    if (filterVersion > 0) {
+      setCategoryFilter(initialCategoryFilter);
+      setSearchCity(initialSearchQuery);
+      setTypeFilter('all');
+    }
+  }, [filterVersion, initialCategoryFilter, initialSearchQuery]);
 
   // Hydrate runtime-injected Google Maps API key if not present at Vite bundle time
   useEffect(() => {
@@ -542,8 +557,11 @@ export const FacilityMap: React.FC<FacilityMapProps> = ({
           <option value="IT & Telecom">IT &amp; Telecom</option>
           <option value="Consumer Electronics">Consumer Electronics</option>
           <option value="Large Appliances">Large Appliances</option>
+          <option value="Small Appliances">Small Appliances</option>
           <option value="Batteries & Power">Batteries &amp; Power</option>
           <option value="PCB & Components">PCB &amp; Components</option>
+          <option value="Medical & Lab">Medical &amp; Lab</option>
+          <option value="Solar & Energy">Solar &amp; Energy</option>
         </select>
         <div className="lg:col-span-3 flex gap-2">
           <button

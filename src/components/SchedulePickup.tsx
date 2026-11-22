@@ -257,12 +257,13 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
       });
 
       const identified = await apiFetch<{
-        deviceName: string;
-        category: string;
-        estimatedWeightKg: number;
-        condition: string;
-        hazards: string[];
-        safeHandlingTip: string;
+        deviceName?: string;
+        category?: string;
+        estimatedWeightKg?: number;
+        condition?: string;
+        hazards?: string[];
+        hazardousMaterials?: string[];
+        safeHandlingTip?: string;
       }>(
         '/api/ai/identify-device',
         {
@@ -276,10 +277,13 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
       if (identified.category) setCategory(identified.category);
       if (identified.estimatedWeightKg) setEstimatedWeightKg(Number(identified.estimatedWeightKg));
       if (identified.condition) setCondition(identified.condition);
+      const hazardList = Array.isArray(identified.hazards)
+        ? identified.hazards
+        : Array.isArray(identified.hazardousMaterials)
+          ? identified.hazardousMaterials
+          : [];
       const hazardStr =
-        identified.hazards && identified.hazards.length > 0
-          ? `Detected components: ${identified.hazards.join(', ')}. `
-          : '';
+        hazardList.length > 0 ? `Detected components: ${hazardList.join(', ')}. ` : '';
       setAiNote(`${hazardStr}${identified.safeHandlingTip || ''}`.trim());
     } catch (err: any) {
       setFormError(err?.message || 'Unable to analyze device photo.');
@@ -294,10 +298,13 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
     setFormError(null);
     try {
       const res = await apiFetch<{
-        category: string;
-        estimatedWeightKg: number;
-        priority: string;
-        note: string;
+        category?: string;
+        suggestedCategory?: string;
+        estimatedWeightKg?: number;
+        priority?: string;
+        hazardLevel?: string;
+        note?: string;
+        checklist?: string;
       }>(
         '/api/ai/triage',
         {
@@ -306,9 +313,12 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         },
         false
       );
-      if (res.category) setCategory(res.category);
+      const resolvedCategory = res.category || res.suggestedCategory;
+      const resolvedPriority = res.priority || res.hazardLevel || 'Standard';
+      const resolvedNote = res.note || res.checklist || 'Follow safe e-waste handling practices.';
+      if (resolvedCategory) setCategory(resolvedCategory);
       if (res.estimatedWeightKg) setEstimatedWeightKg(Number(res.estimatedWeightKg));
-      setAiNote(`Quick Triage (${res.priority} priority): ${res.note}`);
+      setAiNote(`Quick Triage (${resolvedPriority} hazard): ${resolvedNote}`);
     } catch (err: any) {
       setFormError(err?.message || 'Quick triage failed.');
     } finally {
