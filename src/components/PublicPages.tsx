@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { EarthCanvas } from './EarthCanvas';
+import DotField from './DotField';
 import FluxLines from './FluxLines';
 import ElectricBorder from './ElectricBorder';
 import SpecularButton from './SpecularButton';
@@ -190,9 +191,28 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="space-y-24 pb-20">
-      {/* 1. Asymmetric Hero Section with 3D Interactive Earth */}
-      <section className="pt-8 lg:pt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 1. Asymmetric Hero Section with Interactive DotField Background & 3D Earth */}
+      <section className="relative overflow-hidden min-h-[600px] flex items-center pt-8 lg:pt-12 pb-8">
+        <div
+          style={{ width: '100%', height: '600px', position: 'absolute', inset: 0 }}
+          className="min-h-full"
+        >
+          <DotField
+            gradientFrom="#5227FF"
+            gradientTo="#FF9FFC"
+            dotRadius={1.5}
+            dotSpacing={14}
+            cursorRadius={240}
+            bulgeStrength={0.6}
+            glowRadius={160}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#EFF7FF]/25 to-[#EFF7FF] dark:via-[#040E1A]/25 dark:to-[#040E1A]"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
@@ -208,7 +228,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 Recycle Technology. Restart Tomorrow.
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 dark:text-sky-100/80 leading-relaxed max-w-xl">
+              <p className="text-base sm:text-lg text-slate-700 dark:text-sky-100/85 leading-relaxed max-w-xl">
                 Reboot Earth connects households, enterprises, verified recyclers, and low-emission fleets on one auditable platform—from AI-assisted pickup scheduling to 2-opt route optimization and material recovery analytics.
               </p>
 
@@ -216,7 +236,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <button
                   type="button"
                   onClick={onOpenDashboard}
-                  className="px-6 py-3.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors inline-flex items-center gap-2"
+                  className="px-6 py-3.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-600/25 inline-flex items-center gap-2 cursor-pointer"
                 >
                   Schedule E-Waste Pickup
                   <ArrowRight className="w-4 h-4" />
@@ -224,7 +244,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('centres')}
-                  className="px-5 py-3.5 rounded-lg text-sm font-semibold border border-slate-300 dark:border-sky-800 text-slate-800 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 transition-colors inline-flex items-center gap-2"
+                  className="px-5 py-3.5 rounded-lg text-sm font-semibold border border-sky-300/90 dark:border-sky-800 bg-white/80 dark:bg-[#0B223B]/80 backdrop-blur-sm text-slate-800 dark:text-sky-100 hover:bg-white dark:hover:bg-sky-900/50 transition-all duration-200 hover:-translate-y-0.5 inline-flex items-center gap-2 cursor-pointer"
                 >
                   <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                   Find Collection Centres

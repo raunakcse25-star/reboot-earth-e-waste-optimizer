@@ -54,9 +54,16 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
   const [driveConfirmOpen, setDriveConfirmOpen] = useState(false);
   const [driveBusy, setDriveBusy] = useState(false);
   const [driveSuccess, setDriveSuccess] = useState<{ name: string; link?: string } | null>(null);
+  const [lastRunNote, setLastRunNote] = useState<string | null>(null);
 
   const canApprove =
     dbUser && ['admin', 'transporter', 'collection_centre'].includes(dbUser.role);
+
+  const OBJECTIVE_LABELS: Record<OptimizationObjective, string> = {
+    emission: 'Min Emissions (kg CO₂e)',
+    distance: 'Min Distance (km)',
+    cost: 'Min Cost (₹)',
+  };
 
   const loadHistory = useCallback(async () => {
     if (!firebaseUser) return;
@@ -69,7 +76,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
   }, [firebaseUser]);
 
   const executeOptimization = useCallback(
-    async (selectedObj: OptimizationObjective, saveRun = true) => {
+    async (selectedObj: OptimizationObjective, saveRun = true, announce = true) => {
       setRunning(true);
       setError(null);
       setDriveSuccess(null);
@@ -83,6 +90,17 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
           Boolean(firebaseUser)
         );
         setResult(res.result);
+        if (announce) {
+          const timeLabel = new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+          const savedSuffix = res.savedRun ? ` · Saved as ${res.savedRun.runCode}` : '';
+          setLastRunNote(
+            `Optimized for ${OBJECTIVE_LABELS[selectedObj]} at ${timeLabel} (${res.result.assignments.length} route${res.result.assignments.length === 1 ? '' : 's'}, ${res.result.totalDistanceKm} km, ₹${res.result.estimatedCostInr.toLocaleString()}, ${res.result.estimatedEmissionsKg} kg CO₂e)${savedSuffix}.`
+          );
+        }
         if (firebaseUser && res.savedRun) {
           void loadHistory();
           void pushNotification({
@@ -101,7 +119,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
   );
 
   useEffect(() => {
-    void executeOptimization('emission', false);
+    void executeOptimization('emission', false, false);
     if (firebaseUser) {
       void loadHistory();
     }
@@ -229,8 +247,12 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setObjective(opt.id)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                  disabled={running}
+                  onClick={() => {
+                    setObjective(opt.id);
+                    void executeOptimization(opt.id, false, true);
+                  }}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 ${
                     active
                       ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
                       : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
@@ -245,19 +267,19 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
 
           <button
             type="button"
-            onClick={() => void executeOptimization(objective, true)}
+            onClick={() => void executeOptimization(objective, true, true)}
             disabled={running}
-            className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5 whitespace-nowrap"
+            className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-600/20"
           >
             {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-            Run Optimization
+            {running ? 'Optimizing...' : 'Run Optimization'}
           </button>
 
           {result && (
             <button
               type="button"
               onClick={handleDownloadCsv}
-              className="px-3 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               CSV
@@ -268,7 +290,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
             <button
               type="button"
               onClick={() => setDriveConfirmOpen(true)}
-              className="px-3 py-2 rounded-lg text-xs font-medium border border-sky-600/50 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg text-xs font-medium border border-sky-600/50 text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1.5 cursor-pointer"
             >
               <CloudUpload className="w-3.5 h-3.5" />
               Save to Drive
@@ -276,6 +298,13 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
           )}
         </div>
       </div>
+
+      {lastRunNote && !error && (
+        <div className="px-4 py-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/80 text-xs text-sky-900 dark:text-sky-200 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+          <span>{lastRunNote}</span>
+        </div>
+      )}
 
       {error && (
         <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300">
@@ -353,7 +382,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={comparisonData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(16, 185, 129, 0.15)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(14, 165, 233, 0.16)" />
                     <XAxis dataKey="metric" tick={{ fontSize: 12, fill: '#64748b' }} />
                     <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
                     <Tooltip
