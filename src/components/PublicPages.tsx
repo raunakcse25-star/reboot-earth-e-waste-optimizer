@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import {
   ArrowRight,
   ChevronDown,
-  ChevronUp,
   Cpu,
   ExternalLink,
   Factory,
@@ -24,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { EarthCanvas } from './EarthCanvas';
+import OrbitalGlobe from '@/components/ui/globe';
 import FluxLines from './FluxLines';
 import ElectricBorder from './ElectricBorder';
 import SpecularButton from './SpecularButton';
@@ -117,6 +117,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenDashboard,
 }) => {
   const { theme } = useAuth();
+  const [heroVisualMode, setHeroVisualMode] = useState<'globe' | '3d'>('globe');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [supportName, setSupportName] = useState('');
@@ -191,8 +192,17 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="space-y-24 pb-20">
-      {/* 1. Asymmetric Hero Section with 3D Earth over Global DotGrid */}
-      <section className="relative overflow-hidden min-h-[600px] flex items-center pt-8 lg:pt-12 pb-8">
+      {/* 1. Asymmetric Hero Section with 3D Earth and Soft Atmospheric Sky Wash */}
+      <section className="relative overflow-hidden min-h-[600px] flex items-center pt-8 lg:pt-12 pb-10">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full bg-sky-300/25 dark:bg-sky-500/12 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-12 right-0 w-[480px] h-[480px] rounded-full bg-cyan-200/30 dark:bg-cyan-500/10 blur-3xl"
+        />
+
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
             <motion.div
@@ -201,35 +211,54 @@ export const HomePage: React.FC<HomePageProps> = ({
               transition={{ duration: 0.55 }}
               className="lg:col-span-6 flex flex-col justify-center space-y-6 py-4"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-400">
                 Intelligent E-Waste Logistics &amp; Recovery Network
               </p>
 
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-bold tracking-tight leading-[1.08] text-slate-900 dark:text-sky-50">
-                Recycle Technology. Restart Tomorrow.
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.6rem] font-bold tracking-tight leading-[1.06] text-slate-900 dark:text-sky-50">
+                Recycle Technology.{' '}
+                <span className="bg-gradient-to-r from-sky-600 via-cyan-600 to-sky-700 dark:from-sky-300 dark:via-cyan-300 dark:to-sky-400 bg-clip-text text-transparent">
+                  Restart Tomorrow.
+                </span>
               </h1>
 
               <p className="text-base sm:text-lg text-slate-700 dark:text-sky-100/85 leading-relaxed max-w-xl">
                 Reboot Earth connects households, enterprises, verified recyclers, and low-emission fleets on one auditable platform—from AI-assisted pickup scheduling to 2-opt route optimization and material recovery analytics.
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <button
                   type="button"
                   onClick={onOpenDashboard}
-                  className="px-6 py-3.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-600/25 inline-flex items-center gap-2 cursor-pointer"
+                  className="group px-6 py-3.5 rounded-xl text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 shadow-md shadow-sky-600/20 hover:shadow-xl hover:shadow-sky-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 inline-flex items-center gap-2 cursor-pointer"
                 >
                   Schedule E-Waste Pickup
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('centres')}
-                  className="px-5 py-3.5 rounded-lg text-sm font-semibold border border-sky-300/90 dark:border-sky-800 bg-white/80 dark:bg-[#0B223B]/80 backdrop-blur-sm text-slate-800 dark:text-sky-100 hover:bg-white dark:hover:bg-sky-900/50 transition-all duration-200 hover:-translate-y-0.5 inline-flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-3.5 rounded-xl text-sm font-semibold border border-sky-300/90 dark:border-sky-800 bg-white/85 dark:bg-[#0B223B]/85 backdrop-blur-sm text-slate-800 dark:text-sky-100 hover:bg-white dark:hover:bg-sky-900/50 hover:border-sky-400 dark:hover:border-sky-600 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 inline-flex items-center gap-2 cursor-pointer"
                 >
                   <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                   Find Collection Centres
                 </button>
+              </div>
+
+              {/* Clean Trust & Capability Strip */}
+              <div className="pt-4 border-t border-sky-200/80 dark:border-sky-900/60 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600 dark:text-sky-200/75">
+                <div className="inline-flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <span>CPCB 2022 aligned</span>
+                </div>
+                <div className="inline-flex items-center gap-2">
+                  <Route className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <span>2-opt EV/CNG VRP</span>
+                </div>
+                <div className="inline-flex items-center gap-2">
+                  <Recycle className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <span>Audited QR custody</span>
+                </div>
               </div>
             </motion.div>
 
@@ -237,9 +266,52 @@ export const HomePage: React.FC<HomePageProps> = ({
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.65, delay: 0.1 }}
-              className="lg:col-span-6 min-h-[400px] lg:min-h-[470px]"
+              className="lg:col-span-6 min-h-[420px] lg:min-h-[480px] flex flex-col"
             >
-              <EarthCanvas className="w-full h-full min-h-[400px] lg:min-h-[470px]" />
+              {heroVisualMode === 'globe' ? (
+                <div className="relative flex-1 min-h-[420px] lg:min-h-[480px] rounded-2xl border border-sky-900/60 bg-gradient-to-b from-[#040E1A] via-[#071A2E] to-[#040E1A] overflow-hidden shadow-xl shadow-sky-950/20 flex flex-col items-center justify-center">
+                  <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between gap-2 text-[11px] font-mono text-sky-200/75">
+                    <span className="uppercase tracking-[0.18em] text-sky-300/90">
+                      Circular Planet Network
+                    </span>
+                    <span className="tabular-nums text-cyan-300/90">
+                      {analytics ? `${analytics.landfillDiversionPct}% Diverted` : 'Zero-Landfill Mission'}
+                    </span>
+                  </div>
+
+                  <OrbitalGlobe size={270} className="min-h-[380px] py-6" />
+
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 p-1 rounded-xl bg-[#09203A]/95 border border-sky-800/80 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => setHeroVisualMode('globe')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-500 text-sky-950 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      Orbital Globe
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHeroVisualMode('3d')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-sky-100/80 hover:text-white hover:bg-sky-900/60 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      3D Interactive Fleet
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative flex-1 min-h-[420px] lg:min-h-[480px]">
+                  <EarthCanvas className="w-full h-full min-h-[420px] lg:min-h-[480px]" />
+                  <div className="absolute top-3 right-3 z-20">
+                    <button
+                      type="button"
+                      onClick={() => setHeroVisualMode('globe')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#09203A]/95 border border-sky-800/80 text-sky-100 hover:bg-[#13345B] transition-colors cursor-pointer whitespace-nowrap shadow-md"
+                    >
+                      Switch to Orbital Globe
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -418,16 +490,18 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 3. Editorial Platform Overview + Generated Visual */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-6">
-            <img
-              src="/src/assets/images/facility_recycling_hub_1795259315861.jpg"
-              alt="Clean modern electronic waste dismantling and sorting facility"
-              referrerPolicy="no-referrer"
-              className="w-full aspect-video object-cover rounded-2xl border border-slate-200 dark:border-sky-900/60"
-            />
+          <div className="lg:col-span-6 group">
+            <div className="overflow-hidden rounded-2xl border border-sky-200/80 dark:border-sky-900/60 shadow-lg shadow-sky-900/5 dark:shadow-black/30">
+              <img
+                src="/src/assets/images/facility_recycling_hub_1795259315861.jpg"
+                alt="Clean modern electronic waste dismantling and sorting facility"
+                referrerPolicy="no-referrer"
+                className="w-full aspect-video object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+              />
+            </div>
           </div>
           <div className="lg:col-span-6 space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
               Built for Circular Infrastructure
             </p>
             <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
@@ -437,21 +511,25 @@ export const HomePage: React.FC<HomePageProps> = ({
               Informal burning and landfill dumping destroy critical metals while releasing toxic heavy metals into urban soil and groundwater. Reboot Earth digitizes the entire reverse-logistics chain—uniting citizens, bulk IT consumers, collection centres, recyclers, refurbishers, transporters, producers, and administrators in one role-secured workspace.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
-                  <Route className="w-4 h-4 text-sky-500" />
+              <div className="p-4 rounded-xl border border-sky-200/75 dark:border-sky-900/60 bg-white/85 dark:bg-[#0B223B]/90 space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Route className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                   Multi-Objective VRP Optimizer
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-sky-200/70 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                   Balance INR dispatch cost, road kilometers, and fleet CO₂e emissions with real capacity constraints.
                 </p>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-sky-500" />
+              <div className="p-4 rounded-xl border border-sky-200/75 dark:border-sky-900/60 bg-white/85 dark:bg-[#0B223B]/90 space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                   Role-Gated Auditability
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-sky-200/70 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
                   Every facility approval, pickup transition, and recovery batch is recorded with actor attribution.
                 </p>
               </div>
@@ -482,16 +560,22 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col">
-            <img
-              src="/src/assets/images/refurbishment_lab_1795259340405.jpg"
-              alt="Certified electronics refurbishment and diagnostics laboratory"
-              referrerPolicy="no-referrer"
-              className="w-full h-64 object-cover"
-            />
-            <div className="p-6 space-y-2.5 flex-1 flex flex-col justify-between">
+          <div className="group lg:col-span-7 rounded-2xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:shadow-[0_20px_40px_-20px_rgba(14,165,233,0.28)]">
+            <div className="relative overflow-hidden h-64">
+              <img
+                src="/src/assets/images/refurbishment_lab_1795259340405.jpg"
+                alt="Certified electronics refurbishment and diagnostics laboratory"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/35 to-transparent"
+              />
+            </div>
+            <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
                   AI Device Scanning &amp; Doorstep Pickup Workflows
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
@@ -501,23 +585,30 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 type="button"
                 onClick={onOpenDashboard}
-                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1 pt-2 hover:underline"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1.5 pt-2 hover:text-sky-900 dark:hover:text-sky-200 transition-colors cursor-pointer self-start"
               >
-                Open Pickup Manager <ArrowRight className="w-3.5 h-3.5" />
+                Open Pickup Manager
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col">
-            <img
-              src="/src/assets/images/material_recovery_macro_1795259341769.jpg"
-              alt="Recovered copper, aluminum, and circuit board materials"
-              referrerPolicy="no-referrer"
-              className="w-full h-64 object-cover"
-            />
-            <div className="p-6 space-y-2.5 flex-1 flex flex-col justify-between">
+          <div className="group lg:col-span-5 rounded-2xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:shadow-[0_20px_40px_-20px_rgba(14,165,233,0.28)]">
+            <div className="relative overflow-hidden h-64">
+              <img
+                src="/src/assets/images/material_recovery_macro_1795259341769.jpg"
+                alt="Recovered copper, aluminum, and circuit board materials"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/35 to-transparent"
+              />
+            </div>
+            <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-sky-50 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
                   Precision Material Recovery Accounting
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
@@ -527,9 +618,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigate('knowledge')}
-                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1 pt-2 hover:underline"
+                className="text-xs font-semibold text-sky-700 dark:text-sky-400 inline-flex items-center gap-1.5 pt-2 hover:text-sky-900 dark:hover:text-sky-200 transition-colors cursor-pointer self-start"
               >
-                Explore Recovery Guides &amp; Rules <ArrowRight className="w-3.5 h-3.5" />
+                Explore Recovery Guides &amp; Rules
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
               </button>
             </div>
           </div>
@@ -539,7 +631,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 5. 8-Step Circular Workflow */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-2 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
             Core Workflow
           </p>
           <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
@@ -551,19 +643,21 @@ export const HomePage: React.FC<HomePageProps> = ({
           {WORKFLOW_STEPS.map((w) => (
             <div
               key={w.step}
-              className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
+              className="group relative overflow-hidden p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/40 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
             >
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
-              <span className="inline-block font-mono text-xs font-semibold text-sky-700 dark:text-sky-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-sky-600 dark:group-hover:text-sky-300">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 font-mono text-xs font-bold text-sky-700 dark:text-sky-300 transition-transform duration-200 group-hover:scale-105">
                 {w.step}
               </span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
-                {w.title}
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">{w.desc}</p>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
+                  {w.title}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">{w.desc}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -572,7 +666,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 6. E-Waste Categories Accepted */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="space-y-2 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
             E-Waste Streams
           </p>
           <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
@@ -585,18 +679,20 @@ export const HomePage: React.FC<HomePageProps> = ({
             return (
               <div
                 key={c.title}
-                className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2.5 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
+                className="group relative overflow-hidden p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/40 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default"
               >
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 />
-                <Icon className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3 group-hover:text-sky-500 dark:group-hover:text-sky-300" />
+                <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3 group-hover:text-sky-500 dark:group-hover:text-sky-300" />
+                </div>
                 <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
                   {c.title}
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-sky-100/80">{c.items}</p>
-                <p className="text-[11px] text-slate-500 dark:text-sky-200/65 pt-2 border-t border-slate-100 dark:border-sky-900/50 transition-colors duration-200 group-hover:border-sky-200/80 dark:group-hover:border-sky-800/70">
+                <p className="text-xs text-slate-600 dark:text-sky-100/80 leading-relaxed">{c.items}</p>
+                <p className="text-[11px] text-slate-500 dark:text-sky-200/65 pt-2.5 border-t border-slate-100 dark:border-sky-900/50 transition-colors duration-200 group-hover:border-sky-200/80 dark:group-hover:border-sky-800/70">
                   Handling note: {c.hazard}
                 </p>
               </div>
@@ -609,36 +705,54 @@ export const HomePage: React.FC<HomePageProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* FAQs */}
-          <div className="lg:col-span-7 space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
-              Frequently Asked Questions
-            </p>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-sky-50">
-              Clarity on Compliance, Routing &amp; Data Safety
-            </h2>
-            <div className="divide-y divide-slate-200 dark:divide-sky-900/60 border-y border-slate-200 dark:border-sky-900/60">
+          <div className="lg:col-span-7 space-y-5">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+                Frequently Asked Questions
+              </p>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-sky-50">
+                Clarity on Compliance, Routing &amp; Data Safety
+              </h2>
+            </div>
+            <div className="space-y-3">
               {FAQS.map((item, idx) => {
                 const isOpen = openFaq === idx;
                 return (
-                  <div key={idx} className="py-4">
+                  <div
+                    key={idx}
+                    className={`rounded-xl border transition-all duration-200 ${
+                      isOpen
+                        ? 'border-sky-300 dark:border-sky-700/80 bg-white dark:bg-[#0B223B] shadow-sm shadow-sky-600/10'
+                        : 'border-sky-200/75 dark:border-sky-900/60 bg-white/75 dark:bg-[#0B223B]/70 hover:border-sky-300 dark:hover:border-sky-700/70'
+                    }`}
+                  >
                     <button
                       type="button"
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="w-full flex items-center justify-between gap-4 text-left"
+                      aria-expanded={isOpen}
+                      className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left cursor-pointer"
                     >
                       <span className="text-sm font-semibold text-slate-900 dark:text-sky-50">
                         {item.q}
                       </span>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-sky-500 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                      )}
+                      <span
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                          isOpen
+                            ? 'bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-300'
+                            : 'bg-slate-100/80 dark:bg-sky-950/60 text-slate-500 dark:text-sky-300/70'
+                        }`}
+                      >
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </span>
                     </button>
                     {isOpen && (
-                      <p className="mt-2.5 text-xs sm:text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed">
-                        {item.a}
-                      </p>
+                      <div className="px-5 pb-4 pt-0.5 text-xs sm:text-sm text-slate-600 dark:text-sky-100/80 leading-relaxed border-t border-sky-100/80 dark:border-sky-900/50">
+                        <p className="pt-3">{item.a}</p>
+                      </div>
                     )}
                   </div>
                 );
@@ -785,18 +899,23 @@ export const KnowledgeHubPage: React.FC<{
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-      <div className="space-y-3 max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
-          E-Waste Knowledge Centre &amp; Policy Reference
-        </p>
-        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
-          India E-Waste (Management) Rules, 2022 &amp; Safe Handling
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
-          Understand Extended Producer Responsibility (EPR), safe storage of lithium batteries, and mandatory channelization through CPCB-registered recyclers.
-        </p>
-      </div>
+    <div className="relative">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-sky-200/40 via-sky-100/20 to-transparent dark:from-sky-900/25 dark:via-sky-950/10 dark:to-transparent"
+      />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        <div className="space-y-3 max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+            E-Waste Knowledge Centre &amp; Policy Reference
+          </p>
+          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
+            India E-Waste (Management) Rules, 2022 &amp; Safe Handling
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
+            Understand Extended Producer Responsibility (EPR), safe storage of lithium batteries, and mandatory channelization through CPCB-registered recyclers.
+          </p>
+        </div>
 
       {/* Statutory Distinction Notice */}
       <div className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-800/70 bg-sky-50/80 dark:bg-[#0B223B] space-y-2">
@@ -875,12 +994,14 @@ export const KnowledgeHubPage: React.FC<{
 
       {/* Key Regulatory Pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+        <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           />
-          <Recycle className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+          <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+            <Recycle className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+          </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Extended Producer Responsibility
           </h3>
@@ -888,12 +1009,14 @@ export const KnowledgeHubPage: React.FC<{
             Manufacturers, producers, importers, and brand owners placing notified electrical and electronic equipment on the market must meet progressive annual recycling targets through registered recyclers.
           </p>
         </div>
-        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+        <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           />
-          <ShieldCheck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+          <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+          </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Bulk Consumer Obligations
           </h3>
@@ -901,12 +1024,14 @@ export const KnowledgeHubPage: React.FC<{
             Enterprises, hospitals, universities, and public offices must ensure e-waste generated on-site is handed over exclusively to registered producers, refurbishers, or authorized recyclers—never unorganized scrap dealers.
           </p>
         </div>
-        <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+        <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           />
-          <Leaf className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-6" />
+          <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+            <Leaf className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-6" />
+          </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
             Battery &amp; Hazardous Safety
           </h3>
@@ -916,17 +1041,23 @@ export const KnowledgeHubPage: React.FC<{
         </div>
       </div>
     </div>
+    </div>
   );
 };
 
 /* -------------------- About, Privacy & Terms Page -------------------- */
 export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ section }) => {
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="relative">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-sky-200/40 via-sky-100/20 to-transparent dark:from-sky-900/25 dark:via-sky-950/10 dark:to-transparent"
+      />
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
       {section === 'about' ? (
         <>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
               About Reboot Earth
             </p>
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50">
@@ -938,12 +1069,14 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+            <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
-              <Truck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:translate-x-0.5" />
+              <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+                <Truck className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:translate-x-0.5" />
+              </div>
               <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
                 Transparent Math
               </h3>
@@ -951,12 +1084,14 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
                 Every CO₂e saving, road circuity multiplier, and recovery yield is computed from actual database rows with disclosed assumptions.
               </p>
             </div>
-            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+            <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
-              <ShieldCheck className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+              <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-3" />
+              </div>
               <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
                 Zero-Trust Access
               </h3>
@@ -964,12 +1099,14 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
                 Eight distinct user roles enforce least-privilege access on both API endpoints and Firestore security rules.
               </p>
             </div>
-            <div className="group relative overflow-hidden p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/30 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
+            <div className="group relative overflow-hidden p-6 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400/80 dark:hover:border-sky-500/70 hover:bg-sky-50/35 dark:hover:bg-[#102D4F] hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.24)] dark:hover:shadow-[0_14px_30px_-14px_rgba(14,165,233,0.28)] cursor-default">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/80 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
-              <Globe className="w-5 h-5 text-sky-500 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+              <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 flex items-center justify-center">
+                <Globe className="w-5 h-5 text-sky-600 dark:text-sky-400 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-12" />
+              </div>
               <h3 className="text-base font-semibold text-slate-900 dark:text-sky-50 transition-colors duration-200 group-hover:text-sky-700 dark:group-hover:text-sky-300">
                 Open Interoperability
               </h3>
@@ -1032,6 +1169,7 @@ export const AboutAndLegalPage: React.FC<{ section: 'about' | 'legal' }> = ({ se
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

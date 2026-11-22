@@ -330,11 +330,22 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
 
       {result && (
         <>
-          {/* KPI Summary Strip */}
+          {/* KPI Summary Strip with Active Objective Spotlight */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B]">
-              <p className="text-xs text-slate-500 dark:text-sky-200/70">Optimized Distance</p>
-              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-1">
+            <div
+              className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
+                objective === 'distance'
+                  ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
+                  : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Optimized Distance</p>
+                <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Route className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-2">
                 {result.totalDistanceKm.toLocaleString()} km
               </p>
               <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
@@ -342,9 +353,20 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B]">
-              <p className="text-xs text-slate-500 dark:text-sky-200/70">Estimated Dispatch Cost</p>
-              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-1">
+            <div
+              className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
+                objective === 'cost'
+                  ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
+                  : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Estimated Dispatch Cost</p>
+                <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <IndianRupee className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-2">
                 ₹{result.estimatedCostInr.toLocaleString()}
               </p>
               <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
@@ -352,9 +374,20 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B]">
-              <p className="text-xs text-slate-500 dark:text-sky-200/70">Transport Emissions</p>
-              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-1">
+            <div
+              className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
+                objective === 'emission'
+                  ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
+                  : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Transport Emissions</p>
+                <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Leaf className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-2">
                 {result.estimatedEmissionsKg} kg CO₂e
               </p>
               <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
@@ -362,9 +395,14 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B]">
-              <p className="text-xs text-slate-500 dark:text-sky-200/70">Batch Coverage</p>
-              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-1">
+            <div className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/80">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Batch Coverage</p>
+                <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Truck className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-2">
                 {result.assignedCount} Assigned
               </p>
               <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-sky-200/70 mt-1">
@@ -432,27 +470,39 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                 No eligible pending pickups are waiting for route dispatch right now. Submit a pickup request to simulate routing.
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {result.assignments.map((a, idx) => (
                   <div
                     key={`${a.vehicleId}-${idx}`}
-                    className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4"
+                    className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/80 dark:hover:border-sky-600/80 hover:shadow-[0_14px_30px_-16px_rgba(14,165,233,0.22)]"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <Truck className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
-                        <div>
-                          <h5 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
-                            {a.registrationNo} · {a.vehicleType}
-                          </h5>
-                          <p className="text-xs text-slate-500 dark:text-sky-200/65">
-                            Driver: {a.driverName} · Fuel: {a.fuelType} · Drop-off: {a.facilityName}
-                          </p>
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-9 h-9 rounded-lg bg-sky-100 dark:bg-sky-900/60 border border-sky-200/80 dark:border-sky-800/70 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                            <Truck className="w-4 h-4" />
+                          </span>
+                          <div>
+                            <h5 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                              {a.registrationNo} · {a.vehicleType}
+                            </h5>
+                            <p className="text-xs text-slate-500 dark:text-sky-200/65">
+                              Driver: {a.driverName} · Fuel: {a.fuelType} · Drop-off: {a.facilityName}
+                            </p>
+                          </div>
                         </div>
+                        <span className="text-xs font-mono tabular-nums font-semibold text-sky-700 dark:text-sky-400 shrink-0">
+                          {a.utilizationPct}% load
+                        </span>
                       </div>
-                      <span className="text-xs font-mono tabular-nums font-semibold text-sky-700 dark:text-sky-400">
-                        {a.utilizationPct}% load
-                      </span>
+
+                      {/* Capacity Utilization Bar */}
+                      <div className="h-1.5 w-full rounded-full bg-sky-100 dark:bg-[#061526] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(4, a.utilizationPct))}%` }}
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 py-2.5 border-y border-slate-100 dark:border-sky-900/50 text-xs font-mono tabular-nums">
@@ -476,26 +526,36 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                       </div>
                     </div>
 
-                    <ol className="space-y-2 text-xs">
-                      {a.stops.map((stop, sIdx) => (
-                        <li key={sIdx} className="flex items-start justify-between gap-2 text-slate-700 dark:text-sky-100/85">
-                          <span className="leading-snug">
-                            <span className="font-mono text-sky-700 dark:text-sky-400 mr-1.5">
-                              {sIdx + 1}.
+                    {/* Visual Stop Timeline */}
+                    <ol className="relative pl-5 space-y-2.5 text-xs before:content-[''] before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-sky-200 dark:before:bg-sky-800/80">
+                      {a.stops.map((stop, sIdx) => {
+                        const dotColor =
+                          stop.type === 'depot'
+                            ? 'bg-slate-400 dark:bg-sky-400/60'
+                            : stop.type === 'facility'
+                              ? 'bg-cyan-500 dark:bg-cyan-400'
+                              : 'bg-sky-600 dark:bg-sky-400';
+                        return (
+                          <li key={sIdx} className="relative flex items-start justify-between gap-2 text-slate-700 dark:text-sky-100/85">
+                            <span
+                              aria-hidden="true"
+                              className={`absolute -left-5 top-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0B223B] ${dotColor}`}
+                            />
+                            <span className="leading-snug">
+                              <span className="font-mono font-semibold uppercase text-[10px] text-sky-700 dark:text-sky-300 mr-1.5">
+                                {stop.type}
+                              </span>
+                              {stop.label}
+                              {stop.weightKg ? ` (${stop.weightKg} kg)` : ''}
                             </span>
-                            <span className="font-medium uppercase text-[10px] text-slate-500 dark:text-sky-300/70 mr-1.5">
-                              {stop.type}
-                            </span>
-                            {stop.label}
-                            {stop.weightKg ? ` (${stop.weightKg} kg)` : ''}
-                          </span>
-                          {stop.legDistanceKm > 0 && (
-                            <span className="font-mono tabular-nums text-slate-500 dark:text-sky-200/65 whitespace-nowrap">
-                              +{stop.legDistanceKm} km
-                            </span>
-                          )}
-                        </li>
-                      ))}
+                            {stop.legDistanceKm > 0 && (
+                              <span className="font-mono tabular-nums text-slate-500 dark:text-sky-200/65 whitespace-nowrap">
+                                +{stop.legDistanceKm} km
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ol>
                   </div>
                 ))}
@@ -545,7 +605,10 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-sky-900/50">
                 {history.slice(0, 8).map((row) => (
-                  <tr key={row.id} className="text-slate-700 dark:text-sky-100/90">
+                  <tr
+                    key={row.id}
+                    className="text-slate-700 dark:text-sky-100/90 hover:bg-sky-50/50 dark:hover:bg-sky-900/25 transition-colors"
+                  >
                     <td className="px-4 py-2.5 font-mono font-medium">{row.runCode}</td>
                     <td className="px-4 py-2.5 capitalize">{row.objective}</td>
                     <td className="px-4 py-2.5 font-mono tabular-nums">{row.totalDistanceKm} km</td>

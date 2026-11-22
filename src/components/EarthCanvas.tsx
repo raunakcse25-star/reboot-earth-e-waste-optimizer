@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ChevronDown, ChevronUp, RotateCcw, Layers } from 'lucide-react';
+import Globe from '@/components/ui/globe';
 
 interface EarthCanvasProps {
   className?: string;
@@ -640,13 +641,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({ className = '' }) => {
 
   if (webglError) {
     return (
-      <div className={`relative rounded-2xl border border-sky-900/50 bg-[#091F38] overflow-hidden flex items-center justify-center p-8 ${className}`}>
-        <img
-          src="/src/assets/images/facility_recycling_hub_1795259315861.jpg"
-          alt="Reboot Earth Circular Recycling Facility"
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover rounded-xl opacity-85"
-        />
+      <div className={`relative rounded-2xl border border-sky-900/50 bg-[#040E1A] overflow-hidden flex items-center justify-center p-6 ${className}`}>
+        <Globe size={260} className="min-h-[360px]" />
       </div>
     );
   }

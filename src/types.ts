@@ -101,6 +101,14 @@ export interface InventoryBatch {
   createdAt: string;
 }
 
+export interface MonthlyImpactTrendPoint {
+  monthKey: string;
+  label: string;
+  collectedKg: number;
+  energyRecoveredKwh: number;
+  isLiveMonth: boolean;
+}
+
 export interface AnalyticsSummary {
   totalPickups: number;
   completedPickups: number;
@@ -122,6 +130,7 @@ export interface AnalyticsSummary {
   transportEmissionsSavedKg: number;
   optimizationRunsCount: number;
   byCategory: { category: string; weightKg: number; requests: number }[];
+  monthlyTrends?: MonthlyImpactTrendPoint[];
   calculationMethodology: string;
 }
 

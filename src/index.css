@@ -11,6 +11,8 @@
   html {
     font-family: var(--font-sans);
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, .font-display {
@@ -20,6 +22,58 @@
 
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: rgba(14, 165, 233, 0.22);
+    color: #0c4a6e;
+  }
+
+  .dark ::selection {
+    background-color: rgba(56, 189, 248, 0.32);
+    color: #f0f9ff;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid rgba(14, 165, 233, 0.65);
+    outline-offset: 2px;
+  }
+
+  /* Subtle themed scrollbars */
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e6f2ff;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #93c5fd;
+    border-radius: 9999px;
+    border: 2px solid #e6f2ff;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #38bdf8;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: #040e1a;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #173a5e;
+    border: 2px solid #040e1a;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #0284c7;
   }
 }
 
