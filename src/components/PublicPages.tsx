@@ -29,6 +29,7 @@ import ElectricBorder from './ElectricBorder';
 import SpecularButton from './SpecularButton';
 import AnimatedList, { type AnimatedListItem } from './AnimatedList';
 import AnimatedContent from './AnimatedContent';
+import { ImpactDashboard } from './ImpactDashboard';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import type { AnalyticsSummary } from '../types';
@@ -244,57 +245,12 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 2. Full-Width Database-Driven Platform Statistics Strip */}
-      <section className="border-y border-sky-200/80 dark:border-sky-900/60 bg-sky-100/55 dark:bg-[#071A2E]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
-                E-Waste Tracked
-              </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
-                {analytics ? `${analytics.totalCollectedKg.toLocaleString()} kg` : '—'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
-                Across {analytics?.totalPickups ?? 0} verified pickup requests
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
-                Estimated CO₂e Avoided
-              </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-sky-700 dark:text-sky-400 mt-1">
-                {analytics ? `${analytics.estimatedCo2AvoidedKg.toLocaleString()} kg` : '—'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
-                From recycling &amp; optimized routing
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
-                Landfill Diversion
-              </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
-                {analytics ? `${analytics.landfillDiversionPct}%` : '—'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
-                {analytics?.reusableDevices ?? 0} devices refurbished for reuse
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-sky-200/65">
-                Verified Network Facilities
-              </p>
-              <p className="font-display font-mono tabular-nums text-3xl sm:text-4xl font-bold text-slate-900 dark:text-sky-50 mt-1">
-                {analytics ? `${analytics.verifiedFacilities} / ${analytics.totalFacilities}` : '—'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-sky-200/60 mt-1">
-                Active centres, recyclers &amp; refurbishers
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 2. Live Environmental Impact Dashboard (Recycled, CO2 Saved, Energy Recovered) */}
+      <ImpactDashboard
+        analytics={analytics}
+        onExploreOptimizer={() => onNavigate('optimizer')}
+        onSchedulePickup={onOpenDashboard}
+      />
 
       {/* 2.5. Interactive FluxLines + ElectricBorder + SpecularButton + AnimatedList Showcase */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
