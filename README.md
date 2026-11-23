@@ -122,33 +122,47 @@ Make responsible e-waste management easier to access and operate by connecting p
 ## 🖼️ Interface Preview
 
 > Screenshots are supplied interface captures, not a claim that every displayed metric, facility, rating or status is live production data.
+>
+> <!-- Images load from docs/screenshots/. File names are case-sensitive on GitHub and the files must be committed and pushed. -->
+
+<div align="center">
+
+| 🏠 Home | 🎮 3D Studio |
+|:---:|:---:|
+| <img src="./docs/screenshots/01-home.png" alt="Home" width="420"/> | <img src="./docs/screenshots/02-3d-scenes.png" alt="3D Studio" width="420"/> |
+| **🔐 Registration** | **📍 Find Centres** |
+| <img src="./docs/screenshots/03-registration.png" alt="Registration" width="420"/> | <img src="./docs/screenshots/04-find-centres.png" alt="Find Centres" width="420"/> |
+
+</div>
+
+Full-size views and descriptions follow.
 
 ### 1 · Home — landing page
 The landing page introduces the intelligent e-waste logistics network, the pickup and collection-centre journeys, the circular-planet visual, the 3D scene entry point, and quick access to EcoBot and live voice.
 
 <div align="center">
-  <img src="docs/screenshots/01-home.png" alt="Reboot Earth home page" width="92%"/>
+  <img src="./docs/screenshots/01-home.png" alt="Reboot Earth home page" width="92%"/>
 </div>
 
 ### 2 · Interactive 3D Scenes Studio
 A Smart Collection Hub and EV Fleet rendered with Three.js. Orbit, zoom, and switch between Eco Hub, Device Anatomy and Orbital Network, with overview, close-up and aerial views.
 
 <div align="center">
-  <img src="docs/screenshots/02-3d-scenes.png" alt="Reboot Earth interactive 3D studio" width="92%"/>
+  <img src="./docs/screenshots/02-3d-scenes.png" alt="Reboot Earth interactive 3D studio" width="92%"/>
 </div>
 
 ### 3 · Sign in and registration
 Role-based onboarding with a citizen workflow explainer: doorstep pickup, custody updates and environmental-impact tracking.
 
 <div align="center">
-  <img src="docs/screenshots/03-registration.png" alt="Reboot Earth registration screen" width="92%"/>
+  <img src="./docs/screenshots/03-registration.png" alt="Reboot Earth registration screen" width="92%"/>
 </div>
 
 ### 4 · Find verified collection centres
 Search and filters combined with a Google Maps view and facility cards showing type, verification status, hours, accepted categories, capacity utilisation and route actions. *Demo-reference facility data is shown.*
 
 <div align="center">
-  <img src="docs/screenshots/04-find-centres.png" alt="Reboot Earth facility discovery screen" width="92%"/>
+  <img src="./docs/screenshots/04-find-centres.png" alt="Reboot Earth facility discovery screen" width="92%"/>
 </div>
 
 <details>
@@ -1031,10 +1045,57 @@ test: cover optimiser capacity edge cases
 
 </div>
 
-| Contributor | Role | Contribution |
-|---|---|---|
-| [**raunakcse25-star**](https://github.com/raunakcse25-star) | Author / project lead | Overall project, architecture and implementation |
-| *Add teammate* | *Add role* | *Add verified contribution* |
+### 🤝 Contributors
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="180">
+      <a href="https://github.com/raunakcse25-star">
+        <img src="https://github.com/raunakcse25-star.png?size=100" width="90" alt="raunakcse25-star"/><br/>
+        <sub><b>raunakcse25-star</b></sub>
+      </a><br/>
+      <sub>Author · Project lead</sub>
+    </td>
+    <td align="center" width="180">
+      <a href="https://github.com/AnishaDubey-022329">
+        <img src="https://github.com/AnishaDubey-022329.png?size=100" width="90" alt="AnishaDubey-022329"/><br/>
+        <sub><b>AnishaDubey-022329</b></sub>
+      </a><br/>
+      <sub>Collaborator</sub>
+    </td>
+    <td align="center" width="180">
+      <a href="https://github.com/nidhimishra-04">
+        <img src="https://github.com/nidhimishra-04.png?size=100" width="90" alt="Nidhi Mishra"/><br/>
+        <sub><b>Nidhi Mishra</b></sub>
+      </a><br/>
+      <sub>Collaborator</sub>
+    </td>
+    <td align="center" width="180">
+      <a href="https://github.com/sumit23-bot">
+        <img src="https://github.com/sumit23-bot.png?size=100" width="90" alt="Sumit Arya"/><br/>
+        <sub><b>Sumit Arya</b></sub>
+      </a><br/>
+      <sub>Collaborator</sub>
+    </td>
+    <td align="center" width="180">
+      <a href="https://github.com/Sushant9871">
+        <img src="https://github.com/Sushant9871.png?size=100" width="90" alt="Sushant9871"/><br/>
+        <sub><b>Sushant9871</b></sub>
+      </a><br/>
+      <sub>Collaborator</sub>
+    </td>
+  </tr>
+</table>
+</div>
+
+| Contributor | GitHub | Access | Contribution |
+|---|---|---|---|
+| **raunakcse25-star** | [@raunakcse25-star](https://github.com/raunakcse25-star) | Owner | Overall project, architecture and implementation |
+| **Anisha Dubey** | [@AnishaDubey-022329](https://github.com/AnishaDubey-022329) | Collaborator | *Add verified contribution* |
+| **Nidhi Mishra** | [@nidhimishra-04](https://github.com/nidhimishra-04) | Collaborator | *Add verified contribution* |
+| **Sumit Arya** | [@sumit23-bot](https://github.com/sumit23-bot) | Collaborator | *Add verified contribution* |
+| **Sushant** | [@Sushant9871](https://github.com/Sushant9871) | Collaborator | *Add verified contribution* |
 
 ---
 
