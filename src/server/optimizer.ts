@@ -46,6 +46,7 @@ export interface RouteStop {
   lat: number;
   lng: number;
   legDistanceKm: number;
+  legMinutes: number;
 }
 
 export interface VehicleAssignment {
@@ -62,6 +63,7 @@ export interface VehicleAssignment {
   capacityKg: number;
   utilizationPct: number;
   routeDistanceKm: number;
+  estimatedTravelMinutes: number;
   estimatedCostInr: number;
   estimatedEmissionsKg: number;
   stops: RouteStop[];
@@ -80,6 +82,10 @@ export interface OptimizationOutput {
   baselineDistanceKm: number;
   distanceSavedKm: number;
   distanceSavedPct: number;
+  estimatedTravelMinutes: number;
+  baselineTravelMinutes: number;
+  timeSavedMinutes: number;
+  timeSavedPct: number;
   estimatedCostInr: number;
   baselineCostInr: number;
   costSavedInr: number;
@@ -97,6 +103,39 @@ export interface OptimizationOutput {
 }
 
 const ROAD_CIRCUITY_FACTOR = 1.28; // Standard urban-metro road-to-geodesic circuity ratio
+
+const AVG_SPEED_KMH: Record<string, number> = {
+  Electric: 29,
+  CNG: 26,
+  Diesel: 22,
+};
+
+const PICKUP_DWELL_MINUTES = 8; // Loading & digital manifest scan per pickup stop
+const FACILITY_UNLOAD_MINUTES = 10; // Weigh-in & bay intake unloading at destination facility
+
+const FIXED_DISPATCH_COST_INR: Record<string, number> = {
+  Electric: 240,
+  CNG: 260,
+  Diesel: 320,
+};
+
+const COLD_START_EMISSIONS_KG: Record<string, number> = {
+  Electric: 0,
+  CNG: 0.35,
+  Diesel: 1.45,
+};
+
+function getAvgSpeedKmh(fuelType: string): number {
+  return AVG_SPEED_KMH[fuelType] ?? 25;
+}
+
+function getDispatchMobilizationCost(fuelType: string): number {
+  return FIXED_DISPATCH_COST_INR[fuelType] ?? 260;
+}
+
+function getColdStartEmissionsKg(fuelType: string): number {
+  return COLD_START_EMISSIONS_KG[fuelType] ?? 0.4;
+}
 
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -116,13 +155,25 @@ export function estimatedRoadKm(lat1: number, lng1: number, lat2: number, lng2: 
   return haversineKm(lat1, lng1, lat2, lng2) * ROAD_CIRCUITY_FACTOR;
 }
 
+function estimateLegMinutes(
+  distanceKm: number,
+  fuelType: string,
+  dwellMinutes = 0
+): number {
+  const driveMins = (distanceKm / getAvgSpeedKmh(fuelType)) * 60;
+  return Math.max(1, Math.round(driveMins + dwellMinutes));
+}
+
 function facilityAcceptsCategory(facility: OptFacilityInput, category: string): boolean {
   const accepted = facility.acceptedCategories
     .toLowerCase()
     .split(',')
     .map((s) => s.trim());
   const normalized = category.toLowerCase().trim();
-  return accepted.includes('all') || accepted.some((a) => normalized.includes(a) || a.includes(normalized));
+  return (
+    accepted.includes('all') ||
+    accepted.some((a) => normalized.includes(a) || a.includes(normalized))
+  );
 }
 
 function twoOptRoute(
@@ -138,7 +189,12 @@ function twoOptRoute(
     for (let i = 0; i < seq.length - 1; i++) {
       total += estimatedRoadKm(seq[i].lat, seq[i].lng, seq[i + 1].lat, seq[i + 1].lng);
     }
-    total += estimatedRoadKm(seq[seq.length - 1].lat, seq[seq.length - 1].lng, facility.lat, facility.lng);
+    total += estimatedRoadKm(
+      seq[seq.length - 1].lat,
+      seq[seq.length - 1].lng,
+      facility.lat,
+      facility.lng
+    );
     return total;
   };
 
@@ -146,7 +202,7 @@ function twoOptRoute(
   let improved = true;
   let guard = 0;
 
-  while (improved && guard < 25) {
+  while (improved && guard < 30) {
     improved = false;
     guard++;
     for (let i = 0; i < route.length - 1; i++) {
@@ -168,26 +224,6 @@ function twoOptRoute(
   return route;
 }
 
-const FIXED_DISPATCH_COST_INR: Record<string, number> = {
-  Electric: 240,
-  CNG: 240,
-  Diesel: 260,
-};
-
-const COLD_START_EMISSIONS_KG: Record<string, number> = {
-  Electric: 0,
-  CNG: 0.25,
-  Diesel: 1.45,
-};
-
-function getDispatchMobilizationCost(fuelType: string): number {
-  return FIXED_DISPATCH_COST_INR[fuelType] ?? 240;
-}
-
-function getColdStartEmissionsKg(fuelType: string): number {
-  return COLD_START_EMISSIONS_KG[fuelType] ?? 0.4;
-}
-
 function computeRouteDistance(
   origin: { lat: number; lng: number },
   ordered: OptPickupInput[],
@@ -198,10 +234,40 @@ function computeRouteDistance(
   for (let i = 0; i < ordered.length - 1; i++) {
     dist += estimatedRoadKm(ordered[i].lat, ordered[i].lng, ordered[i + 1].lat, ordered[i + 1].lng);
   }
-  dist += estimatedRoadKm(ordered[ordered.length - 1].lat, ordered[ordered.length - 1].lng, facility.lat, facility.lng);
+  dist += estimatedRoadKm(
+    ordered[ordered.length - 1].lat,
+    ordered[ordered.length - 1].lng,
+    facility.lat,
+    facility.lng
+  );
   return dist;
 }
 
+function computeRouteTravelMinutes(
+  origin: { lat: number; lng: number },
+  ordered: OptPickupInput[],
+  facility: { lat: number; lng: number },
+  fuelType: string
+): number {
+  if (ordered.length === 0) return 0;
+  let mins = 0;
+  let prevLat = origin.lat;
+  let prevLng = origin.lng;
+  for (const stop of ordered) {
+    const leg = estimatedRoadKm(prevLat, prevLng, stop.lat, stop.lng);
+    mins += estimateLegMinutes(leg, fuelType, PICKUP_DWELL_MINUTES);
+    prevLat = stop.lat;
+    prevLng = stop.lng;
+  }
+  const finalLeg = estimatedRoadKm(prevLat, prevLng, facility.lat, facility.lng);
+  mins += estimateLegMinutes(finalLeg, fuelType, FACILITY_UNLOAD_MINUTES);
+  return mins;
+}
+
+/**
+ * Evaluates a candidate assignment of clusters to vehicles and returns the best plan
+ * for the active objective (`emission`, `distance`, or `cost`) using real geodesic/road math.
+ */
 export function runSmartOptimization(
   objective: OptimizationObjective,
   requests: OptPickupInput[],
@@ -219,6 +285,7 @@ export function runSmartOptimization(
   let baselineDistanceKm = 0;
   let baselineCostInr = 0;
   let baselineEmissionsKg = 0;
+  let baselineTravelMinutes = 0;
 
   const avgCostPerKm =
     availableVehicles.length > 0
@@ -226,15 +293,21 @@ export function runSmartOptimization(
       : 24;
   const avgEmissionPerKm =
     availableVehicles.length > 0
-      ? availableVehicles.reduce((acc, v) => acc + v.emissionFactorKgPerKm, 0) / availableVehicles.length
+      ? availableVehicles.reduce((acc, v) => acc + v.emissionFactorKgPerKm, 0) /
+        availableVehicles.length
       : 0.22;
 
-  // Step 1: Match each pickup request to its nearest compatible facility with remaining capacity
-  const facilityBuckets: Record<number, { facility: OptFacilityInput; items: OptPickupInput[] }> = {};
+  // Step 1: Match each pickup request to its optimal compatible facility
+  // - Min Distance & Min Emissions: nearest compatible facility to minimize leg distance
+  // - Min Cost: prefer consolidating compatible requests into shared high-capacity hubs if
+  //   detour is small enough to avoid deploying an extra vehicle mobilization fee
+  const facilityBuckets: Record<number, { facility: OptFacilityInput; items: OptPickupInput[] }> =
+    {};
 
   for (const req of requests) {
     const compatible = facilities.filter(
-      (f) => facilityAcceptsCategory(f, req.category) && facilityRemaining[f.id] >= req.estimatedWeightKg
+      (f) =>
+        facilityAcceptsCategory(f, req.category) && facilityRemaining[f.id] >= req.estimatedWeightKg
     );
 
     if (compatible.length === 0) {
@@ -247,11 +320,17 @@ export function runSmartOptimization(
       continue;
     }
 
-    compatible.sort(
-      (a, b) =>
-        estimatedRoadKm(req.lat, req.lng, a.lat, a.lng) -
-        estimatedRoadKm(req.lat, req.lng, b.lat, b.lng)
-    );
+    compatible.sort((a, b) => {
+      const distA = estimatedRoadKm(req.lat, req.lng, a.lat, a.lng);
+      const distB = estimatedRoadKm(req.lat, req.lng, b.lat, b.lng);
+      if (objective === 'cost') {
+        // Reward consolidating into an already-active facility when extra road cost < mobilization fee
+        const activeBonusA = facilityBuckets[a.id] ? -8 : 0;
+        const activeBonusB = facilityBuckets[b.id] ? -8 : 0;
+        return distA + activeBonusA - (distB + activeBonusB);
+      }
+      return distA - distB;
+    });
 
     const chosenFacility = compatible[0];
     facilityRemaining[chosenFacility.id] -= req.estimatedWeightKg;
@@ -269,14 +348,20 @@ export function runSmartOptimization(
     const singleRoundTrip =
       estimatedRoadKm(defaultDepot.baseLat, defaultDepot.baseLng, req.lat, req.lng) +
       estimatedRoadKm(req.lat, req.lng, chosenFacility.lat, chosenFacility.lng) +
-      estimatedRoadKm(chosenFacility.lat, chosenFacility.lng, defaultDepot.baseLat, defaultDepot.baseLng);
+      estimatedRoadKm(
+        chosenFacility.lat,
+        chosenFacility.lng,
+        defaultDepot.baseLat,
+        defaultDepot.baseLng
+      );
 
     baselineDistanceKm += singleRoundTrip;
-    baselineCostInr += singleRoundTrip * (avgCostPerKm * 1.15) + 240;
+    baselineCostInr += singleRoundTrip * (avgCostPerKm * 1.15) + 260;
     baselineEmissionsKg += singleRoundTrip * (avgEmissionPerKm * 1.2) + 0.55;
+    baselineTravelMinutes += Math.round((singleRoundTrip / 24) * 60 + PICKUP_DWELL_MINUTES + FACILITY_UNLOAD_MINUTES);
   }
 
-  // Step 2: Process clusters largest-first and evaluate every candidate vehicle from its live location
+  // Step 2: Order facility clusters
   const orderedBuckets = Object.values(facilityBuckets).sort((a, b) => {
     const weightDiff =
       b.items.reduce((s, i) => s + i.estimatedWeightKg, 0) -
@@ -285,7 +370,7 @@ export function runSmartOptimization(
     return a.facility.id - b.facility.id;
   });
 
-  // Track where each deployed vehicle currently sits (depot initially, last unloading facility on subsequent shifts)
+  // Track where each deployed vehicle currently sits (depot initially, last unloading facility on continuation shifts)
   const vehicleLocations = new Map<number, { lat: number; lng: number; label: string }>();
   const usedVehicleIds = new Set<number>();
   const assignments: VehicleAssignment[] = [];
@@ -307,7 +392,7 @@ export function runSmartOptimization(
         break;
       }
 
-      // Evaluate EVERY candidate vehicle by simulating its actual route from its current live position
+      // Evaluate EVERY candidate vehicle by simulating its actual route from its live position
       const candidates = availableVehicles
         .filter((v) => remaining.some((r) => r.estimatedWeightKg <= v.capacityKg))
         .map((v) => {
@@ -318,7 +403,7 @@ export function runSmartOptimization(
             label: `Depot (${v.registrationNo})`,
           };
 
-          // Simulate greedy packing for this vehicle
+          // Greedy capacity-aware stop packing from current vehicle origin
           const tempRemaining = [...remaining];
           const loaded: OptPickupInput[] = [];
           let weight = 0;
@@ -330,7 +415,12 @@ export function runSmartOptimization(
             let bestDist = Infinity;
             for (let i = 0; i < tempRemaining.length; i++) {
               if (weight + tempRemaining[i].estimatedWeightKg <= v.capacityKg) {
-                const d = estimatedRoadKm(curLat, curLng, tempRemaining[i].lat, tempRemaining[i].lng);
+                const d = estimatedRoadKm(
+                  curLat,
+                  curLng,
+                  tempRemaining[i].lat,
+                  tempRemaining[i].lng
+                );
                 if (d < bestDist) {
                   bestDist = d;
                   bestIdx = i;
@@ -355,9 +445,17 @@ export function runSmartOptimization(
             ordered,
             { lat: facility.lat, lng: facility.lng }
           );
+          const estimatedTravelMinutes = computeRouteTravelMinutes(
+            { lat: origin.lat, lng: origin.lng },
+            ordered,
+            { lat: facility.lat, lng: facility.lng },
+            v.fuelType
+          );
 
           // Already-mobilized vehicles incur zero duplicate fixed dispatch or cold-start overhead on continuation shifts
-          const mobilizationCost = isContinuationShift ? 0 : getDispatchMobilizationCost(v.fuelType);
+          const mobilizationCost = isContinuationShift
+            ? 0
+            : getDispatchMobilizationCost(v.fuelType);
           const coldStartKg = isContinuationShift ? 0 : getColdStartEmissionsKg(v.fuelType);
           const estimatedCostInr = routeDistanceKm * v.costPerKmInr + mobilizationCost;
           const estimatedEmissionsKg = routeDistanceKm * v.emissionFactorKgPerKm + coldStartKg;
@@ -379,6 +477,7 @@ export function runSmartOptimization(
             ordered,
             weight,
             routeDistanceKm,
+            estimatedTravelMinutes,
             estimatedCostInr,
             estimatedEmissionsKg,
             objectiveScore,
@@ -405,6 +504,7 @@ export function runSmartOptimization(
         ordered,
         weight: currentWeight,
         routeDistanceKm,
+        estimatedTravelMinutes,
         estimatedCostInr,
         estimatedEmissionsKg,
       } = best;
@@ -432,6 +532,7 @@ export function runSmartOptimization(
           lat: origin.lat,
           lng: origin.lng,
           legDistanceKm: 0,
+          legMinutes: 0,
         },
       ];
 
@@ -440,6 +541,7 @@ export function runSmartOptimization(
 
       for (const stop of ordered) {
         const leg = estimatedRoadKm(prevLat, prevLng, stop.lat, stop.lng);
+        const legMins = estimateLegMinutes(leg, vehicle.fuelType, PICKUP_DWELL_MINUTES);
         stops.push({
           type: 'pickup',
           label: `${stop.deviceName} — ${stop.pickupAddress}`,
@@ -449,18 +551,21 @@ export function runSmartOptimization(
           lat: stop.lat,
           lng: stop.lng,
           legDistanceKm: Number(leg.toFixed(2)),
+          legMinutes: legMins,
         });
         prevLat = stop.lat;
         prevLng = stop.lng;
       }
 
       const finalLeg = estimatedRoadKm(prevLat, prevLng, facility.lat, facility.lng);
+      const finalMins = estimateLegMinutes(finalLeg, vehicle.fuelType, FACILITY_UNLOAD_MINUTES);
       stops.push({
         type: 'facility',
         label: `${facility.name} (${facility.city})`,
         lat: facility.lat,
         lng: facility.lng,
         legDistanceKm: Number(finalLeg.toFixed(2)),
+        legMinutes: finalMins,
       });
 
       assignments.push({
@@ -477,6 +582,7 @@ export function runSmartOptimization(
         capacityKg: vehicle.capacityKg,
         utilizationPct: Number(((currentWeight / vehicle.capacityKg) * 100).toFixed(1)),
         routeDistanceKm: Number(routeDistanceKm.toFixed(2)),
+        estimatedTravelMinutes,
         estimatedCostInr: Number(estimatedCostInr.toFixed(2)),
         estimatedEmissionsKg: Number(estimatedEmissionsKg.toFixed(3)),
         stops,
@@ -487,6 +593,9 @@ export function runSmartOptimization(
   const totalDistanceKm = Number(
     assignments.reduce((sum, a) => sum + a.routeDistanceKm, 0).toFixed(2)
   );
+  const estimatedTravelMinutes = Math.round(
+    assignments.reduce((sum, a) => sum + a.estimatedTravelMinutes, 0)
+  );
   const estimatedCostInr = Number(
     assignments.reduce((sum, a) => sum + a.estimatedCostInr, 0).toFixed(2)
   );
@@ -495,19 +604,23 @@ export function runSmartOptimization(
   );
 
   const safeBaseDist = Number(Math.max(baselineDistanceKm, totalDistanceKm).toFixed(2));
+  const safeBaseTime = Math.max(baselineTravelMinutes, estimatedTravelMinutes);
   const safeBaseCost = Number(Math.max(baselineCostInr, estimatedCostInr).toFixed(2));
   const safeBaseEm = Number(Math.max(baselineEmissionsKg, estimatedEmissionsKg).toFixed(3));
 
   const distanceSavedKm = Number((safeBaseDist - totalDistanceKm).toFixed(2));
+  const timeSavedMinutes = Math.max(0, safeBaseTime - estimatedTravelMinutes);
   const costSavedInr = Number((safeBaseCost - estimatedCostInr).toFixed(2));
   const emissionsSavedKg = Number((safeBaseEm - estimatedEmissionsKg).toFixed(3));
 
   const assignedCount = assignments.reduce((s, a) => s + a.requestIds.length, 0);
 
   const objectiveDescriptions: Record<OptimizationObjective, string> = {
-    cost: 'Minimizes total dispatch expenditure (INR) by reusing already-mobilized low-cost vehicles on continuation shifts where cheaper than deploying an additional truck, refined with 2-opt tour tightening.',
-    distance: 'Minimizes cumulative estimated road kilometers by dispatching each local depot vehicle to its nearest compatible cluster, refined with 2-opt route ordering.',
-    emission: 'Minimizes logistics carbon footprint (kg CO₂e) by prioritizing zero-tailpipe EV and low-emission CNG continuation shifts over high-emission heavy diesel cold starts.',
+    cost: 'Minimizes total dispatch expenditure (INR) by consolidating nearby compatible pickups into shared hubs and reusing already-mobilized low-cost vehicles on continuation shifts where cheaper than deploying another truck, refined with 2-opt tour tightening.',
+    distance:
+      'Minimizes cumulative estimated road kilometers and transit time by dispatching each local depot vehicle directly to its nearest compatible cluster, refined with 2-opt stop ordering.',
+    emission:
+      'Minimizes logistics carbon footprint (kg CO₂e) by prioritizing zero-tailpipe EV and low-emission CNG continuation shifts over high-emission heavy diesel cold starts.',
   };
 
   return {
@@ -515,21 +628,29 @@ export function runSmartOptimization(
     totalDistanceKm,
     baselineDistanceKm: safeBaseDist,
     distanceSavedKm,
-    distanceSavedPct: safeBaseDist > 0 ? Number(((distanceSavedKm / safeBaseDist) * 100).toFixed(1)) : 0,
+    distanceSavedPct:
+      safeBaseDist > 0 ? Number(((distanceSavedKm / safeBaseDist) * 100).toFixed(1)) : 0,
+    estimatedTravelMinutes,
+    baselineTravelMinutes: safeBaseTime,
+    timeSavedMinutes,
+    timeSavedPct:
+      safeBaseTime > 0 ? Number(((timeSavedMinutes / safeBaseTime) * 100).toFixed(1)) : 0,
     estimatedCostInr,
     baselineCostInr: safeBaseCost,
     costSavedInr,
-    costSavedPct: safeBaseCost > 0 ? Number(((costSavedInr / safeBaseCost) * 100).toFixed(1)) : 0,
+    costSavedPct:
+      safeBaseCost > 0 ? Number(((costSavedInr / safeBaseCost) * 100).toFixed(1)) : 0,
     estimatedEmissionsKg,
     baselineEmissionsKg: safeBaseEm,
     emissionsSavedKg,
-    emissionsSavedPct: safeBaseEm > 0 ? Number(((emissionsSavedKg / safeBaseEm) * 100).toFixed(1)) : 0,
+    emissionsSavedPct:
+      safeBaseEm > 0 ? Number(((emissionsSavedKg / safeBaseEm) * 100).toFixed(1)) : 0,
     assignedCount,
     unassignedCount: unassigned.length,
     assignments,
     unassigned,
     assumptions:
-      'Road distances use WGS-84 Haversine distance multiplied by a 1.28x urban road circuity factor. Costs combine variable ₹/km rates with one-time daily vehicle mobilization (EV ₹240, CNG ₹240, Diesel ₹260; ₹0 additional fixed fee on continuation shifts from the last unloading facility). Emissions combine driving factors (EV 0.08, CNG 0.16, Diesel 0.29 kg CO₂e/km) with one-time cold-start and bay-loading idle (EV 0, CNG 0.25, Diesel 1.45 kg CO₂e).',
+      'Road distances use WGS-84 Haversine distance multiplied by a 1.28x urban road circuity factor. Travel times combine vehicle speed profiles (EV 29 km/h, CNG 26 km/h, Diesel 22 km/h) with 8 min pickup loading and 10 min facility unloading dwell. Costs combine variable ₹/km rates with daily mobilization (EV ₹240, CNG ₹260, Diesel ₹320; ₹0 additional fee on continuation shifts). Emissions combine driving factors (EV 0.08, CNG 0.16, Diesel 0.29 kg CO₂e/km) with cold-start idle (EV 0, CNG 0.35, Diesel 1.45 kg CO₂e).',
     explanation: objectiveDescriptions[objective],
   };
 }

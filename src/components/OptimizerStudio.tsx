@@ -10,21 +10,23 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  AlertCircle,
   CheckCircle2,
+  Clock,
   CloudUpload,
   Download,
+  IndianRupee,
   Leaf,
   Loader2,
   Play,
   Route,
   Truck,
-  IndianRupee,
-  AlertCircle,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { saveFileToGoogleDrive } from '../lib/workspace';
 import { ConfirmDialog } from './ConfirmDialog';
+import { OptimizerRouteMap } from './OptimizerRouteMap';
 import type { OptimizationObjective, OptimizationOutput } from '../server/optimizer';
 
 interface SavedRunRow {
@@ -43,12 +45,20 @@ interface SavedRunRow {
   createdAt: string;
 }
 
+function formatDuration(mins: number): string {
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { firebaseUser, dbUser, workspaceToken, pushNotification } = useAuth();
+  const { isAuthenticated, firebaseUser, dbUser, workspaceToken, pushNotification } = useAuth();
   const [objective, setObjective] = useState<OptimizationObjective>('emission');
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizationOutput | null>(null);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [history, setHistory] = useState<SavedRunRow[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [driveConfirmOpen, setDriveConfirmOpen] = useState(false);
@@ -66,14 +76,14 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
   };
 
   const loadHistory = useCallback(async () => {
-    if (!firebaseUser) return;
+    if (!isAuthenticated) return;
     try {
       const rows = await apiFetch<SavedRunRow[]>('/api/optimize/history');
       setHistory(rows);
     } catch {
       // History stays empty if unauthenticated
     }
-  }, [firebaseUser]);
+  }, [isAuthenticated]);
 
   const executeOptimization = useCallback(
     async (selectedObj: OptimizationObjective, saveRun = true, announce = true) => {
@@ -85,11 +95,15 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
           '/api/optimize',
           {
             method: 'POST',
-            body: JSON.stringify({ objective: selectedObj, saveRun: Boolean(firebaseUser && saveRun) }),
+            body: JSON.stringify({
+              objective: selectedObj,
+              saveRun: Boolean(isAuthenticated && saveRun),
+            }),
           },
-          Boolean(firebaseUser)
+          Boolean(isAuthenticated)
         );
         setResult(res.result);
+        setSelectedRouteIndex(0);
         if (announce) {
           const timeLabel = new Date().toLocaleTimeString([], {
             hour: '2-digit',
@@ -98,16 +112,18 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
           });
           const savedSuffix = res.savedRun ? ` · Saved as ${res.savedRun.runCode}` : '';
           setLastRunNote(
-            `Optimized for ${OBJECTIVE_LABELS[selectedObj]} at ${timeLabel} (${res.result.assignments.length} route${res.result.assignments.length === 1 ? '' : 's'}, ${res.result.totalDistanceKm} km, ₹${res.result.estimatedCostInr.toLocaleString()}, ${res.result.estimatedEmissionsKg} kg CO₂e)${savedSuffix}.`
+            `Optimized for ${OBJECTIVE_LABELS[selectedObj]} at ${timeLabel} — ${res.result.assignments.length} route${res.result.assignments.length === 1 ? '' : 's'}, ${res.result.totalDistanceKm} km, ${formatDuration(res.result.estimatedTravelMinutes)}, ₹${res.result.estimatedCostInr.toLocaleString()}, ${res.result.estimatedEmissionsKg} kg CO₂e${savedSuffix}.`
           );
         }
-        if (firebaseUser && res.savedRun) {
+        if (isAuthenticated && res.savedRun) {
           void loadHistory();
-          void pushNotification({
-            title: `Route Plan ${res.savedRun.runCode} Generated`,
-            message: `Objective: ${selectedObj}. Estimated savings: ${res.result.distanceSavedKm} km and ${res.result.emissionsSavedKg} kg CO2e.`,
-            category: 'optimization',
-          });
+          if (firebaseUser) {
+            void pushNotification({
+              title: `Route Plan ${res.savedRun.runCode} Generated`,
+              message: `Objective: ${selectedObj}. Estimated savings: ${res.result.distanceSavedKm} km, ${res.result.timeSavedMinutes} min, and ${res.result.emissionsSavedKg} kg CO2e.`,
+              category: 'optimization',
+            });
+          }
         }
       } catch (err: any) {
         setError(err?.message || 'Unable to execute route optimization.');
@@ -115,15 +131,15 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
         setRunning(false);
       }
     },
-    [firebaseUser, loadHistory, pushNotification]
+    [isAuthenticated, firebaseUser, loadHistory, pushNotification]
   );
 
   useEffect(() => {
     void executeOptimization('emission', false, false);
-    if (firebaseUser) {
+    if (isAuthenticated) {
       void loadHistory();
     }
-  }, [firebaseUser, executeOptimization, loadHistory]);
+  }, [isAuthenticated, executeOptimization, loadHistory]);
 
   const handleApproveRun = async (id: number) => {
     setApprovingId(id);
@@ -149,6 +165,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
       'Weight_kg',
       'Utilization_pct',
       'Distance_km',
+      'Travel_Time_min',
       'Cost_INR',
       'Emissions_kg_CO2e',
     ];
@@ -162,10 +179,14 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
       a.totalWeightKg,
       a.utilizationPct,
       a.routeDistanceKm,
+      a.estimatedTravelMinutes,
       a.estimatedCostInr,
       a.estimatedEmissionsKg,
     ]);
-    return [headers.join(','), ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+    return [
+      headers.join(','),
+      ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
   };
 
   const handleDownloadCsv = () => {
@@ -199,12 +220,20 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
     }
   };
 
+  const activeObjective = result?.objective ?? objective;
+  const objectivePendingRecalc = Boolean(result && result.objective !== objective);
+
   const comparisonData = result
     ? [
         {
           metric: 'Distance (km)',
           Baseline: result.baselineDistanceKm,
           Optimized: result.totalDistanceKm,
+        },
+        {
+          metric: 'Time (min)',
+          Baseline: result.baselineTravelMinutes,
+          Optimized: result.estimatedTravelMinutes,
         },
         {
           metric: 'Cost (₹ x10)',
@@ -228,7 +257,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
             Smart Multi-Objective Logistics Optimizer
           </h3>
           <p className="text-xs text-slate-600 dark:text-sky-200/70 max-w-2xl">
-            Evaluates active pickup queues against vehicle weight capacities, facility intake compatibility, and 2-opt tour improvement.
+            Select an optimization goal below and click Run Optimization to compute capacity-aware vehicle assignments, 2-opt tour ordering, travel times, and highlighted route paths.
           </p>
         </div>
 
@@ -248,13 +277,10 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                   key={opt.id}
                   type="button"
                   disabled={running}
-                  onClick={() => {
-                    setObjective(opt.id);
-                    void executeOptimization(opt.id, false, true);
-                  }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 ${
+                  onClick={() => setObjective(opt.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 whitespace-nowrap ${
                     active
-                      ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                      ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 shadow-sm'
                       : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -269,7 +295,9 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
             type="button"
             onClick={() => void executeOptimization(objective, true, true)}
             disabled={running}
-            className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-600/20"
+            className={`px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-600/20 ${
+              objectivePendingRecalc ? 'ring-2 ring-sky-400/80 ring-offset-2 dark:ring-offset-[#0B223B]' : ''
+            }`}
           >
             {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
             {running ? 'Optimizing...' : 'Run Optimization'}
@@ -299,7 +327,22 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
         </div>
       </div>
 
-      {lastRunNote && !error && (
+      {objectivePendingRecalc && !running && (
+        <div className="px-4 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3">
+          <span>
+            Objective switched to <strong>{OBJECTIVE_LABELS[objective]}</strong>. Click <strong>Run Optimization</strong> to calculate the new best route.
+          </span>
+          <button
+            type="button"
+            onClick={() => void executeOptimization(objective, true, true)}
+            className="px-3 py-1 rounded-md bg-amber-600 text-white font-semibold hover:bg-amber-700 whitespace-nowrap cursor-pointer"
+          >
+            Run Now
+          </button>
+        </div>
+      )}
+
+      {lastRunNote && !error && !objectivePendingRecalc && (
         <div className="px-4 py-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/80 text-xs text-sky-900 dark:text-sky-200 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
           <span>{lastRunNote}</span>
@@ -330,17 +373,19 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
 
       {result && (
         <>
-          {/* KPI Summary Strip with Active Objective Spotlight */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {/* KPI Summary Strip with Active Objective Spotlight + Travel Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div
               className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
-                objective === 'distance'
+                activeObjective === 'distance'
                   ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
                   : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Optimized Distance</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">
+                  Optimized Distance
+                </p>
                 <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                   <Route className="w-3.5 h-3.5" />
                 </span>
@@ -349,19 +394,21 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                 {result.totalDistanceKm.toLocaleString()} km
               </p>
               <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
-                Saved {result.distanceSavedKm} km ({result.distanceSavedPct}%) vs unbatched
+                Saved {result.distanceSavedKm} km ({result.distanceSavedPct}%)
               </p>
             </div>
 
             <div
               className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
-                objective === 'cost'
-                  ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
+                activeObjective === 'cost'
+                  ? 'border-amber-500 ring-2 ring-amber-500/25 shadow-md shadow-amber-500/10'
                   : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Estimated Dispatch Cost</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">
+                  Estimated Dispatch Cost
+                </p>
                 <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                   <IndianRupee className="w-3.5 h-3.5" />
                 </span>
@@ -376,13 +423,15 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
 
             <div
               className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 ${
-                objective === 'emission'
-                  ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-md shadow-sky-500/10'
+                activeObjective === 'emission'
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/25 shadow-md shadow-emerald-500/10'
                   : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Transport Emissions</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">
+                  Transport Emissions
+                </p>
                 <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                   <Leaf className="w-3.5 h-3.5" />
                 </span>
@@ -391,13 +440,32 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                 {result.estimatedEmissionsKg} kg CO₂e
               </p>
               <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
-                Avoided {result.emissionsSavedKg} kg CO₂e ({result.emissionsSavedPct}%)
+                Avoided {result.emissionsSavedKg} kg ({result.emissionsSavedPct}%)
               </p>
             </div>
 
             <div className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/80">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">Batch Coverage</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">
+                  Est. Travel Time
+                </p>
+                <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </span>
+              </div>
+              <p className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-sky-50 mt-2">
+                {formatDuration(result.estimatedTravelMinutes)}
+              </p>
+              <p className="text-xs font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-1">
+                Saved {result.timeSavedMinutes} min ({result.timeSavedPct}%)
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/80">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-sky-200/75">
+                  Batch Coverage
+                </p>
                 <span className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                   <Truck className="w-3.5 h-3.5" />
                 </span>
@@ -406,10 +474,21 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                 {result.assignedCount} Assigned
               </p>
               <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-sky-200/70 mt-1">
-                {result.assignments.length} route{result.assignments.length === 1 ? '' : 's'} · {result.unassignedCount} unassigned
+                {result.assignments.length} route{result.assignments.length === 1 ? '' : 's'} ·{' '}
+                {result.unassignedCount} unassigned
               </p>
             </div>
           </div>
+
+          {/* Interactive Highlighted Route Map */}
+          {result.assignments.length > 0 && (
+            <OptimizerRouteMap
+              assignments={result.assignments}
+              objective={result.objective}
+              selectedRouteIndex={selectedRouteIndex}
+              onSelectRouteIndex={setSelectedRouteIndex}
+            />
+          )}
 
           {/* Chart + Strategy Explanation */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -471,94 +550,127 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {result.assignments.map((a, idx) => (
-                  <div
-                    key={`${a.vehicleId}-${idx}`}
-                    className="p-5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/80 dark:hover:border-sky-600/80 hover:shadow-[0_14px_30px_-16px_rgba(14,165,233,0.22)]"
-                  >
-                    <div className="space-y-2.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="w-9 h-9 rounded-lg bg-sky-100 dark:bg-sky-900/60 border border-sky-200/80 dark:border-sky-800/70 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                            <Truck className="w-4 h-4" />
-                          </span>
-                          <div>
-                            <h5 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
-                              {a.registrationNo} · {a.vehicleType}
-                            </h5>
-                            <p className="text-xs text-slate-500 dark:text-sky-200/65">
-                              Driver: {a.driverName} · Fuel: {a.fuelType} · Drop-off: {a.facilityName}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-mono tabular-nums font-semibold text-sky-700 dark:text-sky-400 shrink-0">
-                          {a.utilizationPct}% load
-                        </span>
-                      </div>
-
-                      {/* Capacity Utilization Bar */}
-                      <div className="h-1.5 w-full rounded-full bg-sky-100 dark:bg-[#061526] overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
-                          style={{ width: `${Math.min(100, Math.max(4, a.utilizationPct))}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 py-2.5 border-y border-slate-100 dark:border-sky-900/50 text-xs font-mono tabular-nums">
-                      <div>
-                        <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">Payload</span>
-                        <span className="text-slate-900 dark:text-sky-50 font-semibold">
-                          {a.totalWeightKg} / {a.capacityKg} kg
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">Est. Route</span>
-                        <span className="text-slate-900 dark:text-sky-50 font-semibold">
-                          {a.routeDistanceKm} km
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">Cost / CO₂e</span>
-                        <span className="text-slate-900 dark:text-sky-50 font-semibold">
-                          ₹{a.estimatedCostInr} · {a.estimatedEmissionsKg} kg
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Visual Stop Timeline */}
-                    <ol className="relative pl-5 space-y-2.5 text-xs before:content-[''] before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-sky-200 dark:before:bg-sky-800/80">
-                      {a.stops.map((stop, sIdx) => {
-                        const dotColor =
-                          stop.type === 'depot'
-                            ? 'bg-slate-400 dark:bg-sky-400/60'
-                            : stop.type === 'facility'
-                              ? 'bg-cyan-500 dark:bg-cyan-400'
-                              : 'bg-sky-600 dark:bg-sky-400';
-                        return (
-                          <li key={sIdx} className="relative flex items-start justify-between gap-2 text-slate-700 dark:text-sky-100/85">
-                            <span
-                              aria-hidden="true"
-                              className={`absolute -left-5 top-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0B223B] ${dotColor}`}
-                            />
-                            <span className="leading-snug">
-                              <span className="font-mono font-semibold uppercase text-[10px] text-sky-700 dark:text-sky-300 mr-1.5">
-                                {stop.type}
-                              </span>
-                              {stop.label}
-                              {stop.weightKg ? ` (${stop.weightKg} kg)` : ''}
+                {result.assignments.map((a, idx) => {
+                  const isHighlighted = idx === selectedRouteIndex;
+                  return (
+                    <div
+                      key={`${a.vehicleId}-${idx}`}
+                      onClick={() => setSelectedRouteIndex(idx)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedRouteIndex(idx);
+                        }
+                      }}
+                      className={`p-5 rounded-xl border bg-white dark:bg-[#0B223B] space-y-4 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer ${
+                        isHighlighted
+                          ? 'border-sky-500 ring-2 ring-sky-500/25 shadow-[0_14px_30px_-16px_rgba(14,165,233,0.3)]'
+                          : 'border-sky-200/80 dark:border-sky-900/60 hover:border-sky-400/80 dark:hover:border-sky-600/80'
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="w-9 h-9 rounded-lg bg-sky-100 dark:bg-sky-900/60 border border-sky-200/80 dark:border-sky-800/70 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                              <Truck className="w-4 h-4" />
                             </span>
-                            {stop.legDistanceKm > 0 && (
-                              <span className="font-mono tabular-nums text-slate-500 dark:text-sky-200/65 whitespace-nowrap">
-                                +{stop.legDistanceKm} km
+                            <div>
+                              <h5 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                                {a.registrationNo} · {a.vehicleType}
+                              </h5>
+                              <p className="text-xs text-slate-500 dark:text-sky-200/65">
+                                Driver: {a.driverName} · Fuel: {a.fuelType} · Drop-off: {a.facilityName}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-mono tabular-nums font-semibold text-sky-700 dark:text-sky-400 shrink-0">
+                            {a.utilizationPct}% load
+                          </span>
+                        </div>
+
+                        {/* Capacity Utilization Bar */}
+                        <div className="h-1.5 w-full rounded-full bg-sky-100 dark:bg-[#061526] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(4, a.utilizationPct))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2.5 border-y border-slate-100 dark:border-sky-900/50 text-xs font-mono tabular-nums">
+                        <div>
+                          <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">
+                            Payload
+                          </span>
+                          <span className="text-slate-900 dark:text-sky-50 font-semibold">
+                            {a.totalWeightKg} / {a.capacityKg} kg
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">
+                            Distance
+                          </span>
+                          <span className="text-slate-900 dark:text-sky-50 font-semibold">
+                            {a.routeDistanceKm} km
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">
+                            Travel Time
+                          </span>
+                          <span className="text-slate-900 dark:text-sky-50 font-semibold">
+                            {formatDuration(a.estimatedTravelMinutes)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[11px] font-sans text-slate-500 dark:text-sky-200/60">
+                            Cost / CO₂e
+                          </span>
+                          <span className="text-slate-900 dark:text-sky-50 font-semibold">
+                            ₹{a.estimatedCostInr} · {a.estimatedEmissionsKg} kg
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Visual Stop Timeline */}
+                      <ol className="relative pl-5 space-y-2.5 text-xs before:content-[''] before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-sky-200 dark:before:bg-sky-800/80">
+                        {a.stops.map((stop, sIdx) => {
+                          const dotColor =
+                            stop.type === 'depot'
+                              ? 'bg-slate-400 dark:bg-sky-400/60'
+                              : stop.type === 'facility'
+                                ? 'bg-cyan-500 dark:bg-cyan-400'
+                                : 'bg-sky-600 dark:bg-sky-400';
+                          return (
+                            <li
+                              key={sIdx}
+                              className="relative flex items-start justify-between gap-2 text-slate-700 dark:text-sky-100/85"
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`absolute -left-5 top-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0B223B] ${dotColor}`}
+                              />
+                              <span className="leading-snug">
+                                <span className="font-mono font-semibold uppercase text-[10px] text-sky-700 dark:text-sky-300 mr-1.5">
+                                  {stop.type}
+                                </span>
+                                {stop.label}
+                                {stop.weightKg ? ` (${stop.weightKg} kg)` : ''}
                               </span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  </div>
-                ))}
+                              {stop.legDistanceKm > 0 && (
+                                <span className="font-mono tabular-nums text-slate-500 dark:text-sky-200/65 whitespace-nowrap">
+                                  +{stop.legDistanceKm} km · {stop.legMinutes}m
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -573,7 +685,8 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
               <ul className="space-y-1 text-xs text-amber-900 dark:text-amber-200/85">
                 {result.unassigned.map((u) => (
                   <li key={u.requestId}>
-                    <span className="font-mono font-semibold">{u.requestCode}</span> ({u.deviceName}): {u.reason}
+                    <span className="font-mono font-semibold">{u.requestCode}</span> ({u.deviceName}
+                    ): {u.reason}
                   </li>
                 ))}
               </ul>
@@ -583,7 +696,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
       )}
 
       {/* Optimization History Table (Authenticated Dashboard) */}
-      {!compact && firebaseUser && history.length > 0 && (
+      {!compact && isAuthenticated && history.length > 0 && (
         <div className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-200 dark:border-sky-900/60">
             <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
@@ -613,7 +726,9 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                     <td className="px-4 py-2.5 capitalize">{row.objective}</td>
                     <td className="px-4 py-2.5 font-mono tabular-nums">{row.totalDistanceKm} km</td>
                     <td className="px-4 py-2.5 font-mono tabular-nums">₹{row.estimatedCostInr}</td>
-                    <td className="px-4 py-2.5 font-mono tabular-nums">{row.estimatedEmissionsKg} kg</td>
+                    <td className="px-4 py-2.5 font-mono tabular-nums">
+                      {row.estimatedEmissionsKg} kg
+                    </td>
                     <td className="px-4 py-2.5">
                       {row.approved ? (
                         <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-400 font-medium">
@@ -631,7 +746,7 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
                             type="button"
                             disabled={approvingId === row.id}
                             onClick={() => void handleApproveRun(row.id)}
-                            className="px-2.5 py-1 rounded text-xs font-medium bg-sky-600/15 text-sky-700 dark:text-sky-300 hover:bg-sky-600/25"
+                            className="px-2.5 py-1 rounded text-xs font-medium bg-sky-600/15 text-sky-700 dark:text-sky-300 hover:bg-sky-600/25 cursor-pointer"
                           >
                             {approvingId === row.id ? 'Approving...' : 'Approve Plan'}
                           </button>

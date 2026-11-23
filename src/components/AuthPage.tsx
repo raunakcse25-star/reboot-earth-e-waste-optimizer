@@ -576,31 +576,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </div>
 
             {/* Top Brand Callout Card (shown on Sign In view & on mobile, matching Image 2) */}
-            <AnimatePresence initial={false}>
-              {(mode === 'signin' || true) && (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className={`${
-                    mode === 'signin' ? 'flex' : 'flex lg:hidden'
-                  } items-center gap-3.5 rounded-2xl border border-emerald-200/75 dark:border-emerald-800/60 bg-white/85 dark:bg-[#071D26]/90 backdrop-blur-md px-4 py-3.5 shadow-[0_6px_24px_-12px_rgba(5,150,105,0.18)]`}
-                >
-                  <span className="w-11 h-11 rounded-xl bg-[#009966] dark:bg-emerald-500 text-white dark:text-emerald-950 flex items-center justify-center shrink-0 shadow-sm">
-                    <Leaf className="w-5 h-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-emerald-50 leading-snug">
-                      Responsible disposal starts here
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-emerald-200/70 mt-0.5">
-                      One platform for every e-waste journey.
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className={`${
+                mode === 'signin' ? 'flex' : 'flex lg:hidden'
+              } items-center gap-3.5 rounded-2xl border border-emerald-200/75 dark:border-emerald-800/60 bg-white/85 dark:bg-[#071D26]/90 backdrop-blur-md px-4 py-3.5 shadow-[0_6px_24px_-12px_rgba(5,150,105,0.18)]`}
+            >
+              <span className="w-11 h-11 rounded-xl bg-[#009966] dark:bg-emerald-500 text-white dark:text-emerald-950 flex items-center justify-center shrink-0 shadow-sm">
+                <Leaf className="w-5 h-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-emerald-50 leading-snug">
+                  Responsible disposal starts here
+                </p>
+                <p className="text-xs text-slate-500 dark:text-emerald-200/70 mt-0.5">
+                  One platform for every e-waste journey.
+                </p>
+              </div>
+            </motion.div>
 
             {/* Dynamic Heading & Subtitle */}
             <div className="space-y-1.5">

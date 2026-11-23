@@ -4,19 +4,21 @@ interface GoogleSignInButtonProps {
   onClick: () => void;
   loading?: boolean;
   label?: string;
+  className?: string;
 }
 
 export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onClick,
   loading = false,
   label = 'Sign in with Google',
+  className = '',
 }) => {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={loading}
-      className="gsi-material-button disabled:opacity-60 whitespace-nowrap shrink-0"
+      className={`gsi-material-button disabled:opacity-60 whitespace-nowrap shrink-0 ${className}`.trim()}
     >
       <div className="gsi-material-button-icon">
         <svg viewBox="0 0 48 48" style={{ display: 'block' }} aria-hidden="true">
