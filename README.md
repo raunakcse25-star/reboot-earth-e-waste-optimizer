@@ -125,56 +125,56 @@ Make responsible e-waste management easier to access and operate by connecting p
 
 <div align="center">
 
-| 🏠 Home | 📊 Impact Analytics | 📍 Find Centres |
+| 🔐 Registration | 🏠 Home | 📊 Impact Analytics |
 |:---:|:---:|:---:|
-| <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/01-home.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/01-home.png?raw=true" alt="Home" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/02-impact-dashboard.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/02-impact-dashboard.png?raw=true" alt="Impact analytics" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/03-find-centres.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/03-find-centres.png?raw=true" alt="Find centres" width="320"/></a> |
-| **🧠 Route Optimizer** | **🎮 3D Scenes Studio** | **🔐 Registration** |
-| <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/04-optimizer.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/04-optimizer.png?raw=true" alt="Route optimizer" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/05-3d-scenes.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/05-3d-scenes.png?raw=true" alt="3D scenes studio" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true" alt="Registration" width="320"/></a> |
+| <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true" alt="Registration" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/01-home.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/01-home.png?raw=true" alt="Home" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/02-impact-dashboard.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/02-impact-dashboard.png?raw=true" alt="Impact analytics" width="320"/></a> |
+| **📍 Find Centres** | **🧠 Route Optimizer** | **🎮 3D Scenes Studio** |
+| <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/03-find-centres.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/03-find-centres.png?raw=true" alt="Find centres" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/04-optimizer.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/04-optimizer.png?raw=true" alt="Route optimizer" width="320"/></a> | <a href="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/05-3d-scenes.png?raw=true"><img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/05-3d-scenes.png?raw=true" alt="3D scenes studio" width="320"/></a> |
 
 <sub>Click any thumbnail for the full-size image.</sub>
 
 </div>
 
-### 1 · Home — landing page
+### 1 · Sign in and registration
+A split-screen onboarding page: a role-based registration form (**Citizen**, **Collection centre**, **Recycler**, **Transporter**) with name, email and password fields, beside a workspace panel explaining the citizen journey — book a pickup slot, follow custody updates, and measure environmental impact.
+
+<div align="center">
+  <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true" alt="Reboot Earth registration screen" width="94%"/>
+</div>
+
+### 2 · Home — landing page
 The landing page presents Reboot Earth as an *intelligent e-waste logistics and recovery network*. The hero offers two primary journeys — **Schedule E-Waste Pickup** and **Find Collection Centres** — beside an interactive *Circular Planet Network* panel that switches between Orbital Globe, 3D Interactive Fleet and 3D Scenes Studio. The top navigation links Home, Find Centres, Optimizer, 3D Scenes, Knowledge Hub and About, with global search, a theme toggle and sign-in. Floating **Live Voice** and **Ask EcoBot** buttons give quick access to the AI assistant.
 
 <div align="center">
   <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/01-home.png?raw=true" alt="Reboot Earth home page" width="94%"/>
 </div>
 
-### 2 · Impact analytics — network-wide totals
+### 3 · Impact analytics — network-wide totals
 The impact section summarises recycled e-waste, CO₂e emissions saved and energy recovered as headline cards (with landfill-diversion rate, refurbished devices, verified-centre count and precious-metal figures), followed by a dual-axis **6-month trend chart** of e-waste collected (kg) against energy recovered (kWh). *The numbers in this capture are demo/sample values.*
 
 <div align="center">
   <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/02-impact-dashboard.png?raw=true" alt="Reboot Earth impact analytics" width="94%"/>
 </div>
 
-### 3 · Find verified collection centres
+### 4 · Find verified collection centres
 Facility search combines a text query, facility-type and waste-category filters and a **Search Google Maps** action with an interactive Google Map and facility cards. Each card shows facility type, verification status, operating hours, address, accepted categories, a **capacity-load bar** and a **Route** action; selecting a marker opens an info window with directions. Community ratings and reviews appear below. *Facilities shown are labelled "Demo Reference".*
 
 <div align="center">
   <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/03-find-centres.png?raw=true" alt="Reboot Earth facility discovery screen" width="94%"/>
 </div>
 
-### 4 · Smart Multi-Objective Logistics Optimizer
+### 5 · Smart Multi-Objective Logistics Optimizer
 The Optimizer Studio lets an operator choose **Min Emissions**, **Min Distance** or **Min Cost (₹)** and click **Run Optimization**. The result view shows KPI cards (optimised distance, estimated dispatch cost, transport emissions, estimated travel time, batch coverage with assigned/unassigned counts), a highlighted **route map** with per-vehicle route tabs and stops, per-route summaries, and a **CSV export**. *The run in this capture uses demo data; its savings are modelled against the optimiser's own separate-trip baseline, not an independent benchmark.*
 
 <div align="center">
   <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/04-optimizer.png?raw=true" alt="Reboot Earth route optimizer" width="94%"/>
 </div>
 
-### 5 · Interactive 3D Scenes Studio
+### 6 · Interactive 3D Scenes Studio
 A Three.js scene of a **Smart Collection Hub & EV Fleet** — solar-powered sorting bay, twin recovery cyclones and an EV collection van. Click the facility or van to inspect, drag to orbit and scroll to zoom. Scene controls switch between **Eco Hub**, **Device Anatomy** and **Orbital Network**, with *Overview*, *Close-Up* and *Aerial* camera views, a daylight toggle, pause and reset.
 
 <div align="center">
   <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/05-3d-scenes.png?raw=true" alt="Reboot Earth interactive 3D studio" width="94%"/>
-</div>
-
-### 6 · Sign in and registration
-A split-screen onboarding page: a role-based registration form (**Citizen**, **Collection centre**, **Recycler**, **Transporter**) with name, email and password fields, beside a workspace panel explaining the citizen journey — book a pickup slot, follow custody updates, and measure environmental impact.
-
-<div align="center">
-  <img src="https://github.com/raunakcse25-star/reboot-earth-e-waste-optimizer/blob/58b1004c5cfead2a5e32ad5d4bfb17d9c686b90d/readme%20zip%20for%20RebootEarth/docs/screenshots/06-registration.png?raw=true" alt="Reboot Earth registration screen" width="94%"/>
 </div>
 
 <details>
