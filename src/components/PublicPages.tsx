@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
   ChevronDown,
   Cpu,
-  ExternalLink,
   Factory,
   Globe,
   HardDrive,
@@ -14,11 +13,9 @@ import {
   Recycle,
   Route,
   Scale,
-  Search,
   Send,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Truck,
   Zap,
 } from 'lucide-react';
@@ -30,6 +27,7 @@ import SpecularButton from './SpecularButton';
 import AnimatedList, { type AnimatedListItem } from './AnimatedList';
 import AnimatedContent from './AnimatedContent';
 import { ImpactDashboard } from './ImpactDashboard';
+import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { createSupportTicketInFirestore } from '../lib/firebase';
@@ -874,58 +872,6 @@ export const KnowledgeHubPage: React.FC<{
   initialQuery?: string;
   searchNonce?: number;
 }> = ({ initialQuery, searchNonce = 0 }) => {
-  const [query, setQuery] = useState(
-    initialQuery || 'India E-Waste Management Rules 2022 CPCB EPR targets for electronics producers'
-  );
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{
-    answer: string;
-    sources: { title: string; uri: string }[];
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const runLookup = useCallback(async (searchText: string) => {
-    const cleaned = searchText.trim();
-    if (!cleaned) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<{
-        answer?: string;
-        summary?: string;
-        sources?: { title: string; uri: string }[];
-      }>(
-        '/api/ai/regulations-search',
-        { method: 'POST', body: JSON.stringify({ query: cleaned }) },
-        false
-      );
-      const answerText = (res?.answer ?? res?.summary ?? '').trim();
-      if (!answerText) {
-        throw new Error('No regulatory summary was returned. Please try again.');
-      }
-      setResult({
-        answer: answerText,
-        sources: Array.isArray(res?.sources) ? res.sources : [],
-      });
-    } catch (err: any) {
-      setError(err?.message || 'Unable to run Search-grounded regulation lookup.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (searchNonce > 0 && initialQuery && initialQuery.trim()) {
-      setQuery(initialQuery);
-      void runLookup(initialQuery);
-    }
-  }, [searchNonce, initialQuery, runLookup]);
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await runLookup(query);
-  };
-
   return (
     <div className="relative">
       <div
@@ -956,69 +902,13 @@ export const KnowledgeHubPage: React.FC<{
         </p>
       </div>
 
-      {/* Live Gemini Search-Grounded Regulatory Research */}
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-sky-500" />
-            Live Regulatory &amp; Standards Lookup (Google Search Grounded)
-          </h2>
-          <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-1">
-            Query up-to-date CPCB notifications, EPR recycling percentage schedules, or battery safety guidelines with linked public web sources.
-          </p>
-        </div>
-
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2.5">
-          <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-sky-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50 transition-all duration-150 hover:border-sky-400/80 dark:hover:border-sky-700 hover:bg-white dark:hover:bg-[#091F38] focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-[#091F38]"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:bg-sky-700 dark:hover:bg-sky-400 hover:shadow-lg hover:shadow-sky-600/25 active:translate-y-0 disabled:opacity-60 disabled:hover:translate-y-0 inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Research Rules
-          </button>
-        </form>
-
-        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-
-        {result && (
-          <div className="pt-4 border-t border-slate-200 dark:border-sky-900/50 space-y-4">
-            <div className="text-sm text-slate-700 dark:text-sky-100/90 whitespace-pre-line leading-relaxed">
-              {result.answer}
-            </div>
-            {Array.isArray(result.sources) && result.sources.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-sky-300/80">
-                  Cited Web Sources
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {result.sources.map((s, idx) => (
-                    <a
-                      key={idx}
-                      href={s.uri}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-xs text-sky-700 dark:text-sky-300 transition-all duration-150 hover:-translate-y-0.5 hover:border-sky-500 hover:shadow-sm inline-flex items-center gap-1.5"
-                    >
-                      <span className="truncate max-w-[260px]">{s.title}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Live Gemini Google Search-Grounded Regulatory, Market & Recycling Intelligence */}
+      <LiveSearchIntelPanel
+        initialQuery={initialQuery}
+        searchNonce={searchNonce}
+        title="Live Regulatory, Market & Recycling Intelligence (Google Search Grounded)"
+        subtitle="Query live Google Search results for CPCB & EPR regulatory updates, scrap metal recovery rates, circular economy news, and OEM take-back programs with verified web citations."
+      />
 
       {/* Key Regulatory Pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

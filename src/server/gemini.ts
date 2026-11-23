@@ -1,6 +1,7 @@
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 
 const PRIMARY_TEXT_MODEL = 'gemini-4-hydrogen';
+const SECONDARY_SEARCH_MODEL = 'gemini-4-neon';
 const FALLBACK_TEXT_MODEL = 'gemini-3.1-flash-lite';
 
 function getAiClient() {
@@ -155,6 +156,56 @@ Your responsibilities:
 3. Explicitly distinguish Reboot Earth's operational tracking records from official government CPCB registrations, EPR certificates, or statutory filings. Never claim government approval or fabricate facility licenses.
 4. Fluently respond in the user's preferred language: English, Hindi (हिन्दी), or Hinglish (Hindi written in Latin script). Keep responses practical, structured, concise, and helpful.`;
 
+export interface SearchGroundingSource {
+  title: string;
+  uri: string;
+  domain?: string;
+}
+
+function extractSearchGrounding(response: any): {
+  sources: SearchGroundingSource[];
+  webSearchQueries: string[];
+} {
+  const metadata = response?.candidates?.[0]?.groundingMetadata;
+  const chunks = Array.isArray(metadata?.groundingChunks) ? metadata.groundingChunks : [];
+  const seen = new Set<string>();
+  const sources: SearchGroundingSource[] = [];
+
+  for (const chunk of chunks) {
+    const uri = typeof chunk?.web?.uri === 'string' ? chunk.web.uri.trim() : '';
+    if (!uri || seen.has(uri)) continue;
+    seen.add(uri);
+    let domain: string | undefined;
+    try {
+      domain = new URL(uri).hostname.replace(/^www\./, '');
+    } catch {
+      domain = undefined;
+    }
+    sources.push({
+      title: (typeof chunk?.web?.title === 'string' && chunk.web.title.trim()) || domain || uri,
+      uri,
+      domain,
+    });
+  }
+
+  const rawQueries: unknown[] = Array.isArray(metadata?.webSearchQueries)
+    ? metadata.webSearchQueries
+    : [];
+  const webSearchQueries: string[] = Array.from(
+    new Set<string>(
+      rawQueries
+        .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+        .map((q) => q.trim())
+    )
+  ).slice(0, 6);
+
+  return { sources, webSearchQueries };
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface ChatTurn {
   role: 'user' | 'model';
   text: string;
@@ -174,7 +225,18 @@ export async function chatWithEcoBot(params: {
         ? 'Respond in friendly, natural Hinglish (Hindi words written in English/Latin script).'
         : 'Respond in clear, concise English.';
 
-  const systemInstruction = `${ECOBOT_SYSTEM_INSTRUCTION}\n\nLanguage preference: ${langDirective}`;
+  const searchDirective = params.useSearch
+    ? 'Live Google Search grounding is enabled. Actively use Google Search to retrieve up-to-date, real-time facts (including current scrap metal and recovered commodity market benchmarks, latest CPCB E-Waste and Battery Rules amendments, recent circular-economy news, and OEM recycling/take-back programs). Present fresh, verifiable figures and note approximate ranges when prices vary by city or grade.'
+    : '';
+
+  const systemInstruction = [
+    ECOBOT_SYSTEM_INSTRUCTION,
+    `Language preference: ${langDirective}`,
+    searchDirective,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
   const contents = [
     ...sanitizeChatHistory(params.history),
     {
@@ -187,11 +249,14 @@ export async function chatWithEcoBot(params: {
     model: string;
     useSearch: boolean;
     thinkingLow?: boolean;
+    delayMs?: number;
   };
 
   const attempts: AttemptSpec[] = params.useSearch
     ? [
-        { model: PRIMARY_TEXT_MODEL, useSearch: true, thinkingLow: true },
+        { model: PRIMARY_TEXT_MODEL, useSearch: true },
+        { model: PRIMARY_TEXT_MODEL, useSearch: true, delayMs: 900 },
+        { model: SECONDARY_SEARCH_MODEL, useSearch: true },
         { model: FALLBACK_TEXT_MODEL, useSearch: true },
         { model: FALLBACK_TEXT_MODEL, useSearch: false },
       ]
@@ -203,6 +268,9 @@ export async function chatWithEcoBot(params: {
   let lastError: any = null;
 
   for (const attempt of attempts) {
+    if (attempt.delayMs) {
+      await delay(attempt.delayMs);
+    }
     try {
       const response = await ai.models.generateContent({
         model: attempt.model,
@@ -220,20 +288,19 @@ export async function chatWithEcoBot(params: {
         continue;
       }
 
-      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-      const sources = chunks
-        .filter((c: any) => c.web?.uri)
-        .map((c: any) => ({
-          title: c.web.title || c.web.uri,
-          uri: c.web.uri,
-        }));
+      const { sources, webSearchQueries } = extractSearchGrounding(response);
 
       return {
         reply,
         sources,
+        webSearchQueries,
+        grounded: Boolean(attempt.useSearch && (sources.length > 0 || webSearchQueries.length > 0)),
+        model: attempt.model,
         searchFallback: Boolean(params.useSearch && !attempt.useSearch),
       };
     } catch (err: any) {
+      const info = parseErrorInfo(err);
+      console.warn(`[gemini] chatWithEcoBot (${attempt.model}, search=${attempt.useSearch}) failed:`, info.code, info.status, info.message.slice(0, 160));
       lastError = err;
       if (!isRetryableOrFallbackError(err)) {
         throw err;
@@ -246,23 +313,26 @@ export async function chatWithEcoBot(params: {
 
 export async function searchEWasteRegulations(query: string) {
   const ai = getAiClient();
-  const prompt = `Provide an accurate, current summary answering this India & global e-waste regulations question: ${query}. Clearly distinguish operational guidance from official CPCB statutory portals.`;
+  const prompt = `Use live Google Search to provide an accurate, up-to-date summary answering this India & global e-waste regulations question: ${query}. Include recent policy updates, dates, and figures where available, and clearly distinguish operational software guidance from official CPCB statutory portals.`;
 
   const attempts = [
-    { model: PRIMARY_TEXT_MODEL, useSearch: true, thinkingLow: true },
-    { model: FALLBACK_TEXT_MODEL, useSearch: true },
-    { model: FALLBACK_TEXT_MODEL, useSearch: false },
+    { model: PRIMARY_TEXT_MODEL },
+    { model: PRIMARY_TEXT_MODEL, delayMs: 900 },
+    { model: SECONDARY_SEARCH_MODEL },
+    { model: FALLBACK_TEXT_MODEL },
   ];
 
   let lastError: any = null;
   for (const attempt of attempts) {
+    if (attempt.delayMs) {
+      await delay(attempt.delayMs);
+    }
     try {
       const response = await ai.models.generateContent({
         model: attempt.model,
         contents: prompt,
         config: {
-          ...(attempt.thinkingLow ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
-          ...(attempt.useSearch ? { tools: [{ googleSearch: {} }] } : {}),
+          tools: [{ googleSearch: {} }],
         },
       });
 
@@ -272,22 +342,92 @@ export async function searchEWasteRegulations(query: string) {
         continue;
       }
 
-      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-      const sources = chunks
-        .filter((c: any) => c.web?.uri)
-        .map((c: any) => ({
-          title: c.web.title || c.web.uri,
-          uri: c.web.uri,
-        }));
+      const { sources, webSearchQueries } = extractSearchGrounding(response);
 
-      return { summary, answer: summary, sources };
+      return {
+        summary,
+        answer: summary,
+        sources,
+        webSearchQueries,
+        grounded: sources.length > 0 || webSearchQueries.length > 0,
+        model: attempt.model,
+        fetchedAt: new Date().toISOString(),
+      };
     } catch (err: any) {
+      const info = parseErrorInfo(err);
+      console.warn(`[gemini] searchEWasteRegulations (${attempt.model}) failed:`, info.code, info.status, info.message.slice(0, 160));
       lastError = err;
       if (!isRetryableOrFallbackError(err)) throw err;
     }
   }
 
-  throw lastError || new Error('Unable to fetch regulatory summary.');
+  throw lastError || new Error('Unable to fetch search-grounded regulatory summary.');
+}
+
+export async function queryLiveSearchIntel(params: {
+  query: string;
+  topic?: 'metals' | 'regulations' | 'news' | 'programs' | 'custom';
+  region?: string;
+}) {
+  const ai = getAiClient();
+  const region = (params.region || 'India').trim().slice(0, 60);
+  const topicContext: Record<string, string> = {
+    metals: `Focus on current real-time market benchmark prices and trends for recovered e-waste metals (copper, aluminum, gold, silver, PCB scrap) in ${region} and global markets. Include currency units and dates.`,
+    regulations: `Focus on the latest official CPCB notifications, India E-Waste (Management) Rules amendments, Battery Waste Management Rules, and EPR compliance deadlines in ${region}. Distinguish guidance from official statutory portals.`,
+    news: `Focus on the latest verified news, statistics, urban mining innovations, and circular electronics sustainability reports relevant to ${region} and global e-waste management.`,
+    programs: `Focus on active electronics manufacturer (OEM) take-back, trade-in, and authorized e-waste recycling programs currently available in ${region}.`,
+    custom: `Provide an accurate, up-to-date, well-structured answer grounded in live Google Search data relevant to ${region} and circular e-waste sustainability.`,
+  };
+
+  const directive = topicContext[params.topic || 'custom'] || topicContext.custom;
+  const prompt = `${directive}\n\nUser query: ${params.query.trim()}\n\nUse concise headings or bullet points and cite concrete dates/figures from current web results.`;
+
+  const attempts = [
+    { model: PRIMARY_TEXT_MODEL },
+    { model: PRIMARY_TEXT_MODEL, delayMs: 900 },
+    { model: SECONDARY_SEARCH_MODEL },
+    { model: FALLBACK_TEXT_MODEL },
+  ];
+
+  let lastError: any = null;
+  for (const attempt of attempts) {
+    if (attempt.delayMs) {
+      await delay(attempt.delayMs);
+    }
+    try {
+      const response = await ai.models.generateContent({
+        model: attempt.model,
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const answer = extractResponseText(response);
+      if (!answer) {
+        lastError = new Error(`Model ${attempt.model} returned an empty search-grounded response.`);
+        continue;
+      }
+
+      const { sources, webSearchQueries } = extractSearchGrounding(response);
+
+      return {
+        answer,
+        sources,
+        webSearchQueries,
+        grounded: sources.length > 0 || webSearchQueries.length > 0,
+        model: attempt.model,
+        fetchedAt: new Date().toISOString(),
+      };
+    } catch (err: any) {
+      const info = parseErrorInfo(err);
+      console.warn(`[gemini] queryLiveSearchIntel (${attempt.model}) failed:`, info.code, info.status, info.message.slice(0, 160));
+      lastError = err;
+      if (!isRetryableOrFallbackError(err)) throw err;
+    }
+  }
+
+  throw lastError || new Error('Unable to retrieve real-time Google Search grounded data.');
 }
 
 function parseJsonResponse<T>(response: any, fallback: T): T {

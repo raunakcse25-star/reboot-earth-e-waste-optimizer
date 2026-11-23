@@ -118,6 +118,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const micMutedRef = useRef<boolean>(false);
   const speakerMutedRef = useRef<boolean>(false);
+  const isLiveReadyRef = useRef<boolean>(false);
   const inputLevelRef = useRef<number>(0);
   const outputLevelRef = useRef<number>(0);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
@@ -237,6 +238,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
       wsRef.current = null;
     }
 
+    isLiveReadyRef.current = false;
     setStatus('idle');
     setIsModelSpeaking(false);
   }, [stopQueuedOutput]);
@@ -327,6 +329,8 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const inputCtx = new AudioCtx({ sampleRate: TARGET_INPUT_RATE });
       const outputCtx = new AudioCtx({ sampleRate: OUTPUT_SAMPLE_RATE });
+      void inputCtx.resume().catch(() => {});
+      void outputCtx.resume().catch(() => {});
       inputCtxRef.current = inputCtx;
       outputCtxRef.current = outputCtx;
 
@@ -348,6 +352,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
         try {
           const msg = JSON.parse(String(event.data));
           if (msg.type === 'ready') {
+            isLiveReadyRef.current = true;
             setStatus('live');
             setError(null);
           } else if (msg.audio) {
@@ -391,7 +396,12 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
 
         processor.onaudioprocess = (ev) => {
           const activeWs = wsRef.current;
-          if (!activeWs || activeWs.readyState !== WebSocket.OPEN || micMutedRef.current) {
+          if (
+            !activeWs ||
+            activeWs.readyState !== WebSocket.OPEN ||
+            !isLiveReadyRef.current ||
+            micMutedRef.current
+          ) {
             return;
           }
           const rawChannel = ev.inputBuffer.getChannelData(0);

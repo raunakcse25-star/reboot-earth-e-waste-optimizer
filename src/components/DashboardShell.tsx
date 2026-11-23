@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Check,
   Cloud,
+  Globe,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -46,12 +47,14 @@ import { WorkspaceAndStudio } from './WorkspaceAndStudio';
 import { D3ImpactVisualizer } from './D3ImpactVisualizer';
 import { MonthlyTargetsPanel } from './MonthlyTargetsPanel';
 import { LiveVoicePanel } from './LiveVoicePanel';
+import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
 
 type DashTab =
   | 'overview'
   | 'impact'
   | 'targets'
   | 'voice'
+  | 'intel'
   | 'schedule'
   | 'pickups'
   | 'optimizer'
@@ -142,6 +145,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
+    { id: 'intel', label: 'Live Web Intel', icon: Globe, visible: true },
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
@@ -492,6 +496,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             </p>
             <LiveVoicePanel />
           </div>
+        )}
+
+        {activeTab === 'intel' && (
+          <LiveSearchIntelPanel
+            title="Live E-Waste & Circular Economy Web Intel"
+            subtitle="Real-time Google Search grounded market benchmarks, CPCB regulatory circulars, OEM take-back programs, and circular economy news."
+          />
         )}
 
         {activeTab === 'schedule' && (

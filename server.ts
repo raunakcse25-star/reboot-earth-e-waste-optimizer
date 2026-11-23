@@ -52,6 +52,7 @@ import {
   generateCampaignVisual,
   identifyDeviceFromImage,
   mapsGroundedFacilitySearch,
+  queryLiveSearchIntel,
   searchEWasteRegulations,
 } from './src/server/gemini.ts';
 
@@ -857,6 +858,32 @@ async function startServer() {
     } catch (error: any) {
       console.error('Regulations search error:', error);
       const formatted = formatGeminiError(error, 'Unable to fetch search-grounded regulations.');
+      res.status(formatted.status).json({ error: formatted.message });
+    }
+  });
+
+  app.post('/api/ai/live-intel', rateLimit(20), async (req, res) => {
+    try {
+      const { query, topic = 'custom', region = 'India' } = req.body || {};
+      if (!query || typeof query !== 'string' || !query.trim()) {
+        return res.status(400).json({ error: 'A real-time search query is required.' });
+      }
+      const allowedTopics = new Set(['metals', 'regulations', 'news', 'programs', 'custom']);
+      const safeTopic = allowedTopics.has(String(topic))
+        ? (String(topic) as 'metals' | 'regulations' | 'news' | 'programs' | 'custom')
+        : 'custom';
+      const data = await queryLiveSearchIntel({
+        query: query.trim().slice(0, 500),
+        topic: safeTopic,
+        region: typeof region === 'string' ? region.slice(0, 60) : 'India',
+      });
+      res.json(data);
+    } catch (error: any) {
+      console.error('Live search intel error:', error);
+      const formatted = formatGeminiError(
+        error,
+        'Unable to retrieve live Google Search-grounded information right now.'
+      );
       res.status(formatted.status).json({ error: formatted.message });
     }
   });

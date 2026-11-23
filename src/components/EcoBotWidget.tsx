@@ -23,13 +23,15 @@ import type { EcoChatMessage } from '../types';
 
 interface LocalChatMessage extends EcoChatMessage {
   searchFallback?: boolean;
+  webSearchQueries?: string[];
+  grounded?: boolean;
 }
 
 const SUGGESTED_QUESTIONS: Record<'en' | 'hi' | 'hinglish', string[]> = {
   en: [
+    'What are current scrap copper & e-waste metal prices in India?',
+    'Latest CPCB India E-Waste Rules EPR updates & targets',
     'How do I schedule an e-waste pickup?',
-    'How does Smart Route Optimization lower CO₂?',
-    'What are India E-Waste Rules 2022 for EPR?',
     'How should I safely pack swollen lithium batteries?',
   ],
   hi: [
@@ -96,7 +98,7 @@ export const EcoBotWidget: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'chat' | 'voice'>('chat');
   const [input, setInput] = useState('');
-  const [useSearch, setUseSearch] = useState(false);
+  const [useSearch, setUseSearch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFailedPrompt, setLastFailedPrompt] = useState<string | null>(null);
@@ -142,7 +144,9 @@ export const EcoBotWidget: React.FC = () => {
     try {
       const res = await apiFetch<{
         reply?: string;
-        sources?: { title: string; uri: string }[];
+        sources?: { title: string; uri: string; domain?: string }[];
+        webSearchQueries?: string[];
+        grounded?: boolean;
         searchFallback?: boolean;
       }>(
         '/api/ai/chat',
@@ -163,10 +167,16 @@ export const EcoBotWidget: React.FC = () => {
         throw new Error('EcoBot returned an empty response. Please try again.');
       }
 
+      const cleanSources = Array.isArray(res.sources)
+        ? res.sources.map((s) => ({ title: s.title, uri: s.uri }))
+        : undefined;
+
       const botMsg: LocalChatMessage = {
         role: 'model',
         text: replyText,
-        sources: Array.isArray(res.sources) ? res.sources : undefined,
+        sources: cleanSources,
+        webSearchQueries: Array.isArray(res.webSearchQueries) ? res.webSearchQueries : undefined,
+        grounded: Boolean(res.grounded),
         searchFallback: Boolean(res.searchFallback),
       };
       const updated = [...nextHistory, botMsg];
@@ -177,7 +187,7 @@ export const EcoBotWidget: React.FC = () => {
           firebaseUser.uid,
           sessionId,
           language,
-          updated.map(({ searchFallback: _sf, ...rest }) => rest)
+          updated.map(({ searchFallback: _sf, webSearchQueries: _wq, grounded: _g, ...rest }) => rest)
         ).catch(() => {});
       }
     } catch (err: any) {
@@ -338,18 +348,36 @@ export const EcoBotWidget: React.FC = () => {
                         Live web search grounding was temporarily unavailable; answered from EcoBot knowledge.
                       </p>
                     )}
+                    {msg.grounded && !msg.searchFallback && (
+                      <div className="mt-2 pt-1.5 border-t border-slate-200 dark:border-sky-800/60 flex items-center gap-1.5 text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                        <Globe className="w-3 h-3 shrink-0" />
+                        <span>Verified with live Google Search</span>
+                      </div>
+                    )}
+                    {msg.webSearchQueries && msg.webSearchQueries.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {msg.webSearchQueries.slice(0, 3).map((q, qIdx) => (
+                          <span
+                            key={qIdx}
+                            className="px-1.5 py-0.5 rounded bg-white/80 dark:bg-[#07182B] border border-slate-200 dark:border-sky-800/70 text-[10px] text-slate-600 dark:text-sky-200/80"
+                          >
+                            {q}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-sky-800/60 space-y-1">
+                      <div className="mt-2 pt-2 border-t border-slate-200 dark:border-sky-800/60 space-y-1">
                         <p className="text-[11px] font-semibold text-slate-500 dark:text-sky-300/80">
-                          Grounded Web Sources
+                          Grounded Web Sources ({msg.sources.length})
                         </p>
-                        {msg.sources.slice(0, 3).map((src, sIdx) => (
+                        {msg.sources.slice(0, 5).map((src, sIdx) => (
                           <a
                             key={sIdx}
                             href={src.uri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-sky-700 dark:text-sky-300 hover:underline truncate"
+                            className="flex items-center gap-1.5 text-xs text-sky-700 dark:text-sky-300 hover:underline truncate"
                           >
                             <ExternalLink className="w-3 h-3 shrink-0" />
                             <span className="truncate">{src.title}</span>

@@ -14,7 +14,9 @@ function getLiveAiClient(): GoogleGenAI {
   }
   return new GoogleGenAI({
     apiKey,
+    apiVersion: 'v1beta',
     httpOptions: {
+      apiVersion: 'v1beta',
       headers: {
         'User-Agent': 'aistudio-build',
       },
@@ -132,14 +134,6 @@ export function attachLiveVoiceWebSocket(httpServer: HttpServer) {
           systemInstruction: buildVoiceSystemInstruction(language),
         },
         callbacks: {
-          onopen: () => {
-            safeSend(clientWs, {
-              type: 'ready',
-              model: LIVE_VOICE_MODEL,
-              voice: voiceName,
-              language,
-            });
-          },
           onmessage: (message: LiveServerMessage) => {
             if (closed) return;
             const content = message.serverContent;
