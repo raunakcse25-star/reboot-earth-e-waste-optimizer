@@ -195,6 +195,33 @@ export interface ScheduledPickupBooking {
   updatedAt?: any;
 }
 
+export interface FirestoreUserProfile {
+  userId: string;
+  email: string;
+  fullName: string;
+  organizationName: string;
+  phone: string;
+  city: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface FirestoreOptimizationRun {
+  id: string;
+  userId: string;
+  runCode: string;
+  objective: 'emission' | 'distance' | 'cost';
+  totalDistanceKm: number;
+  estimatedTravelMinutes: number;
+  estimatedCostInr: number;
+  estimatedEmissionsKg: number;
+  assignedCount: number;
+  unassignedCount: number;
+  approved: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export const EWASTE_CATEGORIES = [
   'IT & Telecom',
   'Consumer Electronics',

@@ -69,6 +69,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 }) => {
   const {
     dbUser,
+    firestoreProfile,
     firebaseUser,
     isAuthenticated,
     notifications,
@@ -76,6 +77,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     setTheme,
     markNotificationRead,
     refreshProfile,
+    syncFirestoreProfile,
     signOut,
   } = useAuth();
 
@@ -85,22 +87,24 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [notifOpen, setNotifOpen] = useState(false);
 
   // Profile settings state
-  const [fullName, setFullName] = useState(dbUser?.fullName || '');
-  const [organizationName, setOrganizationName] = useState(dbUser?.organizationName || '');
-  const [phone, setPhone] = useState(dbUser?.phone || '');
-  const [city, setCity] = useState(dbUser?.city || '');
+  const [fullName, setFullName] = useState(dbUser?.fullName || firestoreProfile?.fullName || '');
+  const [organizationName, setOrganizationName] = useState(
+    dbUser?.organizationName || firestoreProfile?.organizationName || ''
+  );
+  const [phone, setPhone] = useState(dbUser?.phone || firestoreProfile?.phone || '');
+  const [city, setCity] = useState(dbUser?.city || firestoreProfile?.city || '');
   const [requestedRole, setRequestedRole] = useState<string>(dbUser?.requestedRole || '');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (dbUser) {
-      setFullName(dbUser.fullName || '');
-      setOrganizationName(dbUser.organizationName || '');
-      setPhone(dbUser.phone || '');
-      setCity(dbUser.city || '');
-      setRequestedRole(dbUser.requestedRole || '');
+    if (dbUser || firestoreProfile) {
+      setFullName(dbUser?.fullName || firestoreProfile?.fullName || '');
+      setOrganizationName(dbUser?.organizationName || firestoreProfile?.organizationName || '');
+      setPhone(dbUser?.phone || firestoreProfile?.phone || '');
+      setCity(dbUser?.city || firestoreProfile?.city || '');
+      setRequestedRole(dbUser?.requestedRole || '');
     }
-  }, [dbUser]);
+  }, [dbUser, firestoreProfile]);
 
   const loadDashData = useCallback(async () => {
     try {
@@ -162,11 +166,17 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           requestedRole: requestedRole || undefined,
         }),
       });
+      await syncFirestoreProfile({
+        fullName,
+        organizationName,
+        phone,
+        city,
+      });
       await refreshProfile();
       setProfileMsg(
         requestedRole && requestedRole !== role
-          ? 'Profile saved. Your role upgrade request has been queued for administrator approval.'
-          : 'Profile settings saved.'
+          ? 'Profile saved to your account. Your role upgrade request has been queued for administrator approval.'
+          : 'Profile settings saved and synced across sessions.'
       );
     } catch (err: any) {
       setProfileMsg(err?.message || 'Unable to update profile.');

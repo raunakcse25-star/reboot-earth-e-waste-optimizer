@@ -304,12 +304,134 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private authenticated user profile synced across sessions and devices (strict owner/admin PII isolation; never stores client-editable RBAC roles).",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "organizationName": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "fullName",
+        "organizationName",
+        "phone",
+        "city",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OptimizationRun": {
+      "title": "OptimizationRun",
+      "description": "Persisted multi-objective e-waste route optimization calculation run owned by an authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "runCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32,
+          "pattern": "^[A-Z0-9\\-]+$"
+        },
+        "objective": {
+          "type": "string",
+          "enum": ["emission", "distance", "cost"],
+          "maxLength": 16
+        },
+        "totalDistanceKm": {
+          "type": "number"
+        },
+        "estimatedTravelMinutes": {
+          "type": "integer"
+        },
+        "estimatedCostInr": {
+          "type": "number"
+        },
+        "estimatedEmissionsKg": {
+          "type": "number"
+        },
+        "assignedCount": {
+          "type": "integer"
+        },
+        "unassignedCount": {
+          "type": "integer"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "runCode",
+        "objective",
+        "totalDistanceKm",
+        "estimatedTravelMinutes",
+        "estimatedCostInr",
+        "estimatedEmissionsKg",
+        "assignedCount",
+        "unassignedCount",
+        "approved",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
     "/userPreferences/{userId}": {
       "schema": { "$ref": "#/entities/UserPreference" },
       "description": "Per-user UI preferences (theme, language, alerts)."
+    },
+    "/userProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-scoped persistent user profile metadata (strict PII isolation)."
     },
     "/notifications/{notificationId}": {
       "schema": { "$ref": "#/entities/NotificationItem" },
@@ -330,6 +452,10 @@
     "/scheduledPickups/{bookingId}": {
       "schema": { "$ref": "#/entities/ScheduledPickup" },
       "description": "Authenticated user e-waste collection time-slot bookings (strict owner/admin PII access)."
+    },
+    "/optimizationRuns/{runId}": {
+      "schema": { "$ref": "#/entities/OptimizationRun" },
+      "description": "Authenticated user route optimization run history."
     }
   }
 }

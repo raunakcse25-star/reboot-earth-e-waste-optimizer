@@ -3,18 +3,20 @@ import type { User } from 'firebase/auth';
 import {
   createUserNotification,
   loadUserPreferences,
+  loadUserProfile,
   logoutUser,
   markNotificationAsRead,
   registerWithEmailPassword,
   resetUserPassword,
   saveUserPreferences,
+  saveUserProfile,
   signInWithEmailPassword,
   signInWithGooglePopup,
   subscribeAuthState,
   subscribeUserNotifications,
 } from '../lib/firebase';
 import { apiFetch, getLocalAuthToken, setLocalAuthToken } from '../lib/api';
-import type { DbUser, FirestoreNotification } from '../types';
+import type { DbUser, FirestoreNotification, FirestoreUserProfile } from '../types';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type OnboardingRoleChoice = 'citizen' | 'collection_centre' | 'recycler' | 'transporter';
@@ -22,6 +24,7 @@ export type OnboardingRoleChoice = 'citizen' | 'collection_centre' | 'recycler' 
 interface AuthContextValue {
   firebaseUser: User | null;
   dbUser: DbUser | null;
+  firestoreProfile: FirestoreUserProfile | null;
   isAuthenticated: boolean;
   workspaceToken: string | null;
   authReady: boolean;
@@ -44,6 +47,12 @@ interface AuthContextValue {
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  syncFirestoreProfile: (patch: {
+    fullName: string;
+    organizationName?: string | null;
+    phone?: string | null;
+    city?: string | null;
+  }) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   pushNotification: (payload: {
     title: string;
@@ -91,6 +100,7 @@ function mapFirebaseAuthError(error: any, fallback: string): string {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
+  const [firestoreProfile, setFirestoreProfile] = useState<FirestoreUserProfile | null>(null);
   const [workspaceToken, setWorkspaceToken] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
@@ -117,14 +127,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme]);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (): Promise<DbUser | null> => {
     try {
       const data = await apiFetch<{ user: DbUser }>('/api/me');
       setDbUser(data.user);
+      return data.user;
     } catch (err) {
       console.error('Failed to sync profile:', err);
+      return null;
     }
   }, []);
+
+  const hydrateFirestoreProfile = useCallback(
+    async (user: User, serverUser: DbUser | null) => {
+      try {
+        const existing = await loadUserProfile(user.uid);
+        if (existing) {
+          setFirestoreProfile(existing);
+          setDbUser((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  fullName: prev.fullName || existing.fullName,
+                  organizationName: prev.organizationName || existing.organizationName || null,
+                  phone: prev.phone || existing.phone || null,
+                  city: prev.city || existing.city || null,
+                }
+              : prev
+          );
+        } else if (user.emailVerified) {
+          const initial = {
+            email: serverUser?.email || user.email || 'user@rebootearth.app',
+            fullName:
+              serverUser?.fullName ||
+              user.displayName ||
+              (user.email ? user.email.split('@')[0] : 'Reboot Earth Member'),
+            organizationName: serverUser?.organizationName || '',
+            phone: serverUser?.phone || '',
+            city: serverUser?.city || '',
+          };
+          await saveUserProfile(user.uid, initial);
+          setFirestoreProfile({
+            userId: user.uid,
+            ...initial,
+          });
+        }
+      } catch (err) {
+        console.warn('Firestore profile hydration skipped:', err);
+      }
+    },
+    []
+  );
+
+  const syncFirestoreProfile = useCallback(
+    async (patch: {
+      fullName: string;
+      organizationName?: string | null;
+      phone?: string | null;
+      city?: string | null;
+    }) => {
+      if (!firebaseUser || !firebaseUser.emailVerified) return;
+      const email = dbUser?.email || firebaseUser.email || 'user@rebootearth.app';
+      await saveUserProfile(firebaseUser.uid, {
+        email,
+        fullName: patch.fullName,
+        organizationName: patch.organizationName || '',
+        phone: patch.phone || '',
+        city: patch.city || '',
+      });
+      setFirestoreProfile((prev) => ({
+        userId: firebaseUser.uid,
+        email: prev?.email || email,
+        fullName: patch.fullName.trim() || prev?.fullName || email.split('@')[0],
+        organizationName: (patch.organizationName || '').trim(),
+        phone: (patch.phone || '').trim(),
+        city: (patch.city || '').trim(),
+      }));
+    },
+    [firebaseUser, dbUser]
+  );
 
   useEffect(() => {
     const unsubscribe = subscribeAuthState(async (user, token) => {
@@ -134,7 +215,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         setLocalAuthToken(null);
-        await refreshProfile();
+        const serverUser = await refreshProfile();
+        await hydrateFirestoreProfile(user, serverUser);
         const prefs = await loadUserPreferences(user.uid);
         if (prefs) {
           setThemeState(prefs.theme);
@@ -142,11 +224,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (!getLocalAuthToken()) {
         setDbUser(null);
+        setFirestoreProfile(null);
         setNotifications([]);
       }
     });
     return () => unsubscribe();
-  }, [refreshProfile]);
+  }, [refreshProfile, hydrateFirestoreProfile]);
 
   useEffect(() => {
     if (!authReady || !firebaseUser) return;
@@ -201,14 +284,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await signInWithGooglePopup();
       setFirebaseUser(res.user);
       setWorkspaceToken(res.workspaceToken);
-      await refreshProfile();
+      const serverUser = await refreshProfile();
+      await hydrateFirestoreProfile(res.user, serverUser);
     } catch (error: any) {
       setAuthError(error?.message || 'Google sign-in was cancelled or blocked.');
       throw error;
     } finally {
       setSigningIn(false);
     }
-  }, [refreshProfile]);
+  }, [refreshProfile, hydrateFirestoreProfile]);
 
   const registerWithEmail = useCallback(
     async (payload: {
@@ -344,6 +428,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logoutUser().catch(() => {});
     setFirebaseUser(null);
     setDbUser(null);
+    setFirestoreProfile(null);
     setWorkspaceToken(null);
     setNotifications([]);
   }, []);
@@ -366,11 +451,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = Boolean(firebaseUser || dbUser);
 
+  const refreshProfileVoid = useCallback(async () => {
+    await refreshProfile();
+  }, [refreshProfile]);
+
   return (
     <AuthContext.Provider
       value={{
         firebaseUser,
         dbUser,
+        firestoreProfile,
         isAuthenticated,
         workspaceToken,
         authReady,
@@ -387,7 +477,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         registerWithEmail,
         sendPasswordReset,
         signOut,
-        refreshProfile,
+        refreshProfile: refreshProfileVoid,
+        syncFirestoreProfile,
         markNotificationRead,
         pushNotification,
       }}

@@ -24,10 +24,15 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import {
+  saveOptimizationRunToFirestore,
+  subscribeUserOptimizationRuns,
+} from '../lib/firebase';
 import { saveFileToGoogleDrive } from '../lib/workspace';
 import { ConfirmDialog } from './ConfirmDialog';
 import { OptimizerRouteMap } from './OptimizerRouteMap';
 import type { OptimizationObjective, OptimizationOutput } from '../server/optimizer';
+import type { FirestoreOptimizationRun } from '../types';
 
 interface SavedRunRow {
   id: number;
@@ -53,13 +58,15 @@ function formatDuration(mins: number): string {
 }
 
 export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { isAuthenticated, firebaseUser, dbUser, workspaceToken, pushNotification } = useAuth();
+  const { authReady, isAuthenticated, firebaseUser, dbUser, workspaceToken, pushNotification } =
+    useAuth();
   const [objective, setObjective] = useState<OptimizationObjective>('emission');
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizationOutput | null>(null);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [history, setHistory] = useState<SavedRunRow[]>([]);
+  const [firestoreRuns, setFirestoreRuns] = useState<FirestoreOptimizationRun[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [driveConfirmOpen, setDriveConfirmOpen] = useState(false);
   const [driveBusy, setDriveBusy] = useState(false);
@@ -115,14 +122,30 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
             `Optimized for ${OBJECTIVE_LABELS[selectedObj]} at ${timeLabel} — ${res.result.assignments.length} route${res.result.assignments.length === 1 ? '' : 's'}, ${res.result.totalDistanceKm} km, ${formatDuration(res.result.estimatedTravelMinutes)}, ₹${res.result.estimatedCostInr.toLocaleString()}, ${res.result.estimatedEmissionsKg} kg CO₂e${savedSuffix}.`
           );
         }
-        if (isAuthenticated && res.savedRun) {
-          void loadHistory();
-          if (firebaseUser) {
-            void pushNotification({
-              title: `Route Plan ${res.savedRun.runCode} Generated`,
-              message: `Objective: ${selectedObj}. Estimated savings: ${res.result.distanceSavedKm} km, ${res.result.timeSavedMinutes} min, and ${res.result.emissionsSavedKg} kg CO2e.`,
-              category: 'optimization',
+        if (isAuthenticated && saveRun) {
+          if (res.savedRun) {
+            void loadHistory();
+          }
+          if (firebaseUser && firebaseUser.emailVerified) {
+            void saveOptimizationRunToFirestore(firebaseUser.uid, {
+              runCode: res.savedRun?.runCode,
+              objective: res.result.objective,
+              totalDistanceKm: res.result.totalDistanceKm,
+              estimatedTravelMinutes: res.result.estimatedTravelMinutes,
+              estimatedCostInr: res.result.estimatedCostInr,
+              estimatedEmissionsKg: res.result.estimatedEmissionsKg,
+              assignedCount: res.result.assignedCount,
+              unassignedCount: res.result.unassignedCount,
+            }).catch((fsErr) => {
+              console.warn('Could not persist optimization run to Firestore:', fsErr);
             });
+            if (res.savedRun) {
+              void pushNotification({
+                title: `Route Plan ${res.savedRun.runCode} Generated`,
+                message: `Objective: ${selectedObj}. Estimated savings: ${res.result.distanceSavedKm} km, ${res.result.timeSavedMinutes} min, and ${res.result.emissionsSavedKg} kg CO2e.`,
+                category: 'optimization',
+              });
+            }
           }
         }
       } catch (err: any) {
@@ -140,6 +163,22 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
       void loadHistory();
     }
   }, [isAuthenticated, executeOptimization, loadHistory]);
+
+  useEffect(() => {
+    if (!authReady || !firebaseUser) {
+      setFirestoreRuns([]);
+      return;
+    }
+    let unsub: (() => void) | undefined;
+    try {
+      unsub = subscribeUserOptimizationRuns(firebaseUser.uid, (items) => {
+        setFirestoreRuns(items);
+      });
+    } catch (err) {
+      console.error('Optimization run Firestore listener failed:', err);
+    }
+    return () => unsub?.();
+  }, [authReady, firebaseUser]);
 
   const handleApproveRun = async (id: number) => {
     setApprovingId(id);
@@ -696,70 +735,123 @@ export const OptimizerStudio: React.FC<{ compact?: boolean }> = ({ compact = fal
       )}
 
       {/* Optimization History Table (Authenticated Dashboard) */}
-      {!compact && isAuthenticated && history.length > 0 && (
-        <div className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-200 dark:border-sky-900/60">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
-              Saved Optimization Run History
-            </h4>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#061526] text-slate-500 dark:text-sky-200/70">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Run Code</th>
-                  <th className="px-4 py-2.5 font-medium">Objective</th>
-                  <th className="px-4 py-2.5 font-medium">Distance</th>
-                  <th className="px-4 py-2.5 font-medium">Cost (INR)</th>
-                  <th className="px-4 py-2.5 font-medium">Emissions</th>
-                  <th className="px-4 py-2.5 font-medium">Status</th>
-                  {canApprove && <th className="px-4 py-2.5 font-medium text-right">Action</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-sky-900/50">
-                {history.slice(0, 8).map((row) => (
-                  <tr
-                    key={row.id}
-                    className="text-slate-700 dark:text-sky-100/90 hover:bg-sky-50/50 dark:hover:bg-sky-900/25 transition-colors"
-                  >
-                    <td className="px-4 py-2.5 font-mono font-medium">{row.runCode}</td>
-                    <td className="px-4 py-2.5 capitalize">{row.objective}</td>
-                    <td className="px-4 py-2.5 font-mono tabular-nums">{row.totalDistanceKm} km</td>
-                    <td className="px-4 py-2.5 font-mono tabular-nums">₹{row.estimatedCostInr}</td>
-                    <td className="px-4 py-2.5 font-mono tabular-nums">
-                      {row.estimatedEmissionsKg} kg
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {row.approved ? (
-                        <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-400 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Approved
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 dark:text-sky-200/65">Draft Plan</span>
-                      )}
-                    </td>
-                    {canApprove && (
-                      <td className="px-4 py-2.5 text-right">
-                        {!row.approved && (
-                          <button
-                            type="button"
-                            disabled={approvingId === row.id}
-                            onClick={() => void handleApproveRun(row.id)}
-                            className="px-2.5 py-1 rounded text-xs font-medium bg-sky-600/15 text-sky-700 dark:text-sky-300 hover:bg-sky-600/25 cursor-pointer"
-                          >
-                            {approvingId === row.id ? 'Approving...' : 'Approve Plan'}
-                          </button>
+      {!compact && isAuthenticated && (history.length > 0 || firestoreRuns.length > 0) && (() => {
+        const seenCodes = new Set<string>();
+        const mergedRows: Array<{
+          key: string;
+          serverId: number | null;
+          runCode: string;
+          objective: string;
+          totalDistanceKm: number;
+          estimatedTravelMinutes: number | null;
+          estimatedCostInr: number;
+          estimatedEmissionsKg: number;
+          approved: boolean;
+        }> = [];
+
+        for (const row of history) {
+          seenCodes.add(row.runCode);
+          const matchingFs = firestoreRuns.find((f) => f.runCode === row.runCode);
+          mergedRows.push({
+            key: `srv_${row.id}`,
+            serverId: row.id,
+            runCode: row.runCode,
+            objective: row.objective,
+            totalDistanceKm: row.totalDistanceKm,
+            estimatedTravelMinutes: matchingFs?.estimatedTravelMinutes ?? null,
+            estimatedCostInr: row.estimatedCostInr,
+            estimatedEmissionsKg: row.estimatedEmissionsKg,
+            approved: row.approved,
+          });
+        }
+
+        for (const fsRow of firestoreRuns) {
+          if (seenCodes.has(fsRow.runCode)) continue;
+          seenCodes.add(fsRow.runCode);
+          mergedRows.push({
+            key: `fs_${fsRow.id}`,
+            serverId: null,
+            runCode: fsRow.runCode,
+            objective: fsRow.objective,
+            totalDistanceKm: fsRow.totalDistanceKm,
+            estimatedTravelMinutes: fsRow.estimatedTravelMinutes,
+            estimatedCostInr: fsRow.estimatedCostInr,
+            estimatedEmissionsKg: fsRow.estimatedEmissionsKg,
+            approved: fsRow.approved,
+          });
+        }
+
+        return (
+          <div className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-200 dark:border-sky-900/60">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                Saved Optimization Run History
+              </h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 dark:bg-[#061526] text-slate-500 dark:text-sky-200/70">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Run Code</th>
+                    <th className="px-4 py-2.5 font-medium">Objective</th>
+                    <th className="px-4 py-2.5 font-medium">Distance</th>
+                    <th className="px-4 py-2.5 font-medium">Travel Time</th>
+                    <th className="px-4 py-2.5 font-medium">Cost (INR)</th>
+                    <th className="px-4 py-2.5 font-medium">Emissions</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    {canApprove && <th className="px-4 py-2.5 font-medium text-right">Action</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-sky-900/50">
+                  {mergedRows.slice(0, 10).map((row) => (
+                    <tr
+                      key={row.key}
+                      className="text-slate-700 dark:text-sky-100/90 hover:bg-sky-50/50 dark:hover:bg-sky-900/25 transition-colors"
+                    >
+                      <td className="px-4 py-2.5 font-mono font-medium">{row.runCode}</td>
+                      <td className="px-4 py-2.5 capitalize">{row.objective}</td>
+                      <td className="px-4 py-2.5 font-mono tabular-nums">{row.totalDistanceKm} km</td>
+                      <td className="px-4 py-2.5 font-mono tabular-nums">
+                        {row.estimatedTravelMinutes != null
+                          ? formatDuration(row.estimatedTravelMinutes)
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono tabular-nums">₹{row.estimatedCostInr}</td>
+                      <td className="px-4 py-2.5 font-mono tabular-nums">
+                        {row.estimatedEmissionsKg} kg
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {row.approved ? (
+                          <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-400 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Approved
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 dark:text-sky-200/65">Draft Plan</span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      {canApprove && (
+                        <td className="px-4 py-2.5 text-right">
+                          {!row.approved && row.serverId !== null && (
+                            <button
+                              type="button"
+                              disabled={approvingId === row.serverId}
+                              onClick={() => void handleApproveRun(row.serverId!)}
+                              className="px-2.5 py-1 rounded text-xs font-medium bg-sky-600/15 text-sky-700 dark:text-sky-300 hover:bg-sky-600/25 cursor-pointer"
+                            >
+                              {approvingId === row.serverId ? 'Approving...' : 'Approve Plan'}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <ConfirmDialog
         open={driveConfirmOpen}

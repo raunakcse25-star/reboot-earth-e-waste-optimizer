@@ -32,6 +32,8 @@ import {
   type EcoChatMessage,
   type FacilityReview,
   type FirestoreNotification,
+  type FirestoreOptimizationRun,
+  type FirestoreUserProfile,
   type PickupTimeSlot,
   type ScheduledPickupBooking,
 } from '../types';
@@ -594,3 +596,147 @@ export async function cancelScheduledPickup(bookingId: string) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
+
+// --- Persistent User Profile (Owner-Scoped PII) ---
+
+export async function loadUserProfile(uid: string): Promise<FirestoreUserProfile | null> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  if (!safeUid) return null;
+  const path = `userProfiles/${safeUid}`;
+  try {
+    const snap = await getDoc(doc(db, 'userProfiles', safeUid));
+    return snap.exists() ? (snap.data() as FirestoreUserProfile) : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+  }
+}
+
+export async function saveUserProfile(
+  uid: string,
+  profile: {
+    email: string;
+    fullName: string;
+    organizationName?: string | null;
+    phone?: string | null;
+    city?: string | null;
+  }
+): Promise<void> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  if (!safeUid) return;
+  const path = `userProfiles/${safeUid}`;
+
+  const cleanEmail = (profile.email.trim().toLowerCase() || 'user@rebootearth.app').slice(0, 160);
+  const cleanFullName = (profile.fullName.trim() || cleanEmail.split('@')[0] || 'User').slice(0, 120);
+  const cleanOrg = (profile.organizationName || '').trim().slice(0, 140);
+  const cleanPhone = (profile.phone || '').trim().slice(0, 40);
+  const cleanCity = (profile.city || '').trim().slice(0, 80);
+
+  try {
+    const ref = doc(db, 'userProfiles', safeUid);
+    const existing = await getDoc(ref);
+    if (existing.exists()) {
+      await updateDoc(ref, {
+        fullName: cleanFullName,
+        organizationName: cleanOrg,
+        phone: cleanPhone,
+        city: cleanCity,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await setDoc(ref, {
+        userId: safeUid,
+        email: cleanEmail,
+        fullName: cleanFullName,
+        organizationName: cleanOrg,
+        phone: cleanPhone,
+        city: cleanCity,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+// --- Route Optimization Run History (Owner-Scoped Real-Time Sync) ---
+
+export function subscribeUserOptimizationRuns(
+  uid: string,
+  onData: (items: FirestoreOptimizationRun[]) => void
+) {
+  const path = 'optimizationRuns';
+  const q = query(collection(db, path), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: FirestoreOptimizationRun[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<FirestoreOptimizationRun, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  );
+}
+
+export async function saveOptimizationRunToFirestore(
+  uid: string,
+  payload: {
+    runCode?: string;
+    objective: 'emission' | 'distance' | 'cost';
+    totalDistanceKm: number;
+    estimatedTravelMinutes: number;
+    estimatedCostInr: number;
+    estimatedEmissionsKg: number;
+    assignedCount: number;
+    unassignedCount: number;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const rawCode = (payload.runCode || `OPT-${Date.now().toString(36).toUpperCase()}`)
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 32);
+  const safeRunCode = rawCode.length >= 4 ? rawCode : `OPT-${Math.floor(1000 + Math.random() * 9000)}`;
+  const runId = `opt_${safeRunCode.replace(/-/g, '_')}_${Date.now().toString(36)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `optimizationRuns/${runId}`;
+
+  const safeObjective: 'emission' | 'distance' | 'cost' =
+    payload.objective === 'distance' || payload.objective === 'cost' ? payload.objective : 'emission';
+
+  const clampNum = (v: number, max: number) =>
+    Number.isFinite(v) ? Math.max(0, Math.min(max, Number(v.toFixed(3)))) : 0;
+  const clampInt = (v: number, max: number) =>
+    Number.isFinite(v) ? Math.max(0, Math.min(max, Math.round(v))) : 0;
+
+  try {
+    await setDoc(doc(db, 'optimizationRuns', runId), {
+      userId: safeUid,
+      runCode: safeRunCode,
+      objective: safeObjective,
+      totalDistanceKm: clampNum(payload.totalDistanceKm, 500000),
+      estimatedTravelMinutes: clampInt(payload.estimatedTravelMinutes, 100000),
+      estimatedCostInr: clampNum(payload.estimatedCostInr, 100000000),
+      estimatedEmissionsKg: clampNum(payload.estimatedEmissionsKg, 500000),
+      assignedCount: clampInt(payload.assignedCount, 10000),
+      unassignedCount: clampInt(payload.unassignedCount, 10000),
+      approved: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return runId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+

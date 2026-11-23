@@ -37,10 +37,42 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'theme', 'language', 'emailAlerts', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['userId', 'theme', 'language', 'emailAlerts', 'createdAt', 'updatedAt'])
         && isValidId(data.userId)
-        && data.userId == request.auth.uid
+        && (data.userId == request.auth.uid || isAdmin())
         && data.theme is string && data.theme.size() <= 16 && data.theme in ['dark', 'light', 'system']
         && data.language is string && data.language.size() <= 16 && data.language in ['en', 'hi', 'hinglish']
         && data.emailAlerts is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'userId',
+          'email',
+          'fullName',
+          'organizationName',
+          'phone',
+          'city',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'email',
+          'fullName',
+          'organizationName',
+          'phone',
+          'city',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120
+        && data.organizationName is string && data.organizationName.size() <= 140
+        && data.phone is string && data.phone.size() <= 40
+        && data.city is string && data.city.size() <= 80
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -61,7 +93,7 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'title', 'language', 'messages', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['userId', 'title', 'language', 'messages', 'createdAt', 'updatedAt'])
         && isValidId(data.userId)
-        && data.userId == request.auth.uid
+        && (data.userId == request.auth.uid || isAdmin())
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
         && data.language is string && data.language.size() <= 16 && data.language in ['en', 'hi', 'hinglish']
         && data.messages is list && data.messages.size() <= 40
@@ -96,7 +128,7 @@ service cloud.firestore {
         && data.facilityId is int && data.facilityId >= 1 && data.facilityId <= 1000000
         && data.facilityName is string && data.facilityName.size() >= 1 && data.facilityName.size() <= 140
         && isValidId(data.userId)
-        && data.userId == request.auth.uid
+        && (data.userId == request.auth.uid || isAdmin())
         && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
         && data.rating is int && data.rating >= 1 && data.rating <= 5
         && data.comment is string && data.comment.size() >= 3 && data.comment.size() <= 600
@@ -183,6 +215,50 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidOptimizationRun(data) {
+      return data.keys().hasAll([
+          'userId',
+          'runCode',
+          'objective',
+          'totalDistanceKm',
+          'estimatedTravelMinutes',
+          'estimatedCostInr',
+          'estimatedEmissionsKg',
+          'assignedCount',
+          'unassignedCount',
+          'approved',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'runCode',
+          'objective',
+          'totalDistanceKm',
+          'estimatedTravelMinutes',
+          'estimatedCostInr',
+          'estimatedEmissionsKg',
+          'assignedCount',
+          'unassignedCount',
+          'approved',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.runCode is string && data.runCode.size() >= 4 && data.runCode.size() <= 32 && data.runCode.matches('^[A-Z0-9\\-]+$')
+        && data.objective is string && data.objective.size() <= 16 && data.objective in ['emission', 'distance', 'cost']
+        && data.totalDistanceKm is number && data.totalDistanceKm >= 0 && data.totalDistanceKm <= 500000
+        && data.estimatedTravelMinutes is int && data.estimatedTravelMinutes >= 0 && data.estimatedTravelMinutes <= 100000
+        && data.estimatedCostInr is number && data.estimatedCostInr >= 0 && data.estimatedCostInr <= 100000000
+        && data.estimatedEmissionsKg is number && data.estimatedEmissionsKg >= 0 && data.estimatedEmissionsKg <= 500000
+        && data.assignedCount is int && data.assignedCount >= 0 && data.assignedCount <= 10000
+        && data.unassignedCount is int && data.unassignedCount >= 0 && data.unassignedCount <= 10000
+        && data.approved is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // Connection probe path (read-only ping)
     match /test/connection {
       allow get: if true;
@@ -201,6 +277,7 @@ service cloud.firestore {
         && isVerified()
         && request.auth.uid == userId
         && isValidPreference(incoming())
+        && incoming().userId == request.auth.uid
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
       allow update: if isValidId(userId)
@@ -213,6 +290,32 @@ service cloud.firestore {
             && incoming().createdAt == existing().createdAt
             && incoming().updatedAt == request.time
             && incoming().diff(existing()).affectedKeys().hasOnly(['theme', 'language', 'emailAlerts', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isVerified() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Private owner-scoped user profiles (strict PII isolation)
+    match /userProfiles/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isValidId(userId)
+        && isVerified()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidUserProfile(incoming())
+        && (
+          isAdmin() || (
+            request.auth.uid == userId
+            && incoming().userId == existing().userId
+            && incoming().email == existing().email
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'organizationName', 'phone', 'city', 'updatedAt'])
           )
         );
       allow delete: if isValidId(userId) && isVerified() && (request.auth.uid == userId || isAdmin());
@@ -247,6 +350,7 @@ service cloud.firestore {
       allow create: if isValidId(sessionId)
         && isVerified()
         && isValidChatSession(incoming())
+        && incoming().userId == request.auth.uid
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
       allow update: if isValidId(sessionId)
@@ -274,6 +378,7 @@ service cloud.firestore {
       allow create: if isValidId(reviewId)
         && isVerified()
         && isValidFacilityReview(incoming())
+        && incoming().userId == request.auth.uid
         && reviewId == ('rev_f' + string(incoming().facilityId) + '_' + request.auth.uid)
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
@@ -334,6 +439,32 @@ service cloud.firestore {
           )
         );
       allow delete: if isValidId(bookingId) && isVerified() && isAdmin();
+    }
+
+    // Authenticated user route optimization runs (owner-scoped history)
+    match /optimizationRuns/{runId} {
+      allow get: if isValidId(runId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(runId)
+        && isVerified()
+        && isValidOptimizationRun(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().approved == false
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(runId)
+        && isVerified()
+        && isValidOptimizationRun(incoming())
+        && isAdmin()
+        && incoming().userId == existing().userId
+        && incoming().runCode == existing().runCode
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(runId)
+        && isVerified()
+        && (existing().userId == request.auth.uid || isAdmin());
     }
   }
 }
