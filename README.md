@@ -1105,7 +1105,7 @@ test: cover optimiser capacity edge cases
 
 | Contributor | GitHub | Access | Contribution |
 |---|---|---|---|
-| **raunakcse25-star** | [@raunakcse25-star](https://github.com/raunakcse25-star) | Owner | Overall project, architecture and implementation |
+| **Raunak Kumar** | [@raunakcse25-star](https://github.com/raunakcse25-star) | Owner | Overall project, architecture and implementation |
 | **Anisha Dubey** | [@AnishaDubey-022329](https://github.com/AnishaDubey-022329) | Collaborator | *Add verified contribution* |
 | **Nidhi Mishra** | [@nidhimishra-04](https://github.com/nidhimishra-04) | Collaborator | *Add verified contribution* |
 | **Sumit Arya** | [@sumit23-bot](https://github.com/sumit23-bot) | Collaborator | *Add verified contribution* |
