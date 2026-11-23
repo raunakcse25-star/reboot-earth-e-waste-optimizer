@@ -1105,17 +1105,13 @@ test: cover optimiser capacity edge cases
 
 | Contributor | GitHub | Access | Contribution |
 |---|---|---|---|
-| **raunakcse25-star** | [@raunakcse25-star](https://github.com/raunakcse25-star) | Owner | Overall project, architecture and implementation |
+| **Raunak Kumar** | [@raunakcse25-star](https://github.com/raunakcse25-star) | Owner | Overall project, architecture and implementation |
 | **Anisha Dubey** | [@AnishaDubey-022329](https://github.com/AnishaDubey-022329) | Collaborator | *Add verified contribution* |
 | **Nidhi Mishra** | [@nidhimishra-04](https://github.com/nidhimishra-04) | Collaborator | *Add verified contribution* |
 | **Sumit Arya** | [@sumit23-bot](https://github.com/sumit23-bot) | Collaborator | *Add verified contribution* |
 | **Sushant** | [@Sushant9871](https://github.com/Sushant9871) | Collaborator | *Add verified contribution* |
 
 ---
-
-## 📄 License
-
-No explicit `LICENSE` file or licence declaration is present. Until the owners add one, **all rights remain with the respective copyright holders** and reuse, redistribution or modification should not be assumed permitted. To open-source the project, choose a licence, add its full text as a root-level `LICENSE` file and update this section.
 
 ---
 
