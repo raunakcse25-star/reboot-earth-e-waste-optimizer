@@ -35,6 +35,7 @@ import {
   type FirestoreNotification,
   type FirestoreOptimizationRun,
   type FirestoreUserProfile,
+  type MonthlyRecyclingTarget,
   type PickupTimeSlot,
   type ScheduledPickupBooking,
 } from '../types';
@@ -288,7 +289,7 @@ export function subscribeUserNotifications(
 
 export async function createUserNotification(
   uid: string,
-  payload: { title: string; message: string; category: 'pickup' | 'optimization' | 'facility' | 'system' }
+  payload: { title: string; message: string; category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system' }
 ) {
   const notifId = `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const path = `notifications/${notifId}`;
@@ -903,5 +904,112 @@ export async function createSupportTicketInFirestore(
     handleFirestoreError(error, OperationType.CREATE, path);
   }
 }
+
+// --- Monthly Recycling Targets & Goal Milestones (Owner-Scoped Sync) ---
+
+export function subscribeUserRecyclingTargets(
+  uid: string,
+  onData: (items: MonthlyRecyclingTarget[]) => void
+) {
+  const path = 'recyclingTargets';
+  const q = query(collection(db, path), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: MonthlyRecyclingTarget[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<MonthlyRecyclingTarget, 'id'>),
+      }));
+      list.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+      onData(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  );
+}
+
+export async function saveMonthlyRecyclingTarget(
+  uid: string,
+  payload: {
+    monthKey: string;
+    targetWeightKg: number;
+    targetCo2Kg: number;
+    targetPickups: number;
+    loggedBonusWeightKg?: number;
+    notifiedMilestones?: string[];
+    notes?: string;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+  const safeMonth = /^\d{4}-\d{2}$/.test(payload.monthKey)
+    ? payload.monthKey
+    : new Date().toISOString().slice(0, 7);
+  const targetId = `tgt_${safeUid}_${safeMonth.replace('-', '_')}`.slice(0, 128);
+  const path = `recyclingTargets/${targetId}`;
+
+  const clampNum = (v: number, min: number, max: number) =>
+    Number.isFinite(v) ? Math.max(min, Math.min(max, Number(v.toFixed(2)))) : min;
+  const clampInt = (v: number, min: number, max: number) =>
+    Number.isFinite(v) ? Math.max(min, Math.min(max, Math.round(v))) : min;
+
+  const cleanWeight = clampNum(payload.targetWeightKg, 1, 50000);
+  const cleanCo2 = clampNum(payload.targetCo2Kg, 1, 100000);
+  const cleanPickups = clampInt(payload.targetPickups, 1, 500);
+  const cleanBonus = clampNum(payload.loggedBonusWeightKg ?? 0, 0, 50000);
+  const cleanMilestones = Array.isArray(payload.notifiedMilestones)
+    ? Array.from(
+        new Set(
+          payload.notifiedMilestones
+            .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+            .map((m) => m.trim().slice(0, 40))
+        )
+      ).slice(0, 12)
+    : [];
+  const cleanNotes = (payload.notes || '').trim().slice(0, 300);
+
+  try {
+    const ref = doc(db, 'recyclingTargets', targetId);
+    const existing = await getDoc(ref);
+    if (existing.exists()) {
+      await updateDoc(ref, {
+        targetWeightKg: cleanWeight,
+        targetCo2Kg: cleanCo2,
+        targetPickups: cleanPickups,
+        loggedBonusWeightKg: cleanBonus,
+        notifiedMilestones: cleanMilestones,
+        notes: cleanNotes,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await setDoc(ref, {
+        userId: safeUid,
+        monthKey: safeMonth,
+        targetWeightKg: cleanWeight,
+        targetCo2Kg: cleanCo2,
+        targetPickups: cleanPickups,
+        loggedBonusWeightKg: cleanBonus,
+        notifiedMilestones: cleanMilestones,
+        notes: cleanNotes,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+    return targetId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteMonthlyRecyclingTarget(targetId: string): Promise<void> {
+  const safeId = targetId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `recyclingTargets/${safeId}`;
+  try {
+    await deleteDoc(doc(db, 'recyclingTargets', safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  AudioLines,
   Bot,
   Check,
   Copy,
@@ -17,6 +18,7 @@ import {
 import { apiFetch } from '../lib/api';
 import { saveEcoBotSession } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { LiveVoicePanel } from './LiveVoicePanel';
 import type { EcoChatMessage } from '../types';
 
 interface LocalChatMessage extends EcoChatMessage {
@@ -92,6 +94,7 @@ function renderFormattedText(text: string): React.ReactNode {
 export const EcoBotWidget: React.FC = () => {
   const { firebaseUser, language, setLanguage } = useAuth();
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'chat' | 'voice'>('chat');
   const [input, setInput] = useState('');
   const [useSearch, setUseSearch] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -228,14 +231,16 @@ export const EcoBotWidget: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={clearChat}
-                title="Clear conversation"
-                className="p-1.5 rounded-lg text-slate-500 dark:text-sky-200/70 hover:bg-slate-200/60 dark:hover:bg-sky-900/50"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {mode === 'chat' && (
+                <button
+                  type="button"
+                  onClick={clearChat}
+                  title="Clear conversation"
+                  className="p-1.5 rounded-lg text-slate-500 dark:text-sky-200/70 hover:bg-slate-200/60 dark:hover:bg-sky-900/50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -247,6 +252,40 @@ export const EcoBotWidget: React.FC = () => {
             </div>
           </div>
 
+          {/* Mode Switcher: Text Chat vs Gemini Live Voice */}
+          <div className="px-3.5 py-2 border-b border-slate-200 dark:border-sky-900/60 bg-slate-100/70 dark:bg-[#061526] grid grid-cols-2 gap-1.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode('chat')}
+              className={`py-1.5 px-2.5 rounded-lg font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                mode === 'chat'
+                  ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                  : 'text-slate-600 dark:text-sky-200/75 hover:bg-white/70 dark:hover:bg-sky-900/40'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Text Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('voice')}
+              className={`py-1.5 px-2.5 rounded-lg font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                mode === 'voice'
+                  ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                  : 'text-slate-600 dark:text-sky-200/75 hover:bg-white/70 dark:hover:bg-sky-900/40'
+              }`}
+            >
+              <AudioLines className="w-3.5 h-3.5" />
+              Live Voice
+            </button>
+          </div>
+
+          {mode === 'voice' ? (
+            <div className="flex-1 min-h-0 flex flex-col">
+              <LiveVoicePanel compact />
+            </div>
+          ) : (
+            <>
           {/* Language & Search Grounding Bar */}
           <div className="px-3.5 py-2 border-b border-slate-200 dark:border-sky-900/50 flex items-center justify-between gap-2 text-xs bg-white dark:bg-[#07182B]">
             <div className="flex items-center gap-1">
@@ -416,17 +455,38 @@ export const EcoBotWidget: React.FC = () => {
               <Send className="w-4 h-4" />
             </button>
           </form>
+            </>
+          )}
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="h-12 px-4 rounded-full bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 shadow-lg hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors inline-flex items-center gap-2 font-semibold text-sm"
-      >
-        {open ? <X className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-        <span>{open ? 'Close EcoBot' : 'Ask EcoBot'}</span>
-      </button>
+      <div className="flex items-center justify-end gap-2">
+        {!open && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('voice');
+              setOpen(true);
+            }}
+            title="Start real-time voice conversation with Gemini Live"
+            className="h-12 px-4 rounded-full bg-[#09203A] dark:bg-cyan-400 text-sky-50 dark:text-sky-950 border border-sky-700/80 dark:border-cyan-300 shadow-lg hover:bg-[#113158] dark:hover:bg-cyan-300 transition-colors inline-flex items-center gap-2 font-semibold text-sm cursor-pointer"
+          >
+            <AudioLines className="w-4 h-4" />
+            <span>Live Voice</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (!open) setMode('chat');
+            setOpen((v) => !v);
+          }}
+          className="h-12 px-4 rounded-full bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 shadow-lg hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors inline-flex items-center gap-2 font-semibold text-sm cursor-pointer"
+        >
+          {open ? <X className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+          <span>{open ? 'Close EcoBot' : 'Ask EcoBot'}</span>
+        </button>
+      </div>
     </div>
   );
 };

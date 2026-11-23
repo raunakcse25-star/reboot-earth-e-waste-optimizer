@@ -139,7 +139,7 @@ export interface FirestoreNotification {
   userId: string;
   title: string;
   message: string;
-  category: 'pickup' | 'optimization' | 'facility' | 'system';
+  category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
   read: boolean;
   createdAt?: any;
 }
@@ -253,6 +253,20 @@ export interface FirestoreSupportTicket {
   subject: string;
   message: string;
   status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface MonthlyRecyclingTarget {
+  id: string;
+  userId: string;
+  monthKey: string;
+  targetWeightKg: number;
+  targetCo2Kg: number;
+  targetPickups: number;
+  loggedBonusWeightKg: number;
+  notifiedMilestones: string[];
+  notes: string;
   createdAt?: any;
   updatedAt?: any;
 }

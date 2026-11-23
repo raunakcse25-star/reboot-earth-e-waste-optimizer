@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Activity,
+  AudioLines,
   BarChart3,
   Bell,
   Boxes,
@@ -16,6 +18,7 @@ import {
   Settings,
   ShieldCheck,
   Sun,
+  Target,
   Truck,
   X,
 } from 'lucide-react';
@@ -40,9 +43,15 @@ import {
   InventoryModule,
 } from './OperationsModules';
 import { WorkspaceAndStudio } from './WorkspaceAndStudio';
+import { D3ImpactVisualizer } from './D3ImpactVisualizer';
+import { MonthlyTargetsPanel } from './MonthlyTargetsPanel';
+import { LiveVoicePanel } from './LiveVoicePanel';
 
 type DashTab =
   | 'overview'
+  | 'impact'
+  | 'targets'
+  | 'voice'
   | 'schedule'
   | 'pickups'
   | 'optimizer'
@@ -130,6 +139,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
   const navItems: { id: DashTab; label: string; icon: React.ComponentType<any>; visible: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, visible: true },
+    { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
+    { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
+    { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
@@ -413,6 +425,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               </button>
             </div>
 
+            {/* Live Monthly Targets Summary Widget */}
+            <MonthlyTargetsPanel
+              pickups={recentPickups}
+              compact
+              onOpenFullTab={() => setActiveTab('targets')}
+            />
+
+            {/* D3.js Recycling Impact Trends Preview */}
+            <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} compact />
+
             {/* Recent Pickups Snapshot */}
             <div className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-x-auto">
               <div className="px-5 py-3.5 border-b border-slate-200 dark:border-sky-900/60 flex items-center justify-between">
@@ -452,6 +474,23 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'impact' && (
+          <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} />
+        )}
+
+        {activeTab === 'targets' && (
+          <MonthlyTargetsPanel pickups={recentPickups} />
+        )}
+
+        {activeTab === 'voice' && (
+          <div className="max-w-3xl space-y-4">
+            <p className="text-xs text-slate-600 dark:text-sky-200/75">
+              Speak directly with EcoBot Voice in real time via the Gemini Live API (`gemini-3.8-live`) for hands-free e-waste recycling guidance, pickup advice, and goal planning.
+            </p>
+            <LiveVoicePanel />
           </div>
         )}
 

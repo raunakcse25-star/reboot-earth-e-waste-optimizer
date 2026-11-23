@@ -54,7 +54,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["pickup", "optimization", "facility", "system"],
+          "enum": ["pickup", "optimization", "facility", "goal", "system"],
           "maxLength": 32
         },
         "read": {
@@ -581,6 +581,68 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "MonthlyRecyclingTarget": {
+      "title": "MonthlyRecyclingTarget",
+      "description": "User-defined monthly recycling goals (e-waste mass, CO2 avoided, and completed pickups) with milestone notification tracking.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "monthKey": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^[0-9]{4}-[0-9]{2}$"
+        },
+        "targetWeightKg": {
+          "type": "number",
+          "description": "Monthly e-waste recycling weight target in kilograms (1 to 50000)."
+        },
+        "targetCo2Kg": {
+          "type": "number",
+          "description": "Monthly CO2e avoided target in kilograms (1 to 100000)."
+        },
+        "targetPickups": {
+          "type": "integer",
+          "description": "Monthly completed pickups or drop-offs target (1 to 500)."
+        },
+        "loggedBonusWeightKg": {
+          "type": "number",
+          "description": "Additional self-logged verified drop-off weight in kilograms (0 to 50000)."
+        },
+        "notifiedMilestones": {
+          "type": "array",
+          "description": "Bounded list of milestone IDs already notified for this month (max 12)."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "monthKey",
+        "targetWeightKg",
+        "targetCo2Kg",
+        "targetPickups",
+        "loggedBonusWeightKg",
+        "notifiedMilestones",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -623,6 +685,10 @@
     "/supportTickets/{ticketId}": {
       "schema": { "$ref": "#/entities/SupportTicket" },
       "description": "Owner-scoped support inquiries (strict owner/admin PII access)."
+    },
+    "/recyclingTargets/{targetId}": {
+      "schema": { "$ref": "#/entities/MonthlyRecyclingTarget" },
+      "description": "Owner-scoped monthly recycling targets and progress milestone tracking."
     }
   }
 }

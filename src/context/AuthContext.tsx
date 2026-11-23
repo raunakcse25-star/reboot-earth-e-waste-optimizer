@@ -57,7 +57,7 @@ interface AuthContextValue {
   pushNotification: (payload: {
     title: string;
     message: string;
-    category: 'pickup' | 'optimization' | 'facility' | 'system';
+    category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
   }) => Promise<void>;
 }
 
@@ -441,12 +441,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (payload: {
       title: string;
       message: string;
-      category: 'pickup' | 'optimization' | 'facility' | 'system';
+      category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
     }) => {
-      if (!firebaseUser) return;
-      await createUserNotification(firebaseUser.uid, payload);
+      if (firebaseUser && firebaseUser.emailVerified) {
+        await createUserNotification(firebaseUser.uid, payload);
+        return;
+      }
+      // Fallback for unverified/local-auth sessions so progress notifications still appear in the bell dropdown
+      setNotifications((prev) => [
+        {
+          id: `local_ntf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          userId: dbUser?.uid || firebaseUser?.uid || 'local',
+          title: payload.title.slice(0, 140),
+          message: payload.message.slice(0, 500),
+          category: payload.category,
+          read: false,
+        },
+        ...prev,
+      ]);
     },
-    [firebaseUser]
+    [firebaseUser, dbUser]
   );
 
   const isAuthenticated = Boolean(firebaseUser || dbUser);

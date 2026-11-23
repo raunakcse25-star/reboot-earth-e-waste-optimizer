@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { optionalAuth, requireAuth, requireRoles, type AuthRequest } from './src/middleware/auth.ts';
+import { attachLiveVoiceWebSocket } from './src/server/liveVoice.ts';
 import {
   applyInitialOnboardingRole,
   approveOptimizationRun,
@@ -956,7 +958,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const httpServer = http.createServer(app);
+  attachLiveVoiceWebSocket(httpServer);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Reboot Earth server listening on http://0.0.0.0:${PORT}`);
   });
 }
