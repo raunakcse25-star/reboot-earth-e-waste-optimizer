@@ -121,48 +121,60 @@ Make responsible e-waste management easier to access and operate by connecting p
 
 ## 🖼️ Interface Preview
 
-> Screenshots are supplied interface captures, not a claim that every displayed metric, facility, rating or status is live production data.
->
-> <!-- Images load from docs/screenshots/. File names are case-sensitive on GitHub and the files must be committed and pushed. -->
+> Screenshots are real captures of the application interface. Figures, facilities, ratings and statuses shown in them come from **demo/sample data** and are not independently verified operational or scientific measurements.
 
 <div align="center">
 
-| 🏠 Home | 🎮 3D Studio |
-|:---:|:---:|
-| <img src="./docs/screenshots/01-home.png" alt="Home" width="420"/> | <img src="./docs/screenshots/02-3d-scenes.png" alt="3D Studio" width="420"/> |
-| **🔐 Registration** | **📍 Find Centres** |
-| <img src="./docs/screenshots/03-registration.png" alt="Registration" width="420"/> | <img src="./docs/screenshots/04-find-centres.png" alt="Find Centres" width="420"/> |
+| 🏠 Home | 📊 Impact Analytics | 📍 Find Centres |
+|:---:|:---:|:---:|
+| <a href="./docs/screenshots/01-home.png"><img src="./docs/screenshots/01-home.png" alt="Home" width="320"/></a> | <a href="./docs/screenshots/02-impact-dashboard.png"><img src="./docs/screenshots/02-impact-dashboard.png" alt="Impact analytics" width="320"/></a> | <a href="./docs/screenshots/03-find-centres.png"><img src="./docs/screenshots/03-find-centres.png" alt="Find centres" width="320"/></a> |
+| **🧠 Route Optimizer** | **🎮 3D Scenes Studio** | **🔐 Registration** |
+| <a href="./docs/screenshots/04-optimizer.png"><img src="./docs/screenshots/04-optimizer.png" alt="Route optimizer" width="320"/></a> | <a href="./docs/screenshots/05-3d-scenes.png"><img src="./docs/screenshots/05-3d-scenes.png" alt="3D scenes studio" width="320"/></a> | <a href="./docs/screenshots/06-registration.png"><img src="./docs/screenshots/06-registration.png" alt="Registration" width="320"/></a> |
+
+<sub>Click any thumbnail for the full-size image.</sub>
 
 </div>
-
-Full-size views and descriptions follow.
 
 ### 1 · Home — landing page
-The landing page introduces the intelligent e-waste logistics network, the pickup and collection-centre journeys, the circular-planet visual, the 3D scene entry point, and quick access to EcoBot and live voice.
+The landing page presents Reboot Earth as an *intelligent e-waste logistics and recovery network*. The hero offers two primary journeys — **Schedule E-Waste Pickup** and **Find Collection Centres** — beside an interactive *Circular Planet Network* panel that switches between Orbital Globe, 3D Interactive Fleet and 3D Scenes Studio. The top navigation links Home, Find Centres, Optimizer, 3D Scenes, Knowledge Hub and About, with global search, a theme toggle and sign-in. Floating **Live Voice** and **Ask EcoBot** buttons give quick access to the AI assistant.
 
 <div align="center">
-  <img src="./docs/screenshots/01-home.png" alt="Reboot Earth home page" width="92%"/>
+  <img src="./docs/screenshots/01-home.png" alt="Reboot Earth home page" width="94%"/>
 </div>
 
-### 2 · Interactive 3D Scenes Studio
-A Smart Collection Hub and EV Fleet rendered with Three.js. Orbit, zoom, and switch between Eco Hub, Device Anatomy and Orbital Network, with overview, close-up and aerial views.
+### 2 · Impact analytics — network-wide totals
+The impact section summarises recycled e-waste, CO₂e emissions saved and energy recovered as headline cards (with landfill-diversion rate, refurbished devices, verified-centre count and precious-metal figures), followed by a dual-axis **6-month trend chart** of e-waste collected (kg) against energy recovered (kWh). *The numbers in this capture are demo/sample values.*
 
 <div align="center">
-  <img src="./docs/screenshots/02-3d-scenes.png" alt="Reboot Earth interactive 3D studio" width="92%"/>
+  <img src="./docs/screenshots/02-impact-dashboard.png" alt="Reboot Earth impact analytics" width="94%"/>
 </div>
 
-### 3 · Sign in and registration
-Role-based onboarding with a citizen workflow explainer: doorstep pickup, custody updates and environmental-impact tracking.
+### 3 · Find verified collection centres
+Facility search combines a text query, facility-type and waste-category filters and a **Search Google Maps** action with an interactive Google Map and facility cards. Each card shows facility type, verification status, operating hours, address, accepted categories, a **capacity-load bar** and a **Route** action; selecting a marker opens an info window with directions. Community ratings and reviews appear below. *Facilities shown are labelled "Demo Reference".*
 
 <div align="center">
-  <img src="./docs/screenshots/03-registration.png" alt="Reboot Earth registration screen" width="92%"/>
+  <img src="./docs/screenshots/03-find-centres.png" alt="Reboot Earth facility discovery screen" width="94%"/>
 </div>
 
-### 4 · Find verified collection centres
-Search and filters combined with a Google Maps view and facility cards showing type, verification status, hours, accepted categories, capacity utilisation and route actions. *Demo-reference facility data is shown.*
+### 4 · Smart Multi-Objective Logistics Optimizer
+The Optimizer Studio lets an operator choose **Min Emissions**, **Min Distance** or **Min Cost (₹)** and click **Run Optimization**. The result view shows KPI cards (optimised distance, estimated dispatch cost, transport emissions, estimated travel time, batch coverage with assigned/unassigned counts), a highlighted **route map** with per-vehicle route tabs and stops, per-route summaries, and a **CSV export**. *The run in this capture uses demo data; its savings are modelled against the optimiser's own separate-trip baseline, not an independent benchmark.*
 
 <div align="center">
-  <img src="./docs/screenshots/04-find-centres.png" alt="Reboot Earth facility discovery screen" width="92%"/>
+  <img src="./docs/screenshots/04-optimizer.png" alt="Reboot Earth route optimizer" width="94%"/>
+</div>
+
+### 5 · Interactive 3D Scenes Studio
+A Three.js scene of a **Smart Collection Hub & EV Fleet** — solar-powered sorting bay, twin recovery cyclones and an EV collection van. Click the facility or van to inspect, drag to orbit and scroll to zoom. Scene controls switch between **Eco Hub**, **Device Anatomy** and **Orbital Network**, with *Overview*, *Close-Up* and *Aerial* camera views, a daylight toggle, pause and reset.
+
+<div align="center">
+  <img src="./docs/screenshots/05-3d-scenes.png" alt="Reboot Earth interactive 3D studio" width="94%"/>
+</div>
+
+### 6 · Sign in and registration
+A split-screen onboarding page: a role-based registration form (**Citizen**, **Collection centre**, **Recycler**, **Transporter**) with name, email and password fields, beside a workspace panel explaining the citizen journey — book a pickup slot, follow custody updates, and measure environmental impact.
+
+<div align="center">
+  <img src="./docs/screenshots/06-registration.png" alt="Reboot Earth registration screen" width="94%"/>
 </div>
 
 <details>
@@ -172,18 +184,20 @@ Search and filters combined with a Google Maps view and facility cards showing t
 |---|---|
 | Dashboard | Operational overview and role-specific modules |
 | Pickup Manager / Schedule Pickup | Create and manage collection requests |
-| Optimizer Studio | Pick an objective, run optimisation, inspect assignments and route estimates |
-| Impact Dashboard | Impact summaries, trends and monthly targets |
 | EcoBot panel | Text or voice questions |
 | Knowledge Hub | Learn about e-waste and responsible handling |
+
+Screenshots live in the repository at:
 
 ```text
 docs/
 └── screenshots/
     ├── 01-home.png
-    ├── 02-3d-scenes.png
-    ├── 03-registration.png
-    └── 04-find-centres.png
+    ├── 02-impact-dashboard.png
+    ├── 03-find-centres.png
+    ├── 04-optimizer.png
+    ├── 05-3d-scenes.png
+    └── 06-registration.png
 ```
 </details>
 
