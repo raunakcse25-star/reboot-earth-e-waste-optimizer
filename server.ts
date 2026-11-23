@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { optionalAuth, requireAuth, requireRoles, type AuthRequest } from './src/middleware/auth.ts';
 import {
+  applyInitialOnboardingRole,
   approveOptimizationRun,
   approveUserRole,
   computeEnvironmentalAnalytics,
@@ -26,6 +27,7 @@ import {
   listVehicles,
   reschedulePickup,
   saveOptimizationRun,
+  syncAuthenticatedUser,
   updatePickupStatus,
   updateUserProfile,
   updateVehicleStatus,
@@ -33,6 +35,13 @@ import {
   verifyFacility,
   writeAuditLog,
 } from './src/db/queries.ts';
+import {
+  createLocalSessionToken,
+  isAllowedOnboardingRole,
+  isValidEmail,
+  registerLocalAccount,
+  verifyLocalAccountLogin,
+} from './src/server/localAuth.ts';
 import { runSmartOptimization, type OptimizationObjective } from './src/server/optimizer.ts';
 import {
   chatWithEcoBot,
@@ -122,9 +131,124 @@ async function startServer() {
     }
   });
 
+  // --- Email & Password Authentication Endpoints (Server-Side scrypt + Signed Bearer Token) ---
+  app.post('/api/auth/register', rateLimit(15), async (req, res) => {
+    try {
+      const { fullName, email, password, role } = req.body || {};
+      const cleanName = typeof fullName === 'string' ? fullName.trim() : '';
+      const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      const cleanPassword = typeof password === 'string' ? password : '';
+      const chosenRole = isAllowedOnboardingRole(role) ? role : 'citizen';
+
+      if (cleanName.length < 2 || cleanName.length > 120) {
+        return res.status(400).json({ error: 'Please enter your full name (at least 2 characters).' });
+      }
+      if (!isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      if (cleanPassword.length < 8 || cleanPassword.length > 128) {
+        return res.status(400).json({ error: 'Password must be between 8 and 128 characters.' });
+      }
+
+      const account = await registerLocalAccount({
+        email: cleanEmail,
+        password: cleanPassword,
+        fullName: cleanName,
+        role: chosenRole,
+      });
+
+      const dbUser = await syncAuthenticatedUser({
+        uid: account.uid,
+        email: account.email,
+        fullName: account.fullName,
+        isBootstrapAdmin: false,
+        initialRole: account.role,
+      });
+
+      const token = createLocalSessionToken({
+        uid: account.uid,
+        email: account.email,
+        fullName: account.fullName,
+        role: account.role,
+      });
+
+      await writeAuditLog({
+        actorUid: account.uid,
+        actorEmail: account.email,
+        action: 'USER_REGISTERED',
+        entityType: 'user',
+        entityId: account.uid,
+        details: `Registered as ${account.role}`,
+      });
+
+      return res.status(201).json({ token, user: dbUser });
+    } catch (error: any) {
+      if (error?.code === 'EMAIL_EXISTS') {
+        return res.status(409).json({ error: error.message });
+      }
+      return res.status(500).json({ error: error?.message || 'Unable to create account right now.' });
+    }
+  });
+
+  app.post('/api/auth/login', rateLimit(20), async (req, res) => {
+    try {
+      const { email, password } = req.body || {};
+      const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      const cleanPassword = typeof password === 'string' ? password : '';
+
+      if (!isValidEmail(cleanEmail) || !cleanPassword) {
+        return res.status(400).json({ error: 'Please enter both your email and password.' });
+      }
+
+      const account = await verifyLocalAccountLogin(cleanEmail, cleanPassword);
+      if (!account) {
+        return res.status(401).json({ error: 'Invalid email or password. Please check your credentials and try again.' });
+      }
+
+      const dbUser = await syncAuthenticatedUser({
+        uid: account.uid,
+        email: account.email,
+        fullName: account.fullName,
+        isBootstrapAdmin: false,
+        initialRole: account.role,
+      });
+
+      const token = createLocalSessionToken({
+        uid: account.uid,
+        email: account.email,
+        fullName: account.fullName,
+        role: account.role,
+      });
+
+      return res.json({ token, user: dbUser });
+    } catch (error: any) {
+      return res.status(500).json({ error: error?.message || 'Unable to sign in right now.' });
+    }
+  });
+
   // --- Authenticated Profile & Role Requests ---
   app.get('/api/me', requireAuth, async (req: AuthRequest, res) => {
     res.json({ user: req.dbUser });
+  });
+
+  app.post('/api/me/onboarding-role', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { fullName, role } = req.body || {};
+      if (!isAllowedOnboardingRole(role)) {
+        return res.status(400).json({ error: 'Please choose a valid onboarding role.' });
+      }
+      const cleanName =
+        typeof fullName === 'string' && fullName.trim().length >= 2
+          ? fullName.trim().slice(0, 120)
+          : undefined;
+      const updated = await applyInitialOnboardingRole(req.user!.uid, {
+        fullName: cleanName,
+        role,
+      });
+      return res.json({ user: updated || req.dbUser });
+    } catch (error: any) {
+      return res.status(500).json({ error: error?.message || 'Unable to set onboarding role.' });
+    }
   });
 
   app.patch('/api/me', requireAuth, async (req: AuthRequest, res) => {

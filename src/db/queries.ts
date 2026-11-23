@@ -451,12 +451,25 @@ async function withDbFallback<T>(dbOp: () => Promise<T>, fallbackOp: () => T): P
   }
 }
 
+const SELF_ASSIGNABLE_ONBOARDING_ROLES = new Set([
+  'citizen',
+  'collection_centre',
+  'recycler',
+  'transporter',
+]);
+
 export async function syncAuthenticatedUser(input: {
   uid: string;
   email: string;
   fullName: string;
   isBootstrapAdmin: boolean;
+  initialRole?: string;
 }) {
+  const safeInitialRole =
+    input.initialRole && SELF_ASSIGNABLE_ONBOARDING_ROLES.has(input.initialRole)
+      ? input.initialRole
+      : 'citizen';
+
   return withDbFallback(
     async () => {
       const existingRows = await db.select().from(users).where(eq(users.uid, input.uid)).limit(1);
@@ -479,7 +492,7 @@ export async function syncAuthenticatedUser(input: {
           uid: input.uid,
           email: input.email,
           fullName: input.fullName,
-          role: input.isBootstrapAdmin ? 'admin' : 'citizen',
+          role: input.isBootstrapAdmin ? 'admin' : safeInitialRole,
           roleApproved: true,
           rewardPoints: 50,
         })
@@ -511,7 +524,7 @@ export async function syncAuthenticatedUser(input: {
         uid: input.uid,
         email: input.email,
         fullName: input.fullName,
-        role: input.isBootstrapAdmin ? 'admin' : 'citizen',
+        role: input.isBootstrapAdmin ? 'admin' : safeInitialRole,
         roleApproved: true,
         requestedRole: null as string | null,
         organizationName: null as string | null,
@@ -523,6 +536,54 @@ export async function syncAuthenticatedUser(input: {
       };
       memStore.users.unshift(created);
       return created;
+    }
+  );
+}
+
+export async function applyInitialOnboardingRole(
+  uid: string,
+  input: { fullName?: string; role: string }
+) {
+  const safeRole = SELF_ASSIGNABLE_ONBOARDING_ROLES.has(input.role) ? input.role : 'citizen';
+  return withDbFallback(
+    async () => {
+      const existingRows = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
+      if (existingRows.length === 0) return null;
+      const existing = existingRows[0];
+      // Prevent role tampering after initial onboarding or on admin accounts
+      if (existing.role !== 'citizen') {
+        if (input.fullName) {
+          const [updated] = await db
+            .update(users)
+            .set({ fullName: input.fullName, updatedAt: new Date() })
+            .where(eq(users.uid, uid))
+            .returning();
+          return updated;
+        }
+        return existing;
+      }
+      const [updated] = await db
+        .update(users)
+        .set({
+          fullName: input.fullName || existing.fullName,
+          role: safeRole,
+          roleApproved: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.uid, uid))
+        .returning();
+      return updated;
+    },
+    () => {
+      const existing = memStore.users.find((u) => u.uid === uid);
+      if (!existing) return null;
+      if (input.fullName) existing.fullName = input.fullName;
+      if (existing.role === 'citizen') {
+        existing.role = safeRole;
+        existing.roleApproved = true;
+      }
+      existing.updatedAt = new Date();
+      return existing;
     }
   );
 }

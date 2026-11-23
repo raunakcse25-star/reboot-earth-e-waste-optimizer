@@ -34,7 +34,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import type { AnalyticsSummary } from '../types';
 
-export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'knowledge' | 'about' | 'legal';
+export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'knowledge' | 'about' | 'legal' | 'auth';
 
 interface HomePageProps {
   analytics: AnalyticsSummary | null;
@@ -322,6 +322,8 @@ export const HomePage: React.FC<HomePageProps> = ({
         analytics={analytics}
         onExploreOptimizer={() => onNavigate('optimizer')}
         onSchedulePickup={onOpenDashboard}
+        onExploreCentres={() => onNavigate('centres')}
+        onExploreKnowledge={() => onNavigate('knowledge')}
       />
 
       {/* 2.5. Interactive FluxLines + ElectricBorder + SpecularButton + AnimatedList Showcase */}

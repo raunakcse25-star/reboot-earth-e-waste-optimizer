@@ -5,19 +5,24 @@ import {
   loadUserPreferences,
   logoutUser,
   markNotificationAsRead,
+  registerWithEmailPassword,
+  resetUserPassword,
   saveUserPreferences,
+  signInWithEmailPassword,
   signInWithGooglePopup,
   subscribeAuthState,
   subscribeUserNotifications,
 } from '../lib/firebase';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getLocalAuthToken, setLocalAuthToken } from '../lib/api';
 import type { DbUser, FirestoreNotification } from '../types';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
+export type OnboardingRoleChoice = 'citizen' | 'collection_centre' | 'recycler' | 'transporter';
 
 interface AuthContextValue {
   firebaseUser: User | null;
   dbUser: DbUser | null;
+  isAuthenticated: boolean;
   workspaceToken: string | null;
   authReady: boolean;
   signingIn: boolean;
@@ -27,7 +32,16 @@ interface AuthContextValue {
   language: 'en' | 'hi' | 'hinglish';
   setTheme: (mode: ThemeMode) => void;
   setLanguage: (lang: 'en' | 'hi' | 'hinglish') => void;
+  clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    role: OnboardingRoleChoice;
+  }) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
@@ -48,6 +62,30 @@ function applyThemeToDom(mode: ThemeMode) {
     window.matchMedia('(prefers-color-scheme: dark)').matches;
   const shouldUseDark = mode === 'dark' || (mode === 'system' && prefersDark);
   root.classList.toggle('dark', shouldUseDark);
+}
+
+function mapFirebaseAuthError(error: any, fallback: string): string {
+  const code = String(error?.code || '');
+  if (code === 'auth/email-already-in-use') {
+    return 'An account with this email already exists. Try signing in instead.';
+  }
+  if (code === 'auth/invalid-email') {
+    return 'Please enter a valid email address.';
+  }
+  if (code === 'auth/weak-password') {
+    return 'Password should be at least 8 characters long.';
+  }
+  if (
+    code === 'auth/invalid-credential' ||
+    code === 'auth/wrong-password' ||
+    code === 'auth/user-not-found'
+  ) {
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Too many attempts. Please wait a moment before trying again.';
+  }
+  return error?.message || fallback;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -95,13 +133,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthReady(true);
 
       if (user) {
+        setLocalAuthToken(null);
         await refreshProfile();
         const prefs = await loadUserPreferences(user.uid);
         if (prefs) {
           setThemeState(prefs.theme);
           setLanguageState(prefs.language);
         }
-      } else {
+      } else if (!getLocalAuthToken()) {
         setDbUser(null);
         setNotifications([]);
       }
@@ -150,10 +189,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [firebaseUser, theme]
   );
 
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
   const signInWithGoogle = useCallback(async () => {
     setSigningIn(true);
     setAuthError(null);
     try {
+      setLocalAuthToken(null);
       const res = await signInWithGooglePopup();
       setFirebaseUser(res.user);
       setWorkspaceToken(res.workspaceToken);
@@ -166,8 +210,138 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshProfile]);
 
+  const registerWithEmail = useCallback(
+    async (payload: {
+      fullName: string;
+      email: string;
+      password: string;
+      role: OnboardingRoleChoice;
+    }) => {
+      setSigningIn(true);
+      setAuthError(null);
+      const cleanName = payload.fullName.trim();
+      const cleanEmail = payload.email.trim().toLowerCase();
+
+      try {
+        // Primary: Firebase Email/Password Auth
+        const user = await registerWithEmailPassword(cleanEmail, payload.password, cleanName);
+        setLocalAuthToken(null);
+        setFirebaseUser(user);
+        const res = await apiFetch<{ user: DbUser }>('/api/me/onboarding-role', {
+          method: 'POST',
+          body: JSON.stringify({ fullName: cleanName, role: payload.role }),
+        });
+        setDbUser(res.user);
+      } catch (fbError: any) {
+        const code = String(fbError?.code || '');
+        const providerUnavailable =
+          code === 'auth/operation-not-allowed' ||
+          code === 'auth/configuration-not-found' ||
+          code === 'auth/admin-restricted-operation';
+
+        if (providerUnavailable) {
+          // Seamless server-side scrypt registration fallback when Email/Password provider isn't enabled in Firebase Console
+          try {
+            const res = await apiFetch<{ token: string; user: DbUser }>(
+              '/api/auth/register',
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  fullName: cleanName,
+                  email: cleanEmail,
+                  password: payload.password,
+                  role: payload.role,
+                }),
+              },
+              false
+            );
+            setLocalAuthToken(res.token);
+            setDbUser(res.user);
+            return;
+          } catch (serverErr: any) {
+            const msg = serverErr?.message || 'Unable to create your account.';
+            setAuthError(msg);
+            throw serverErr;
+          }
+        }
+
+        const friendly = mapFirebaseAuthError(fbError, 'Unable to create your account.');
+        setAuthError(friendly);
+        throw new Error(friendly);
+      } finally {
+        setSigningIn(false);
+      }
+    },
+    []
+  );
+
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      setSigningIn(true);
+      setAuthError(null);
+      const cleanEmail = email.trim().toLowerCase();
+
+      try {
+        // Primary: Firebase Email/Password Auth
+        const user = await signInWithEmailPassword(cleanEmail, password);
+        setLocalAuthToken(null);
+        setFirebaseUser(user);
+        await refreshProfile();
+      } catch (fbError: any) {
+        const code = String(fbError?.code || '');
+        const shouldCheckServerAuth =
+          code === 'auth/operation-not-allowed' ||
+          code === 'auth/configuration-not-found' ||
+          code === 'auth/invalid-credential' ||
+          code === 'auth/user-not-found';
+
+        if (shouldCheckServerAuth) {
+          try {
+            const res = await apiFetch<{ token: string; user: DbUser }>(
+              '/api/auth/login',
+              {
+                method: 'POST',
+                body: JSON.stringify({ email: cleanEmail, password }),
+              },
+              false
+            );
+            setLocalAuthToken(res.token);
+            setDbUser(res.user);
+            return;
+          } catch (serverErr: any) {
+            const msg =
+              code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found'
+                ? serverErr?.message || 'Invalid email or password.'
+                : mapFirebaseAuthError(fbError, 'Invalid email or password.');
+            setAuthError(msg);
+            throw new Error(msg);
+          }
+        }
+
+        const friendly = mapFirebaseAuthError(fbError, 'Unable to sign in right now.');
+        setAuthError(friendly);
+        throw new Error(friendly);
+      } finally {
+        setSigningIn(false);
+      }
+    },
+    [refreshProfile]
+  );
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      await resetUserPassword(cleanEmail);
+    } catch (error: any) {
+      throw new Error(
+        mapFirebaseAuthError(error, 'Unable to send password reset email right now.')
+      );
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
-    await logoutUser();
+    setLocalAuthToken(null);
+    await logoutUser().catch(() => {});
     setFirebaseUser(null);
     setDbUser(null);
     setWorkspaceToken(null);
@@ -190,11 +364,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [firebaseUser]
   );
 
+  const isAuthenticated = Boolean(firebaseUser || dbUser);
+
   return (
     <AuthContext.Provider
       value={{
         firebaseUser,
         dbUser,
+        isAuthenticated,
         workspaceToken,
         authReady,
         signingIn,
@@ -204,7 +381,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         language,
         setTheme,
         setLanguage,
+        clearAuthError,
         signInWithGoogle,
+        signInWithEmail,
+        registerWithEmail,
+        sendPasswordReset,
         signOut,
         refreshProfile,
         markNotificationRead,

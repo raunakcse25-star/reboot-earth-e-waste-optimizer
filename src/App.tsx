@@ -7,7 +7,7 @@ import { AboutAndLegalPage, HomePage, KnowledgeHubPage, type PublicRoute } from 
 import { FacilityMap } from './components/FacilityMap';
 import { OptimizerStudio } from './components/OptimizerStudio';
 import { DashboardShell } from './components/DashboardShell';
-import { GoogleSignInButton } from './components/GoogleSignInButton';
+import { AuthPage, type AuthMode } from './components/AuthPage';
 import { EcoBotWidget } from './components/EcoBotWidget';
 import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
 
@@ -15,10 +15,10 @@ const QUOTA_DOC_URL =
   'https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors';
 
 export default function App() {
-  const { firebaseUser, signingIn, authError, theme, setTheme, signInWithGoogle } = useAuth();
+  const { isAuthenticated, theme, setTheme } = useAuth();
   const [route, setRoute] = useState<PublicRoute>('home');
+  const [authInitialMode, setAuthInitialMode] = useState<AuthMode>('signin');
   const [inDashboard, setInDashboard] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
 
@@ -57,12 +57,20 @@ export default function App() {
     return () => window.removeEventListener('gmp-quota-exceeded', handler);
   }, []);
 
+  const handleOpenAuth = (mode: AuthMode = 'signin') => {
+    setInDashboard(false);
+    setAuthInitialMode(mode);
+    setRoute('auth');
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleOpenDashboard = () => {
-    if (firebaseUser) {
+    if (isAuthenticated) {
       setInDashboard(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      setAuthModalOpen(true);
+      handleOpenAuth('signin');
     }
   };
 
@@ -108,14 +116,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      await signInWithGoogle();
-      setAuthModalOpen(false);
-      setInDashboard(true);
-    } catch {
-      // Error surfaced via authError
-    }
+  const handleAuthSuccess = () => {
+    setRoute('home');
+    setInDashboard(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const toggleQuickTheme = () => {
@@ -216,7 +220,13 @@ export default function App() {
               onClick={handleOpenDashboard}
               className="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 shadow-sm hover:shadow-md hover:shadow-sky-600/25 transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap cursor-pointer"
             >
-              {firebaseUser ? (inDashboard ? 'Dashboard Active' : 'Open Dashboard') : 'Sign In'}
+              {isAuthenticated
+                ? inDashboard
+                  ? 'Dashboard Active'
+                  : 'Open Dashboard'
+                : route === 'auth'
+                  ? 'Sign In / Register'
+                  : 'Sign In'}
             </button>
 
             <button
@@ -256,7 +266,7 @@ export default function App() {
 
       {/* Main Content Switch */}
       <div className="relative z-10 flex-1">
-        {inDashboard && firebaseUser ? (
+        {inDashboard && isAuthenticated ? (
           <DashboardShell
             analytics={analytics}
             facilities={facilities}
@@ -265,6 +275,14 @@ export default function App() {
           />
         ) : (
           <>
+            {route === 'auth' && (
+              <AuthPage
+                initialMode={authInitialMode}
+                analytics={analytics}
+                onSuccess={handleAuthSuccess}
+                onBackHome={() => handleNavigate('home')}
+              />
+            )}
             {route === 'home' && (
               <HomePage
                 analytics={analytics}
@@ -320,7 +338,7 @@ export default function App() {
                       Test real-time multi-objective vehicle routing against active pickup requests. Sign in to save optimization runs, approve dispatch plans, and export to Google Drive.
                     </p>
                   </div>
-                  <OptimizerStudio compact={!firebaseUser} />
+                  <OptimizerStudio compact={!isAuthenticated} />
                 </div>
               </div>
             )}
@@ -340,7 +358,7 @@ export default function App() {
       </div>
 
       {/* Professional Footer */}
-      {!inDashboard && (
+      {!inDashboard && route !== 'auth' && (
         <footer className="relative border-t border-sky-200/80 dark:border-sky-900/60 bg-gradient-to-b from-sky-100/65 to-sky-100/35 dark:from-[#061526] dark:to-[#040E1A]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-5 space-y-3">
@@ -428,64 +446,6 @@ export default function App() {
             © {new Date().getFullYear()} Reboot Earth · Operational recycling records do not replace statutory CPCB EPR certificates.
           </div>
         </footer>
-      )}
-
-      {/* Sign-In Modal */}
-      {authModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setAuthModalOpen(false);
-          }}
-        >
-          <div className="relative overflow-hidden w-full max-w-md rounded-2xl border border-sky-200/90 dark:border-sky-800/80 bg-white dark:bg-[#0B223B] p-6 shadow-2xl space-y-5">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-cyan-400 to-sky-600"
-            />
-            <div className="flex items-start justify-between gap-3 pt-1">
-              <div className="flex items-start gap-3">
-                <span className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/60 border border-sky-200 dark:border-sky-800 flex items-center justify-center shrink-0">
-                  <Recycle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-                </span>
-                <div>
-                  <h3 className="font-display text-xl font-bold text-slate-900 dark:text-sky-50">
-                    Sign in to Reboot Earth
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-sky-200/75 mt-1 leading-relaxed">
-                    Access your role-based dashboard, schedule pickups, run route optimizations, and connect Google Workspace tools.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(false)}
-                aria-label="Close sign in dialog"
-                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex justify-center py-2">
-              <GoogleSignInButton
-                onClick={() => void handleGoogleLogin()}
-                loading={signingIn}
-                label="Continue with Google"
-              />
-            </div>
-
-            {authError && (
-              <p className="text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-lg px-3 py-2">
-                {authError}
-              </p>
-            )}
-
-            <p className="text-[11px] text-slate-500 dark:text-sky-200/65 text-center leading-relaxed pt-2 border-t border-slate-100 dark:border-sky-900/60">
-              New accounts start as Citizen / Individual. Organizations, Recyclers, Refurbishers, Transporters, and Producers can request verified role upgrades inside Profile Settings.
-            </p>
-          </div>
-        </div>
       )}
 
       {/* Floating EcoBot AI Assistant */}

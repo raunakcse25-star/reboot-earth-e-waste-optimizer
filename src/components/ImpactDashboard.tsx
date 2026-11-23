@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import {
   ArrowUpRight,
+  Award,
+  Building2,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cpu,
   Flame,
   Info,
+  Laptop,
   Leaf,
   Recycle,
   ShieldCheck,
@@ -13,11 +17,14 @@ import {
 } from 'lucide-react';
 import type { AnalyticsSummary, MonthlyImpactTrendPoint } from '../types';
 import { ImpactTrendChart } from './ImpactTrendChart';
+import { MilestoneInsightDrawer, type MilestoneItem } from './MilestoneInsightDrawer';
 
 interface ImpactDashboardProps {
   analytics: AnalyticsSummary | null;
   onExploreOptimizer?: () => void;
   onSchedulePickup?: () => void;
+  onExploreCentres?: () => void;
+  onExploreKnowledge?: () => void;
 }
 
 // Published circular-economy secondary vs primary smelting energy-saving midpoints
@@ -31,8 +38,11 @@ export const ImpactDashboard: React.FC<ImpactDashboardProps> = ({
   analytics,
   onExploreOptimizer,
   onSchedulePickup,
+  onExploreCentres,
+  onExploreKnowledge,
 }) => {
   const [showMethodology, setShowMethodology] = useState(false);
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
 
   const metrics = useMemo(() => {
     const recycledKg = analytics?.totalRecycledKg ?? 0;
@@ -123,6 +133,326 @@ export const ImpactDashboard: React.FC<ImpactDashboardProps> = ({
       trendData,
     };
   }, [analytics]);
+
+  const milestones: MilestoneItem[] = useMemo(
+    () => [
+      {
+        id: 'ewaste-collected',
+        icon: Award,
+        metric: '10,000 Tonnes',
+        title: 'E-Waste Collected',
+        period: 'Milestone · Q4 2025',
+        description:
+          'Cumulative electronics safely diverted from informal dismantling and municipal landfills across partner corridors, tracked through verified weight manifests and QR chain-of-custody logs.',
+        liveFootnote: analytics
+          ? `${metrics.collectedKg.toLocaleString()} kg live in workspace`
+          : 'Audited chain-of-custody ledger',
+        liveDetailLabel: 'Active Workspace Ledger',
+        liveDetailValue: analytics ? `${metrics.collectedKg.toLocaleString()} kg` : '—',
+        unitLabel: 'Tonnes',
+        yoyGrowthLabel: '+168% YoY',
+        peakQuarterLabel: '2,650 T (Q4 25)',
+        methodologyNote:
+          'Coalition milestone reflects cumulative multi-region intake logged by partner recyclers and corporate IT decommissioning drives. Workspace ledger totals reflect live database rows and are distinct from statutory CPCB EPR certificates.',
+        history: [
+          { period: 'Q3 24', cumulative: 2150, quarterlyDelta: 820 },
+          { period: 'Q4 24', cumulative: 3340, quarterlyDelta: 1190 },
+          { period: 'Q1 25', cumulative: 4820, quarterlyDelta: 1480 },
+          { period: 'Q2 25', cumulative: 6410, quarterlyDelta: 1590 },
+          { period: 'Q3 25', cumulative: 8120, quarterlyDelta: 1710 },
+          { period: 'Q4 25', cumulative: 10000, quarterlyDelta: 1880 },
+        ],
+        regions: [
+          {
+            corridor: 'Delhi NCR & Northern Belt',
+            hubs: 'Okhla, Gurugram, Noida, Faridabad',
+            valueLabel: '3,200 T',
+            sharePct: 32,
+          },
+          {
+            corridor: 'Mumbai–Pune Western Corridor',
+            hubs: 'Navi Mumbai, Thane, Chakan, Hinjewadi',
+            valueLabel: '2,800 T',
+            sharePct: 28,
+          },
+          {
+            corridor: 'Bengaluru–Chennai Tech Belt',
+            hubs: 'Peenya, Whitefield, Sriperumbudur',
+            valueLabel: '2,500 T',
+            sharePct: 25,
+          },
+          {
+            corridor: 'Hyderabad & Tier-2 Expansion',
+            hubs: 'HITEC City, Ahmedabad, Jaipur, Kochi',
+            valueLabel: '1,500 T',
+            sharePct: 15,
+          },
+        ],
+        reports: [
+          {
+            id: 'north-corridor-2025',
+            title: 'Northern & Western Urban Intake Audit (FY 2025)',
+            region: 'Delhi NCR & Maharashtra',
+            published: 'Jan 2026',
+            summary:
+              'Enterprise IT decommissioning accounted for 61% of collected weight, with lithium-battery quarantine compliance reaching 99.2% across authorized bays.',
+            actionTarget: 'pickup',
+            actionLabel: 'Schedule New Pickup',
+          },
+          {
+            id: 'south-tech-corridor-2025',
+            title: 'Southern Tech Corridor Recovery Brief',
+            region: 'Karnataka & Tamil Nadu',
+            published: 'Dec 2025',
+            summary:
+              'High-grade server rack and PCB streams led secondary copper and precious metal recovery yields across Bengaluru and Chennai partner dismantlers.',
+            actionTarget: 'knowledge',
+            actionLabel: 'Review CPCB 2022 Rules',
+          },
+        ],
+      },
+      {
+        id: 'partner-centres',
+        icon: Building2,
+        metric: '500 Centres',
+        title: 'Partner Centres Joined',
+        period: 'Milestone · Q1 2026',
+        description:
+          'Authorized collection hubs, diagnostic refurbishment labs, and CPCB-registered dismantlers onboarded to the geospatial recovery map with verified intake capabilities.',
+        liveFootnote: analytics
+          ? `${analytics.verifiedFacilities} verified hubs active locally`
+          : 'Geospatially verified intake bays',
+        liveDetailLabel: 'Verified Local Hubs',
+        liveDetailValue: analytics
+          ? `${analytics.verifiedFacilities} / ${analytics.totalFacilities}`
+          : '—',
+        unitLabel: 'Centres',
+        yoyGrowthLabel: '+142% YoY',
+        peakQuarterLabel: '+96 hubs (Q1 26)',
+        methodologyNote:
+          'Partner onboarding requires documented hazardous-handling protocols, verified geographic coordinates, and accepted e-waste category declarations before appearing on the public finder map.',
+        history: [
+          { period: 'Q4 24', cumulative: 135, quarterlyDelta: 42 },
+          { period: 'Q1 25', cumulative: 198, quarterlyDelta: 63 },
+          { period: 'Q2 25', cumulative: 268, quarterlyDelta: 70 },
+          { period: 'Q3 25', cumulative: 336, quarterlyDelta: 68 },
+          { period: 'Q4 25', cumulative: 404, quarterlyDelta: 68 },
+          { period: 'Q1 26', cumulative: 500, quarterlyDelta: 96 },
+        ],
+        regions: [
+          {
+            corridor: 'Western Industrial & Metro Hubs',
+            hubs: 'Mumbai, Pune, Surat, Ahmedabad',
+            valueLabel: '155 hubs',
+            sharePct: 31,
+          },
+          {
+            corridor: 'Southern Innovation Corridors',
+            hubs: 'Bengaluru, Chennai, Hyderabad, Kochi',
+            valueLabel: '145 hubs',
+            sharePct: 29,
+          },
+          {
+            corridor: 'National Capital & North Network',
+            hubs: 'Delhi, Noida, Gurugram, Chandigarh',
+            valueLabel: '120 hubs',
+            sharePct: 24,
+          },
+          {
+            corridor: 'Eastern & Central Drop-off Points',
+            hubs: 'Kolkata, Bhubaneswar, Indore, Bhopal',
+            valueLabel: '80 hubs',
+            sharePct: 16,
+          },
+        ],
+        reports: [
+          {
+            id: 'facility-density-2026',
+            title: 'National Collection Centre Density & Readiness Report',
+            region: 'Pan-India (28 Metro & Tier-2 Cities)',
+            published: 'Mar 2026',
+            summary:
+              'Average household distance to a verified e-waste drop-off hub fell from 14.8 km to 6.2 km following Q1 2026 municipal kiosk onboarding.',
+            actionTarget: 'centres',
+            actionLabel: 'Explore Partner Map',
+          },
+          {
+            id: 'battery-safety-audit-2026',
+            title: 'Hazardous & Li-Ion Intake Certification Digest',
+            region: 'Tier-1 Industrial Zones',
+            published: 'Feb 2026',
+            summary:
+              'Details fire-safe lithium storage compliance, thermal monitoring coverage, and community rating benchmarks across partner centres.',
+            actionTarget: 'knowledge',
+            actionLabel: 'Open Safety Standards',
+          },
+        ],
+      },
+      {
+        id: 'co2-avoided',
+        icon: Leaf,
+        metric: '15,000 Tonnes',
+        title: 'CO₂e Emissions Avoided',
+        period: 'Milestone · Q2 2026',
+        description:
+          'Lifecycle greenhouse gas emissions prevented by replacing energy-intensive primary mining with secondary smelting recovery and optimizing collection fleets with 2-opt EV/CNG dispatch.',
+        liveFootnote: analytics
+          ? `${metrics.co2SavedKg.toLocaleString()} kg CO₂e saved in ledger`
+          : 'Transparent emission accounting',
+        liveDetailLabel: 'Live Ledger CO₂e Saved',
+        liveDetailValue: analytics ? `${metrics.co2SavedKg.toLocaleString()} kg` : '—',
+        unitLabel: 'Tonnes CO₂e',
+        yoyGrowthLabel: '+184% YoY',
+        peakQuarterLabel: '3,420 T (Q2 26)',
+        methodologyNote:
+          'Avoided emissions combine secondary metal recovery factors (1.44 kg CO₂e/kg mixed e-waste), hardware reuse life-extension (18 kg CO₂e/unit), and Smart Optimizer distance reductions using 1.28x urban road circuity.',
+        history: [
+          { period: 'Q1 25', cumulative: 3800, quarterlyDelta: 1240 },
+          { period: 'Q2 25', cumulative: 5650, quarterlyDelta: 1850 },
+          { period: 'Q3 25', cumulative: 7780, quarterlyDelta: 2130 },
+          { period: 'Q4 25', cumulative: 10120, quarterlyDelta: 2340 },
+          { period: 'Q1 26', cumulative: 12450, quarterlyDelta: 2330 },
+          { period: 'Q2 26', cumulative: 15000, quarterlyDelta: 2550 },
+        ],
+        regions: [
+          {
+            corridor: 'EV & CNG Fleet Dispatch Corridors',
+            hubs: 'Delhi NCR, Bengaluru, Pune',
+            valueLabel: '5,100 T CO₂e',
+            sharePct: 34,
+          },
+          {
+            corridor: 'Copper & Aluminum Smelting Offsets',
+            hubs: 'Maharashtra & Gujarat Smelters',
+            valueLabel: '4,650 T CO₂e',
+            sharePct: 31,
+          },
+          {
+            corridor: 'Enterprise Refurbishment Offsets',
+            hubs: 'Bengaluru, Hyderabad, Chennai',
+            valueLabel: '3,450 T CO₂e',
+            sharePct: 23,
+          },
+          {
+            corridor: 'Clean Energy & Solar PV Recovery',
+            hubs: 'Rajasthan & Tamil Nadu Clusters',
+            valueLabel: '1,800 T CO₂e',
+            sharePct: 12,
+          },
+        ],
+        reports: [
+          {
+            id: 'fleet-decarb-2026',
+            title: 'Reverse-Logistics Fleet Decarbonization Report',
+            region: 'NCR, Karnataka & Maharashtra',
+            published: 'Jun 2026',
+            summary:
+              'Switching unbatched diesel pickups to capacity-constrained 2-opt EV/CNG multi-stop tours reduced last-mile transport CO₂e by 38.4% per tonne collected.',
+            actionTarget: 'optimizer',
+            actionLabel: 'Launch Route Optimizer',
+          },
+          {
+            id: 'secondary-smelting-lca-2026',
+            title: 'Secondary Material Lifecycle Carbon Ledger',
+            region: 'Western & Southern Recovery Plants',
+            published: 'May 2026',
+            summary:
+              'Breaks down embodied carbon savings across aluminum frames, copper busbars, industrial polymers, and recovered printed circuit board alloys.',
+            actionTarget: 'knowledge',
+            actionLabel: 'Inspect Methodology',
+          },
+        ],
+      },
+      {
+        id: 'devices-refurbished',
+        icon: Laptop,
+        metric: '250,000 Units',
+        title: 'Devices Refurbished',
+        period: 'Milestone · Q3 2026',
+        description:
+          'Laptops, smartphones, monitors, and enterprise networking devices diagnostically graded, cryptographically data-wiped, repaired, and returned to productive service for schools and SMBs.',
+        liveFootnote: analytics
+          ? `${metrics.reusableDevices.toLocaleString()} devices extended locally`
+          : 'NIST-aligned data sanitization',
+        liveDetailLabel: 'Live Devices Extended',
+        liveDetailValue: analytics ? `${metrics.reusableDevices.toLocaleString()} units` : '—',
+        unitLabel: 'Units',
+        yoyGrowthLabel: '+196% YoY',
+        peakQuarterLabel: '54k units (Q3 26)',
+        methodologyNote:
+          'Every refurbished device passes cryptographic wipe verification (NIST SP 800-88 aligned), battery health screening, and component stress testing before re-issue.',
+        history: [
+          { period: 'Q2 25', cumulative: 58000, quarterlyDelta: 19500 },
+          { period: 'Q3 25', cumulative: 86000, quarterlyDelta: 28000 },
+          { period: 'Q4 25', cumulative: 121000, quarterlyDelta: 35000 },
+          { period: 'Q1 26', cumulative: 158000, quarterlyDelta: 37000 },
+          { period: 'Q2 26', cumulative: 196000, quarterlyDelta: 38000 },
+          { period: 'Q3 26', cumulative: 250000, quarterlyDelta: 54000 },
+        ],
+        regions: [
+          {
+            corridor: 'Bengaluru & Hyderabad IT Parks',
+            hubs: 'Corporate Laptop & Workstation Leases',
+            valueLabel: '90,000 units',
+            sharePct: 36,
+          },
+          {
+            corridor: 'Mumbai–Pune Financial & SaaS Belt',
+            hubs: 'Enterprise Laptops, Routers & Displays',
+            valueLabel: '67,500 units',
+            sharePct: 27,
+          },
+          {
+            corridor: 'Delhi NCR Education & Public Labs',
+            hubs: 'Refurbished Classroom PCs & Tablets',
+            valueLabel: '57,500 units',
+            sharePct: 23,
+          },
+          {
+            corridor: 'Regional Vocational & SMB Programs',
+            hubs: 'Jaipur, Kochi, Ahmedabad, Kolkata',
+            valueLabel: '35,000 units',
+            sharePct: 14,
+          },
+        ],
+        reports: [
+          {
+            id: 'circular-it-reuse-2026',
+            title: 'Corporate IT Lifecycle Extension & Digital Equity Report',
+            region: 'Bengaluru, Hyderabad & Pune',
+            published: 'Sep 2026',
+            summary:
+              'Over 64% of retired corporate laptops graded Grade A/B after SSD and battery swaps, saving ~48 kWh of embodied manufacturing energy per unit.',
+            actionTarget: 'pickup',
+            actionLabel: 'Log Devices for Reuse',
+          },
+          {
+            id: 'data-sanitization-brief-2026',
+            title: 'Zero-Leakage Data Wipe & Refurbisher Audit',
+            region: 'Certified Partner Labs',
+            published: 'Aug 2026',
+            summary:
+              'Summarizes serialized wipe certificates, physical shredding protocols for failed drives, and chain-of-custody verification rates.',
+            actionTarget: 'centres',
+            actionLabel: 'Find Refurbishment Labs',
+          },
+        ],
+      },
+    ],
+    [analytics, metrics.collectedKg, metrics.co2SavedKg, metrics.reusableDevices]
+  );
+
+  const selectedMilestone = useMemo(
+    () => milestones.find((m) => m.id === selectedMilestoneId) ?? null,
+    [milestones, selectedMilestoneId]
+  );
+
+  const handleDrawerNavigate = (target: 'centres' | 'optimizer' | 'knowledge' | 'pickup') => {
+    if (target === 'centres') onExploreCentres?.();
+    else if (target === 'optimizer') onExploreOptimizer?.();
+    else if (target === 'knowledge') onExploreKnowledge?.();
+    else if (target === 'pickup') onSchedulePickup?.();
+  };
 
   return (
     <section
@@ -436,7 +766,88 @@ export const ImpactDashboard: React.FC<ImpactDashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Key Milestones Grid */}
+        <div className="space-y-5 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+                Network Achievements
+              </p>
+              <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
+                Key Milestones Reached
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-sky-200/70 max-w-md sm:text-right">
+              Select any milestone card to inspect six-quarter growth trajectories and regional corridor reports.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {milestones.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setSelectedMilestoneId(item.id)}
+                  className="group relative overflow-hidden rounded-2xl border border-sky-200/85 dark:border-sky-900/70 bg-white/95 dark:bg-[#0B223B] p-5 flex flex-col justify-between gap-4 text-left transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:border-sky-400 dark:hover:border-sky-500/80 hover:shadow-[0_16px_32px_-16px_rgba(14,165,233,0.28)] cursor-pointer"
+                >
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-500/85 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  />
+
+                  <div className="space-y-3 w-full">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-sky-100/90 dark:bg-sky-900/60 border border-sky-200/70 dark:border-sky-800/70 text-sky-600 dark:text-sky-300 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="font-mono text-[11px] font-medium text-sky-700 dark:text-sky-400">
+                        {item.period}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="font-display font-mono tabular-nums text-2xl font-bold tracking-tight text-slate-900 dark:text-sky-50 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors">
+                        {item.metric}
+                      </p>
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-sky-100 mt-0.5">
+                        {item.title}
+                      </h4>
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed line-clamp-3">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <div className="w-full pt-3 border-t border-slate-100 dark:border-sky-900/60 space-y-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-sky-200/80">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+                      <span className="truncate font-mono tabular-nums">{item.liveFootnote}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                      <span>View growth &amp; regional reports</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {/* Interactive Milestone Deep-Insight Slide-Over Drawer */}
+      <MilestoneInsightDrawer
+        milestone={selectedMilestone}
+        allMilestones={milestones}
+        onSelectMilestone={(m) => setSelectedMilestoneId(m.id)}
+        onClose={() => setSelectedMilestoneId(null)}
+        onActionNavigate={handleDrawerNavigate}
+      />
     </section>
   );
 };

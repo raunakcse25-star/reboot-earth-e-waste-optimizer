@@ -1,5 +1,16 @@
 import { auth } from './firebase';
 
+// Kept strictly in JS memory (never localStorage or sessionStorage)
+let inMemoryLocalAuthToken: string | null = null;
+
+export function setLocalAuthToken(token: string | null) {
+  inMemoryLocalAuthToken = token;
+}
+
+export function getLocalAuthToken(): string | null {
+  return inMemoryLocalAuthToken;
+}
+
 export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
@@ -10,9 +21,13 @@ export async function apiFetch<T = any>(
     ...(options.headers as Record<string, string>),
   };
 
-  if (requireAuthHeader && auth.currentUser) {
-    const idToken = await auth.currentUser.getIdToken();
-    headers.Authorization = `Bearer ${idToken}`;
+  if (requireAuthHeader) {
+    if (auth.currentUser) {
+      const idToken = await auth.currentUser.getIdToken();
+      headers.Authorization = `Bearer ${idToken}`;
+    } else if (inMemoryLocalAuthToken) {
+      headers.Authorization = `Bearer ${inMemoryLocalAuthToken}`;
+    }
   }
 
   const res = await fetch(path, {

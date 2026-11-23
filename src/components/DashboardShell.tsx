@@ -70,6 +70,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const {
     dbUser,
     firebaseUser,
+    isAuthenticated,
     notifications,
     theme,
     setTheme,
@@ -115,10 +116,10 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   }, []);
 
   useEffect(() => {
-    if (firebaseUser) {
+    if (isAuthenticated) {
       void loadDashData();
     }
-  }, [firebaseUser, loadDashData]);
+  }, [isAuthenticated, loadDashData]);
 
   const role: UserRole = dbUser?.role || 'citizen';
   const unreadCount = notifications.filter((n) => !n.read).length;

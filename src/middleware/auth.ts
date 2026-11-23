@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminAuth } from '../lib/firebase-admin.ts';
 import { syncAuthenticatedUser } from '../db/queries.ts';
+import { verifyLocalSessionToken } from '../server/localAuth.ts';
 
 export const BOOTSTRAP_ADMIN_EMAIL = 'raunaksahni7286@gmail.com';
 
@@ -20,11 +21,14 @@ export interface DbUserRecord {
 }
 
 export interface AuthRequest extends Request {
-  user?: DecodedIdToken;
+  user?: DecodedIdToken | { uid: string; email?: string; name?: string; email_verified?: boolean };
   dbUser?: DbUserRecord;
 }
 
-export async function getOrCreateDbUser(decoded: DecodedIdToken): Promise<DbUserRecord> {
+export async function getOrCreateDbUser(
+  decoded: { uid: string; email?: string; name?: string; email_verified?: boolean },
+  initialRole?: string
+): Promise<DbUserRecord> {
   const email = (decoded.email || '').toLowerCase();
   const isBootstrapAdmin = email === BOOTSTRAP_ADMIN_EMAIL && decoded.email_verified === true;
   const displayName = decoded.name || email.split('@')[0] || 'Reboot Earth Member';
@@ -35,11 +39,33 @@ export async function getOrCreateDbUser(decoded: DecodedIdToken): Promise<DbUser
       email,
       fullName: displayName,
       isBootstrapAdmin,
+      initialRole,
     });
   } catch (error) {
     console.error('Failed to sync authenticated user record:', error);
     throw new Error('Unable to synchronize user profile. Please retry.', { cause: error });
   }
+}
+
+async function resolveAuthToken(token: string) {
+  if (token.startsWith('rbe.')) {
+    const local = verifyLocalSessionToken(token);
+    if (!local) {
+      throw new Error('Invalid or expired session token.');
+    }
+    const identity = {
+      uid: local.uid,
+      email: local.email,
+      name: local.name,
+      email_verified: false,
+    };
+    const dbUser = await getOrCreateDbUser(identity, local.role);
+    return { identity, dbUser };
+  }
+
+  const decoded = await adminAuth.verifyIdToken(token);
+  const dbUser = await getOrCreateDbUser(decoded);
+  return { identity: decoded, dbUser };
 }
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -54,9 +80,9 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    req.user = decoded;
-    req.dbUser = await getOrCreateDbUser(decoded);
+    const { identity, dbUser } = await resolveAuthToken(token);
+    req.user = identity;
+    req.dbUser = dbUser;
     return next();
   } catch (error) {
     console.error('Token verification failed:', error);
@@ -70,9 +96,9 @@ export const optionalAuth = async (req: AuthRequest, _res: Response, next: NextF
     const token = authHeader.slice('Bearer '.length).trim();
     if (token) {
       try {
-        const decoded = await adminAuth.verifyIdToken(token);
-        req.user = decoded;
-        req.dbUser = await getOrCreateDbUser(decoded);
+        const { identity, dbUser } = await resolveAuthToken(token);
+        req.user = identity;
+        req.dbUser = dbUser;
       } catch {
         // Ignore invalid optional tokens on public routes
       }

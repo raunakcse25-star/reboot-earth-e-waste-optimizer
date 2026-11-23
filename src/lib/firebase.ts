@@ -1,10 +1,14 @@
 import { initializeApp } from 'firebase/app';
 import {
+  createUserWithEmailAndPassword,
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut as fbSignOut,
+  updateProfile,
   type User,
 } from 'firebase/auth';
 import {
@@ -164,6 +168,41 @@ export async function signInWithGooglePopup(): Promise<{
   } finally {
     isSigningIn = false;
   }
+}
+
+export async function registerWithEmailPassword(
+  email: string,
+  password: string,
+  fullName: string
+): Promise<User> {
+  isSigningIn = true;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (fullName.trim()) {
+      await updateProfile(cred.user, { displayName: fullName.trim() });
+      await cred.user.getIdToken(true);
+    }
+    return cred.user;
+  } finally {
+    isSigningIn = false;
+  }
+}
+
+export async function signInWithEmailPassword(
+  email: string,
+  password: string
+): Promise<User> {
+  isSigningIn = true;
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return cred.user;
+  } finally {
+    isSigningIn = false;
+  }
+}
+
+export async function resetUserPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
 }
 
 export function getCachedWorkspaceToken(): string | null {
