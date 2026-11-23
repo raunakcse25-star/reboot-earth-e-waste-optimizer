@@ -1111,9 +1111,7 @@ test: cover optimiser capacity edge cases
 | **Sumit Arya** | [@sumit23-bot](https://github.com/sumit23-bot) | Collaborator | *Add verified contribution* |
 | **Sushant** | [@Sushant9871](https://github.com/Sushant9871) | Collaborator | *Add verified contribution* |
 
----
 
----
 
 <div align="center">
 
