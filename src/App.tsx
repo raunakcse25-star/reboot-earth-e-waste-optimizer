@@ -10,6 +10,7 @@ import { DashboardShell } from './components/DashboardShell';
 import { AuthPage, type AuthMode } from './components/AuthPage';
 import { EcoBotWidget } from './components/EcoBotWidget';
 import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
+import { ScenesStudio } from './components/three/ScenesStudio';
 
 const QUOTA_DOC_URL =
   'https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors';
@@ -130,6 +131,7 @@ export default function App() {
     { id: 'home', label: 'Home' },
     { id: 'centres', label: 'Find Centres' },
     { id: 'optimizer', label: 'Optimizer' },
+    { id: 'scenes', label: '3D Scenes' },
     { id: 'knowledge', label: 'Knowledge Hub' },
     { id: 'about', label: 'About' },
   ];
@@ -343,6 +345,8 @@ export default function App() {
               </div>
             )}
 
+            {route === 'scenes' && <ScenesStudio />}
+
             {route === 'knowledge' && (
               <KnowledgeHubPage
                 initialQuery={knowledgeQuery || undefined}
@@ -358,7 +362,7 @@ export default function App() {
       </div>
 
       {/* Professional Footer */}
-      {!inDashboard && route !== 'auth' && (
+      {!inDashboard && route !== 'auth' && route !== 'scenes' && (
         <footer className="relative border-t border-sky-200/80 dark:border-sky-900/60 bg-gradient-to-b from-sky-100/65 to-sky-100/35 dark:from-[#061526] dark:to-[#040E1A]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-5 space-y-3">
@@ -393,6 +397,15 @@ export default function App() {
                     className="hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer"
                   >
                     Smart Logistics Optimizer
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('scenes')}
+                    className="hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer"
+                  >
+                    3D Scenes Studio
                   </button>
                 </li>
                 <li>
@@ -449,7 +462,7 @@ export default function App() {
       )}
 
       {/* Floating EcoBot AI Assistant */}
-      <EcoBotWidget />
+      {route !== 'scenes' && <EcoBotWidget />}
     </div>
   );
 }

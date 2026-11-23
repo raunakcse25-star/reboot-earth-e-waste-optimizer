@@ -23,11 +23,16 @@ import {
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
+  saveInventoryBatchToFirestore,
+  subscribeUserInventoryBatches,
+} from '../lib/firebase';
+import {
   EWASTE_CATEGORIES,
   ROLE_LABELS,
   type AnalyticsSummary,
   type DbUser,
   type Facility,
+  type FirestoreInventoryBatch,
   type InventoryBatch,
   type UserRole,
   type Vehicle,
@@ -40,8 +45,9 @@ export const InventoryModule: React.FC<{
   facilities: Facility[];
   onDataChanged?: () => void;
 }> = ({ facilities, onDataChanged }) => {
-  const { dbUser } = useAuth();
+  const { authReady, firebaseUser, dbUser } = useAuth();
   const [batches, setBatches] = useState<InventoryBatch[]>([]);
+  const [firestoreBatches, setFirestoreBatches] = useState<FirestoreInventoryBatch[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,11 +82,28 @@ export const InventoryModule: React.FC<{
     void loadBatches();
   }, [loadBatches]);
 
+  useEffect(() => {
+    if (!authReady || !firebaseUser) {
+      setFirestoreBatches([]);
+      return;
+    }
+    let unsub: (() => void) | undefined;
+    try {
+      unsub = subscribeUserInventoryBatches(firebaseUser.uid, (items) => {
+        setFirestoreBatches(items);
+      });
+    } catch (err) {
+      console.error('Inventory batch Firestore listener failed:', err);
+    }
+    return () => unsub?.();
+  }, [authReady, firebaseUser]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const computedStatus = processingStage === 'Recycled' ? 'Completed' : 'In Processing';
     try {
-      await apiFetch('/api/inventory', {
+      const created = await apiFetch<InventoryBatch>('/api/inventory', {
         method: 'POST',
         body: JSON.stringify({
           facilityId,
@@ -89,7 +112,7 @@ export const InventoryModule: React.FC<{
           quantity,
           weightKg,
           storageZone,
-          status: processingStage === 'Recycled' ? 'Completed' : 'In Processing',
+          status: computedStatus,
           processingStage,
           recoveredCopperKg,
           recoveredAluminumKg,
@@ -99,6 +122,27 @@ export const InventoryModule: React.FC<{
           residueKg,
         }),
       });
+      if (firebaseUser && firebaseUser.emailVerified) {
+        void saveInventoryBatchToFirestore(firebaseUser.uid, {
+          batchCode: created?.batchCode,
+          facilityId,
+          category,
+          deviceSummary,
+          quantity,
+          weightKg,
+          storageZone,
+          status: computedStatus,
+          processingStage,
+          recoveredCopperKg,
+          recoveredAluminumKg,
+          recoveredPlasticsKg,
+          recoveredPreciousGrams,
+          reusableUnits,
+          residueKg,
+        }).catch((fsErr) => {
+          console.warn('Could not persist inventory batch to Firestore:', fsErr);
+        });
+      }
       setShowForm(false);
       setDeviceSummary('');
       await loadBatches();
@@ -107,6 +151,77 @@ export const InventoryModule: React.FC<{
       setError(err?.message || 'Failed to record batch.');
     }
   };
+
+  const mergedBatches: Array<{
+    key: string;
+    batchCode: string;
+    storageZone: string;
+    deviceSummary: string;
+    category: string;
+    processingStage: string;
+    weightKg: number;
+    recoveredCopperKg: number;
+    recoveredAluminumKg: number;
+    recoveredPlasticsKg: number;
+    recoveredPreciousGrams: number;
+    reusableUnits: number;
+    residueKg: number;
+  }> = (() => {
+    const seen = new Set<string>();
+    const list: Array<{
+      key: string;
+      batchCode: string;
+      storageZone: string;
+      deviceSummary: string;
+      category: string;
+      processingStage: string;
+      weightKg: number;
+      recoveredCopperKg: number;
+      recoveredAluminumKg: number;
+      recoveredPlasticsKg: number;
+      recoveredPreciousGrams: number;
+      reusableUnits: number;
+      residueKg: number;
+    }> = [];
+    for (const b of batches) {
+      seen.add(b.batchCode);
+      list.push({
+        key: `srv_${b.id}`,
+        batchCode: b.batchCode,
+        storageZone: b.storageZone,
+        deviceSummary: b.deviceSummary,
+        category: b.category,
+        processingStage: b.processingStage,
+        weightKg: b.weightKg,
+        recoveredCopperKg: b.recoveredCopperKg,
+        recoveredAluminumKg: b.recoveredAluminumKg,
+        recoveredPlasticsKg: b.recoveredPlasticsKg,
+        recoveredPreciousGrams: b.recoveredPreciousGrams,
+        reusableUnits: b.reusableUnits,
+        residueKg: b.residueKg,
+      });
+    }
+    for (const fb of firestoreBatches) {
+      if (seen.has(fb.batchCode)) continue;
+      seen.add(fb.batchCode);
+      list.push({
+        key: `fs_${fb.id}`,
+        batchCode: fb.batchCode,
+        storageZone: fb.storageZone,
+        deviceSummary: fb.deviceSummary,
+        category: fb.category,
+        processingStage: fb.processingStage,
+        weightKg: fb.weightKg,
+        recoveredCopperKg: fb.recoveredCopperKg,
+        recoveredAluminumKg: fb.recoveredAluminumKg,
+        recoveredPlasticsKg: fb.recoveredPlasticsKg,
+        recoveredPreciousGrams: fb.recoveredPreciousGrams,
+        reusableUnits: fb.reusableUnits,
+        residueKg: fb.residueKg,
+      });
+    }
+    return list;
+  })();
 
   return (
     <div className="space-y-6">
@@ -303,8 +418,8 @@ export const InventoryModule: React.FC<{
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-sky-900/50">
-            {batches.map((b) => (
-              <tr key={b.id} className="text-slate-700 dark:text-sky-100/90">
+            {mergedBatches.map((b) => (
+              <tr key={b.key} className="text-slate-700 dark:text-sky-100/90">
                 <td className="px-4 py-3 font-mono font-semibold text-sky-700 dark:text-sky-400">
                   {b.batchCode}
                   <span className="block text-[10px] font-sans font-normal text-slate-500 dark:text-sky-200/60">

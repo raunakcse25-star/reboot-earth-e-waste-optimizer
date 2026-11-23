@@ -31,6 +31,7 @@ import {
   PICKUP_TIME_SLOTS,
   type EcoChatMessage,
   type FacilityReview,
+  type FirestoreInventoryBatch,
   type FirestoreNotification,
   type FirestoreOptimizationRun,
   type FirestoreUserProfile,
@@ -739,4 +740,168 @@ export async function saveOptimizationRunToFirestore(
     handleFirestoreError(error, OperationType.CREATE, path);
   }
 }
+
+// --- Facility Inventory & Material Recovery Batches (Owner-Scoped Sync) ---
+
+const VALID_BATCH_STATUSES = [
+  'Received',
+  'In Processing',
+  'Inspected',
+  'Dismantling',
+  'Refurbished',
+  'Recycled',
+  'Completed',
+  'Dispatched',
+] as const;
+
+const VALID_PROCESSING_STAGES = [
+  'Inspection',
+  'Dismantling',
+  'Refurbishment',
+  'Material Recovery',
+  'Recycled',
+] as const;
+
+export function subscribeUserInventoryBatches(
+  uid: string,
+  onData: (items: FirestoreInventoryBatch[]) => void
+) {
+  const path = 'inventoryBatches';
+  const q = query(collection(db, path), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: FirestoreInventoryBatch[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<FirestoreInventoryBatch, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  );
+}
+
+export async function saveInventoryBatchToFirestore(
+  uid: string,
+  payload: {
+    batchCode?: string;
+    facilityId: number;
+    category: string;
+    deviceSummary: string;
+    quantity: number;
+    weightKg: number;
+    storageZone: string;
+    status: string;
+    processingStage: string;
+    recoveredCopperKg: number;
+    recoveredAluminumKg: number;
+    recoveredPlasticsKg: number;
+    recoveredPreciousGrams: number;
+    reusableUnits: number;
+    residueKg: number;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const rawCode = (payload.batchCode || `BAT-${Date.now().toString(36).toUpperCase()}`)
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 32);
+  const safeBatchCode = rawCode.length >= 4 ? rawCode : `BAT-${Math.floor(1000 + Math.random() * 9000)}`;
+  const batchId = `inv_${safeBatchCode.replace(/-/g, '_')}_${Date.now().toString(36)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `inventoryBatches/${batchId}`;
+
+  const clampNum = (v: number, min: number, max: number) =>
+    Number.isFinite(v) ? Math.max(min, Math.min(max, Number(v.toFixed(3)))) : min;
+  const clampInt = (v: number, min: number, max: number) =>
+    Number.isFinite(v) ? Math.max(min, Math.min(max, Math.round(v))) : min;
+
+  const safeStatus = (VALID_BATCH_STATUSES as readonly string[]).includes(payload.status)
+    ? payload.status
+    : 'In Processing';
+  const safeStage = (VALID_PROCESSING_STAGES as readonly string[]).includes(payload.processingStage)
+    ? payload.processingStage
+    : 'Dismantling';
+
+  try {
+    await setDoc(doc(db, 'inventoryBatches', batchId), {
+      userId: safeUid,
+      batchCode: safeBatchCode,
+      facilityId: clampInt(payload.facilityId, 1, 1000000),
+      category: (payload.category.trim() || 'IT & Telecom').slice(0, 60),
+      deviceSummary: (payload.deviceSummary.trim() || 'E-Waste Batch').slice(0, 200),
+      quantity: clampInt(payload.quantity, 1, 100000),
+      weightKg: clampNum(payload.weightKg, 0.1, 1000000),
+      storageZone: (payload.storageZone.trim() || 'Bay A-1').slice(0, 60),
+      status: safeStatus,
+      processingStage: safeStage,
+      recoveredCopperKg: clampNum(payload.recoveredCopperKg, 0, 1000000),
+      recoveredAluminumKg: clampNum(payload.recoveredAluminumKg, 0, 1000000),
+      recoveredPlasticsKg: clampNum(payload.recoveredPlasticsKg, 0, 1000000),
+      recoveredPreciousGrams: clampNum(payload.recoveredPreciousGrams, 0, 1000000),
+      reusableUnits: clampInt(payload.reusableUnits, 0, 100000),
+      residueKg: clampNum(payload.residueKg, 0, 1000000),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return batchId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+// --- Support Inquiries (Owner-Scoped PII) ---
+
+export async function createSupportTicketInFirestore(
+  uid: string,
+  payload: {
+    name: string;
+    email: string;
+    category: string;
+    subject: string;
+    message: string;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const ticketId = `sup_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `supportTickets/${ticketId}`;
+
+  const cleanName = (payload.name.trim() || 'Account Member').slice(0, 120);
+  const cleanEmail = (payload.email.trim().toLowerCase() || 'user@rebootearth.app').slice(0, 160);
+  const cleanCategory = (payload.category.trim() || 'General').slice(0, 60);
+  const cleanSubject = (payload.subject.trim() || 'General Inquiry').slice(0, 160);
+  const cleanMessage = payload.message.trim().slice(0, 1500);
+
+  if (cleanMessage.length < 5) {
+    throw new Error('Please enter at least 5 characters for your message.');
+  }
+
+  try {
+    await setDoc(doc(db, 'supportTickets', ticketId), {
+      userId: safeUid,
+      name: cleanName,
+      email: cleanEmail,
+      category: cleanCategory,
+      subject: cleanSubject,
+      message: cleanMessage,
+      status: 'Open',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return ticketId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
 

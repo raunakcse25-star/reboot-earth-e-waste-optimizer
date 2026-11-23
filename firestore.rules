@@ -259,6 +259,118 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidInventoryBatch(data) {
+      return data.keys().hasAll([
+          'userId',
+          'batchCode',
+          'facilityId',
+          'category',
+          'deviceSummary',
+          'quantity',
+          'weightKg',
+          'storageZone',
+          'status',
+          'processingStage',
+          'recoveredCopperKg',
+          'recoveredAluminumKg',
+          'recoveredPlasticsKg',
+          'recoveredPreciousGrams',
+          'reusableUnits',
+          'residueKg',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'batchCode',
+          'facilityId',
+          'category',
+          'deviceSummary',
+          'quantity',
+          'weightKg',
+          'storageZone',
+          'status',
+          'processingStage',
+          'recoveredCopperKg',
+          'recoveredAluminumKg',
+          'recoveredPlasticsKg',
+          'recoveredPreciousGrams',
+          'reusableUnits',
+          'residueKg',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.batchCode is string && data.batchCode.size() >= 4 && data.batchCode.size() <= 32 && data.batchCode.matches('^[A-Z0-9\\-]+$')
+        && data.facilityId is int && data.facilityId >= 1 && data.facilityId <= 1000000
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 60
+        && data.deviceSummary is string && data.deviceSummary.size() >= 2 && data.deviceSummary.size() <= 200
+        && data.quantity is int && data.quantity >= 1 && data.quantity <= 100000
+        && data.weightKg is number && data.weightKg >= 0.1 && data.weightKg <= 1000000
+        && data.storageZone is string && data.storageZone.size() >= 1 && data.storageZone.size() <= 60
+        && data.status is string && data.status.size() <= 32 && data.status in [
+          'Received',
+          'In Processing',
+          'Inspected',
+          'Dismantling',
+          'Refurbished',
+          'Recycled',
+          'Completed',
+          'Dispatched'
+        ]
+        && data.processingStage is string && data.processingStage.size() <= 32 && data.processingStage in [
+          'Inspection',
+          'Dismantling',
+          'Refurbishment',
+          'Material Recovery',
+          'Recycled'
+        ]
+        && data.recoveredCopperKg is number && data.recoveredCopperKg >= 0 && data.recoveredCopperKg <= 1000000
+        && data.recoveredAluminumKg is number && data.recoveredAluminumKg >= 0 && data.recoveredAluminumKg <= 1000000
+        && data.recoveredPlasticsKg is number && data.recoveredPlasticsKg >= 0 && data.recoveredPlasticsKg <= 1000000
+        && data.recoveredPreciousGrams is number && data.recoveredPreciousGrams >= 0 && data.recoveredPreciousGrams <= 1000000
+        && data.reusableUnits is int && data.reusableUnits >= 0 && data.reusableUnits <= 100000
+        && data.residueKg is number && data.residueKg >= 0 && data.residueKg <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll([
+          'userId',
+          'name',
+          'email',
+          'category',
+          'subject',
+          'message',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'name',
+          'email',
+          'category',
+          'subject',
+          'message',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 60
+        && data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 160
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 1500
+        && data.status is string && data.status.size() <= 24 && data.status in ['Open', 'In Progress', 'Resolved', 'Closed']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // Connection probe path (read-only ping)
     match /test/connection {
       allow get: if true;
@@ -465,6 +577,70 @@ service cloud.firestore {
       allow delete: if isValidId(runId)
         && isVerified()
         && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Operator-scoped facility inventory & material recovery batches
+    match /inventoryBatches/{batchId} {
+      allow get: if isValidId(batchId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(batchId)
+        && isVerified()
+        && isValidInventoryBatch(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(batchId)
+        && isVerified()
+        && isValidInventoryBatch(incoming())
+        && (
+          isAdmin() || (
+            existing().userId == request.auth.uid
+            && incoming().userId == existing().userId
+            && incoming().batchCode == existing().batchCode
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'storageZone',
+              'status',
+              'processingStage',
+              'recoveredCopperKg',
+              'recoveredAluminumKg',
+              'recoveredPlasticsKg',
+              'recoveredPreciousGrams',
+              'reusableUnits',
+              'residueKg',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(batchId)
+        && isVerified()
+        && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Owner-scoped support inquiries (strict PII isolation)
+    match /supportTickets/{ticketId} {
+      allow get: if isValidId(ticketId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(ticketId)
+        && isVerified()
+        && isValidSupportTicket(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'Open'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(ticketId)
+        && isVerified()
+        && isValidSupportTicket(incoming())
+        && isAdmin()
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(ticketId) && isVerified() && isAdmin();
     }
   }
 }

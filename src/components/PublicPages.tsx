@@ -32,9 +32,10 @@ import AnimatedContent from './AnimatedContent';
 import { ImpactDashboard } from './ImpactDashboard';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
+import { createSupportTicketInFirestore } from '../lib/firebase';
 import type { AnalyticsSummary } from '../types';
 
-export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'knowledge' | 'about' | 'legal' | 'auth';
+export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'scenes' | 'knowledge' | 'about' | 'legal' | 'auth';
 
 interface HomePageProps {
   analytics: AnalyticsSummary | null;
@@ -116,7 +117,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigate,
   onOpenDashboard,
 }) => {
-  const { theme } = useAuth();
+  const { theme, firebaseUser } = useAuth();
   const [heroVisualMode, setHeroVisualMode] = useState<'globe' | '3d'>('globe');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
@@ -178,6 +179,17 @@ export const HomePage: React.FC<HomePageProps> = ({
         },
         false
       );
+      if (firebaseUser && firebaseUser.emailVerified) {
+        void createSupportTicketInFirestore(firebaseUser.uid, {
+          name: supportName,
+          email: supportEmail,
+          category: supportCategory,
+          subject: supportSubject,
+          message: supportMessage,
+        }).catch((fsErr) => {
+          console.warn('Could not persist support ticket to Firestore:', fsErr);
+        });
+      }
       setSupportStatus('Thank you. Your inquiry has been logged in our support queue.');
       setSupportName('');
       setSupportEmail('');
@@ -296,12 +308,26 @@ export const HomePage: React.FC<HomePageProps> = ({
                     >
                       3D Interactive Fleet
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('scenes')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-cyan-300 hover:text-white hover:bg-sky-900/60 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      3D Scenes Studio
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="relative flex-1 min-h-[420px] lg:min-h-[480px]">
                   <EarthCanvas className="w-full h-full min-h-[420px] lg:min-h-[480px]" />
-                  <div className="absolute top-3 right-3 z-20">
+                  <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('scenes')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-500 text-sky-950 hover:bg-sky-400 transition-colors cursor-pointer whitespace-nowrap shadow-md"
+                    >
+                      Open 3D Studio
+                    </button>
                     <button
                       type="button"
                       onClick={() => setHeroVisualMode('globe')}

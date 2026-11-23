@@ -222,6 +222,41 @@ export interface FirestoreOptimizationRun {
   updatedAt?: any;
 }
 
+export interface FirestoreInventoryBatch {
+  id: string;
+  userId: string;
+  batchCode: string;
+  facilityId: number;
+  category: string;
+  deviceSummary: string;
+  quantity: number;
+  weightKg: number;
+  storageZone: string;
+  status: string;
+  processingStage: string;
+  recoveredCopperKg: number;
+  recoveredAluminumKg: number;
+  recoveredPlasticsKg: number;
+  recoveredPreciousGrams: number;
+  reusableUnits: number;
+  residueKg: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface FirestoreSupportTicket {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  category: string;
+  subject: string;
+  message: string;
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export const EWASTE_CATEGORIES = [
   'IT & Telecom',
   'Consumer Electronics',
