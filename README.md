@@ -1110,6 +1110,7 @@ test: cover optimiser capacity edge cases
 | **Nidhi Mishra** | [@nidhimishra-04](https://github.com/nidhimishra-04) | Collaborator | *Add verified contribution* |
 | **Sumit Arya** | [@sumit23-bot](https://github.com/sumit23-bot) | Collaborator | *Add verified contribution* |
 | **Sushant** | [@Sushant9871](https://github.com/Sushant9871) | Collaborator | *Add verified contribution* |
+| **Sanjana** | [@sam-sanjana07](https://github.com/sam-sanjana07⁠) | Collaborator | *Add verified contribution* |
 
 
 
