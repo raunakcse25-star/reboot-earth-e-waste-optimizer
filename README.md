@@ -1099,8 +1099,8 @@ test: cover optimiser capacity edge cases
       </a><br/>
       <sub>Collaborator</sub>
     </td>
-    </td>
-    <td align="center" width="180">
+    
+  <td align="center" width="180">
       <a href="https://github.com/sam-sanjana07⁠">
         <img src="https://github.com/sam-sanjana07⁠.png?size=100" width="90" alt="sam-sanjana07"/><br/>
         <sub><b>sam-sanjana07</b></sub>
