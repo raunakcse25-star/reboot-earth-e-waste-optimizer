@@ -16,7 +16,13 @@ import {
   subscribeUserNotifications,
 } from '../lib/firebase';
 import { apiFetch, getLocalAuthToken, setLocalAuthToken } from '../lib/api';
-import type { DbUser, FirestoreNotification, FirestoreUserProfile } from '../types';
+import type {
+  CommunicationChannel,
+  DbUser,
+  FirestoreNotification,
+  FirestoreUserProfile,
+  OrganizationType,
+} from '../types';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type OnboardingRoleChoice = 'citizen' | 'collection_centre' | 'recycler' | 'transporter';
@@ -50,8 +56,15 @@ interface AuthContextValue {
   syncFirestoreProfile: (patch: {
     fullName: string;
     organizationName?: string | null;
+    organizationType?: OrganizationType;
     phone?: string | null;
     city?: string | null;
+    preferredChannel?: CommunicationChannel;
+    emailAlerts?: boolean;
+    pickupReminders?: boolean;
+    goalMilestoneAlerts?: boolean;
+    weeklyImpactDigest?: boolean;
+    regulatoryUpdates?: boolean;
   }) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   pushNotification: (payload: {
@@ -183,28 +196,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (patch: {
       fullName: string;
       organizationName?: string | null;
+      organizationType?: OrganizationType;
       phone?: string | null;
       city?: string | null;
+      preferredChannel?: CommunicationChannel;
+      emailAlerts?: boolean;
+      pickupReminders?: boolean;
+      goalMilestoneAlerts?: boolean;
+      weeklyImpactDigest?: boolean;
+      regulatoryUpdates?: boolean;
     }) => {
-      if (!firebaseUser || !firebaseUser.emailVerified) return;
-      const email = dbUser?.email || firebaseUser.email || 'user@rebootearth.app';
-      await saveUserProfile(firebaseUser.uid, {
+      const uid = firebaseUser?.uid || dbUser?.uid || 'local';
+      const email = dbUser?.email || firebaseUser?.email || 'user@rebootearth.app';
+      const nextProfile: FirestoreUserProfile = {
+        userId: uid,
         email,
-        fullName: patch.fullName,
-        organizationName: patch.organizationName || '',
-        phone: patch.phone || '',
-        city: patch.city || '',
-      });
-      setFirestoreProfile((prev) => ({
-        userId: firebaseUser.uid,
-        email: prev?.email || email,
-        fullName: patch.fullName.trim() || prev?.fullName || email.split('@')[0],
+        fullName: patch.fullName.trim() || firestoreProfile?.fullName || email.split('@')[0],
         organizationName: (patch.organizationName || '').trim(),
+        organizationType: patch.organizationType ?? firestoreProfile?.organizationType ?? 'individual',
         phone: (patch.phone || '').trim(),
         city: (patch.city || '').trim(),
-      }));
+        preferredChannel: patch.preferredChannel ?? firestoreProfile?.preferredChannel ?? 'email',
+        emailAlerts: patch.emailAlerts ?? firestoreProfile?.emailAlerts ?? true,
+        pickupReminders: patch.pickupReminders ?? firestoreProfile?.pickupReminders ?? true,
+        goalMilestoneAlerts:
+          patch.goalMilestoneAlerts ?? firestoreProfile?.goalMilestoneAlerts ?? true,
+        weeklyImpactDigest:
+          patch.weeklyImpactDigest ?? firestoreProfile?.weeklyImpactDigest ?? false,
+        regulatoryUpdates:
+          patch.regulatoryUpdates ?? firestoreProfile?.regulatoryUpdates ?? true,
+      };
+
+      try {
+        localStorage.setItem(`reboot_earth_profile_prefs_${uid}`, JSON.stringify(nextProfile));
+      } catch {
+        // Ignore storage restrictions
+      }
+
+      if (firebaseUser && firebaseUser.emailVerified) {
+        await saveUserProfile(firebaseUser.uid, {
+          email: nextProfile.email,
+          fullName: nextProfile.fullName,
+          organizationName: nextProfile.organizationName,
+          organizationType: nextProfile.organizationType,
+          phone: nextProfile.phone,
+          city: nextProfile.city,
+          preferredChannel: nextProfile.preferredChannel,
+          emailAlerts: nextProfile.emailAlerts,
+          pickupReminders: nextProfile.pickupReminders,
+          goalMilestoneAlerts: nextProfile.goalMilestoneAlerts,
+          weeklyImpactDigest: nextProfile.weeklyImpactDigest,
+          regulatoryUpdates: nextProfile.regulatoryUpdates,
+        });
+        void saveUserPreferences(firebaseUser.uid, {
+          theme,
+          language,
+          emailAlerts: Boolean(nextProfile.emailAlerts),
+        }).catch(() => {});
+      }
+
+      setFirestoreProfile(nextProfile);
     },
-    [firebaseUser, dbUser]
+    [firebaseUser, dbUser, firestoreProfile, theme, language]
   );
 
   useEffect(() => {

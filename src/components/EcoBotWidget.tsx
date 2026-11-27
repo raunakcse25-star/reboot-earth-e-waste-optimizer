@@ -19,6 +19,7 @@ import { apiFetch } from '../lib/api';
 import { saveEcoBotSession } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LiveVoicePanel } from './LiveVoicePanel';
+import { MicTranscribeButton } from './AudioTranscriber';
 import type { EcoChatMessage } from '../types';
 
 interface LocalChatMessage extends EcoChatMessage {
@@ -471,8 +472,17 @@ export const EcoBotWidget: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask EcoBot anything about e-waste..."
-              className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900 bg-slate-50 dark:bg-[#040E1A] text-slate-900 dark:text-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="Ask or dictate about e-waste..."
+              className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-sky-900 bg-slate-50 dark:bg-[#040E1A] text-slate-900 dark:text-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <MicTranscribeButton
+              language={language}
+              disabled={loading}
+              onTranscribed={(text) => {
+                setError(null);
+                setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
+              }}
+              onError={(msg) => setError(msg)}
             />
             <button
               type="submit"

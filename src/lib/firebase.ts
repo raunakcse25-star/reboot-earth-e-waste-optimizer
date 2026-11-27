@@ -29,6 +29,7 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   PICKUP_TIME_SLOTS,
+  type CommunicationChannel,
   type EcoChatMessage,
   type FacilityReview,
   type FirestoreInventoryBatch,
@@ -36,6 +37,7 @@ import {
   type FirestoreOptimizationRun,
   type FirestoreUserProfile,
   type MonthlyRecyclingTarget,
+  type OrganizationType,
   type PickupTimeSlot,
   type ScheduledPickupBooking,
 } from '../types';
@@ -613,14 +615,39 @@ export async function loadUserProfile(uid: string): Promise<FirestoreUserProfile
   }
 }
 
+const VALID_ORG_TYPES: readonly OrganizationType[] = [
+  'individual',
+  'corporate',
+  'educational',
+  'government',
+  'healthcare',
+  'retail_oem',
+  'recycler_partner',
+  'ngo_community',
+];
+
+const VALID_COMM_CHANNELS: readonly CommunicationChannel[] = [
+  'email',
+  'sms',
+  'whatsapp',
+  'in_app',
+];
+
 export async function saveUserProfile(
   uid: string,
   profile: {
     email: string;
     fullName: string;
     organizationName?: string | null;
+    organizationType?: OrganizationType;
     phone?: string | null;
     city?: string | null;
+    preferredChannel?: CommunicationChannel;
+    emailAlerts?: boolean;
+    pickupReminders?: boolean;
+    goalMilestoneAlerts?: boolean;
+    weeklyImpactDigest?: boolean;
+    regulatoryUpdates?: boolean;
   }
 ): Promise<void> {
   const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
@@ -630,8 +657,25 @@ export async function saveUserProfile(
   const cleanEmail = (profile.email.trim().toLowerCase() || 'user@rebootearth.app').slice(0, 160);
   const cleanFullName = (profile.fullName.trim() || cleanEmail.split('@')[0] || 'User').slice(0, 120);
   const cleanOrg = (profile.organizationName || '').trim().slice(0, 140);
+  const cleanOrgType: OrganizationType =
+    profile.organizationType && VALID_ORG_TYPES.includes(profile.organizationType)
+      ? profile.organizationType
+      : 'individual';
   const cleanPhone = (profile.phone || '').trim().slice(0, 40);
   const cleanCity = (profile.city || '').trim().slice(0, 80);
+  const cleanChannel: CommunicationChannel =
+    profile.preferredChannel && VALID_COMM_CHANNELS.includes(profile.preferredChannel)
+      ? profile.preferredChannel
+      : 'email';
+  const cleanEmailAlerts = profile.emailAlerts !== undefined ? Boolean(profile.emailAlerts) : true;
+  const cleanPickupReminders =
+    profile.pickupReminders !== undefined ? Boolean(profile.pickupReminders) : true;
+  const cleanGoalAlerts =
+    profile.goalMilestoneAlerts !== undefined ? Boolean(profile.goalMilestoneAlerts) : true;
+  const cleanWeeklyDigest =
+    profile.weeklyImpactDigest !== undefined ? Boolean(profile.weeklyImpactDigest) : false;
+  const cleanRegulatoryUpdates =
+    profile.regulatoryUpdates !== undefined ? Boolean(profile.regulatoryUpdates) : true;
 
   try {
     const ref = doc(db, 'userProfiles', safeUid);
@@ -640,8 +684,15 @@ export async function saveUserProfile(
       await updateDoc(ref, {
         fullName: cleanFullName,
         organizationName: cleanOrg,
+        organizationType: cleanOrgType,
         phone: cleanPhone,
         city: cleanCity,
+        preferredChannel: cleanChannel,
+        emailAlerts: cleanEmailAlerts,
+        pickupReminders: cleanPickupReminders,
+        goalMilestoneAlerts: cleanGoalAlerts,
+        weeklyImpactDigest: cleanWeeklyDigest,
+        regulatoryUpdates: cleanRegulatoryUpdates,
         updatedAt: serverTimestamp(),
       });
     } else {
@@ -650,8 +701,15 @@ export async function saveUserProfile(
         email: cleanEmail,
         fullName: cleanFullName,
         organizationName: cleanOrg,
+        organizationType: cleanOrgType,
         phone: cleanPhone,
         city: cleanCity,
+        preferredChannel: cleanChannel,
+        emailAlerts: cleanEmailAlerts,
+        pickupReminders: cleanPickupReminders,
+        goalMilestoneAlerts: cleanGoalAlerts,
+        weeklyImpactDigest: cleanWeeklyDigest,
+        regulatoryUpdates: cleanRegulatoryUpdates,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

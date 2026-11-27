@@ -739,3 +739,79 @@ export async function generateCampaignVisual(params: {
 
   throw lastError || new Error('The image model completed without returning image bytes.');
 }
+
+const TRANSCRIBE_MODEL = 'gemini-3.5-transcribe';
+
+export async function transcribeAudio(params: {
+  audioBase64: string;
+  mimeType: string;
+  language?: string;
+}) {
+  const ai = getAiClient();
+  const base64Clean = params.audioBase64.replace(/^data:[^;]+;base64,/, '').trim();
+  if (!base64Clean) {
+    throw new Error('Audio recording data is empty.');
+  }
+
+  const langHint =
+    params.language === 'hi'
+      ? 'The speaker may be speaking Hindi (transcribe accurately in Devanagari script).'
+      : params.language === 'hinglish'
+        ? 'The speaker may be speaking Hinglish (Hindi/English mix in Latin script).'
+        : 'Transcribe accurately in the spoken language.';
+
+  const audioPart = {
+    inlineData: {
+      mimeType: params.mimeType,
+      data: base64Clean,
+    },
+  };
+
+  const attempts = [
+    { model: TRANSCRIBE_MODEL },
+    { model: TRANSCRIBE_MODEL, delayMs: 800 },
+  ];
+
+  let lastError: any = null;
+  for (const attempt of attempts) {
+    if (attempt.delayMs) {
+      await delay(attempt.delayMs);
+    }
+    try {
+      const response = await ai.models.generateContent({
+        model: attempt.model,
+        contents: {
+          parts: [
+            audioPart,
+            {
+              text: `Transcribe this audio verbatim with clean punctuation. Return only the transcribed text with no preamble or commentary. ${langHint}`,
+            },
+          ],
+        },
+      });
+
+      const transcript = extractResponseText(response);
+      if (!transcript) {
+        lastError = new Error('No speech was detected in the audio recording.');
+        continue;
+      }
+
+      return {
+        transcript,
+        model: attempt.model,
+      };
+    } catch (err: any) {
+      const info = parseErrorInfo(err);
+      console.warn(
+        `[gemini] transcribeAudio (${attempt.model}) failed:`,
+        info.code,
+        info.status,
+        info.message.slice(0, 160)
+      );
+      lastError = err;
+      if (!isRetryableOrFallbackError(err)) throw err;
+    }
+  }
+
+  throw lastError || new Error('Unable to transcribe audio right now.');
+}

@@ -329,6 +329,20 @@
           "type": "string",
           "maxLength": 140
         },
+        "organizationType": {
+          "type": "string",
+          "enum": [
+            "individual",
+            "corporate",
+            "educational",
+            "government",
+            "healthcare",
+            "retail_oem",
+            "recycler_partner",
+            "ngo_community"
+          ],
+          "maxLength": 32
+        },
         "phone": {
           "type": "string",
           "maxLength": 40
@@ -336,6 +350,26 @@
         "city": {
           "type": "string",
           "maxLength": 80
+        },
+        "preferredChannel": {
+          "type": "string",
+          "enum": ["email", "sms", "whatsapp", "in_app"],
+          "maxLength": 16
+        },
+        "emailAlerts": {
+          "type": "boolean"
+        },
+        "pickupReminders": {
+          "type": "boolean"
+        },
+        "goalMilestoneAlerts": {
+          "type": "boolean"
+        },
+        "weeklyImpactDigest": {
+          "type": "boolean"
+        },
+        "regulatoryUpdates": {
+          "type": "boolean"
         },
         "createdAt": {
           "type": "string",

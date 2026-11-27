@@ -195,13 +195,43 @@ export interface ScheduledPickupBooking {
   updatedAt?: any;
 }
 
+export type OrganizationType =
+  | 'individual'
+  | 'corporate'
+  | 'educational'
+  | 'government'
+  | 'healthcare'
+  | 'retail_oem'
+  | 'recycler_partner'
+  | 'ngo_community';
+
+export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
+  individual: 'Individual / Household',
+  corporate: 'Corporate / Enterprise',
+  educational: 'Educational Institution',
+  government: 'Government / Public Sector',
+  healthcare: 'Healthcare / Lab Facility',
+  retail_oem: 'Retail / OEM Producer',
+  recycler_partner: 'Recycling / Logistics Partner',
+  ngo_community: 'NGO / Community Organization',
+};
+
+export type CommunicationChannel = 'email' | 'sms' | 'whatsapp' | 'in_app';
+
 export interface FirestoreUserProfile {
   userId: string;
   email: string;
   fullName: string;
   organizationName: string;
+  organizationType?: OrganizationType;
   phone: string;
   city: string;
+  preferredChannel?: CommunicationChannel;
+  emailAlerts?: boolean;
+  pickupReminders?: boolean;
+  goalMilestoneAlerts?: boolean;
+  weeklyImpactDigest?: boolean;
+  regulatoryUpdates?: boolean;
   createdAt?: any;
   updatedAt?: any;
 }

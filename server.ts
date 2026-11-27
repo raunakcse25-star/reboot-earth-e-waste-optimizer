@@ -54,6 +54,7 @@ import {
   mapsGroundedFacilitySearch,
   queryLiveSearchIntel,
   searchEWasteRegulations,
+  transcribeAudio,
 } from './src/server/gemini.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -82,7 +83,7 @@ function rateLimit(maxPerMinute: number) {
 
 async function startServer() {
   const app = express();
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '15mb' }));
 
   // --- Public Read Endpoints ---
   app.get('/api/health', (_req, res) => {
@@ -934,6 +935,55 @@ async function startServer() {
       res.json(result);
     } catch (error: any) {
       const formatted = formatGeminiError(error, 'Unable to run fast device triage.');
+      res.status(formatted.status).json({ error: formatted.message });
+    }
+  });
+
+  app.post('/api/ai/transcribe', rateLimit(20), async (req, res) => {
+    try {
+      const { audioBase64, mimeType, language = 'en' } = req.body || {};
+      if (!audioBase64 || typeof audioBase64 !== 'string' || !mimeType || typeof mimeType !== 'string') {
+        return res.status(400).json({ error: 'Audio data and MIME type are required.' });
+      }
+      if (audioBase64.length > 14_000_000) {
+        return res.status(400).json({ error: 'Audio clip is too large. Please keep recordings under 10 MB.' });
+      }
+      const normalizedMime = mimeType.split(';')[0].trim().toLowerCase();
+      const allowedAudioMimes = [
+        'audio/webm',
+        'audio/mp4',
+        'audio/m4a',
+        'audio/x-m4a',
+        'audio/mpeg',
+        'audio/mp3',
+        'audio/wav',
+        'audio/x-wav',
+        'audio/ogg',
+        'audio/aac',
+        'audio/flac',
+      ];
+      if (!allowedAudioMimes.includes(normalizedMime)) {
+        return res.status(400).json({
+          error: `Unsupported audio format (${normalizedMime}). Use WebM, MP3, WAV, OGG, M4A, or MP4 audio.`,
+        });
+      }
+      const apiMime =
+        normalizedMime === 'audio/m4a' || normalizedMime === 'audio/x-m4a'
+          ? 'audio/mp4'
+          : normalizedMime === 'audio/x-wav'
+            ? 'audio/wav'
+            : normalizedMime === 'audio/mpeg'
+              ? 'audio/mp3'
+              : normalizedMime;
+      const result = await transcribeAudio({
+        audioBase64,
+        mimeType: apiMime,
+        language: String(language),
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error('Audio transcription error:', error);
+      const formatted = formatGeminiError(error, 'Unable to transcribe audio right now.');
       res.status(formatted.status).json({ error: formatted.message });
     }
   });

@@ -61,8 +61,15 @@ service cloud.firestore {
           'email',
           'fullName',
           'organizationName',
+          'organizationType',
           'phone',
           'city',
+          'preferredChannel',
+          'emailAlerts',
+          'pickupReminders',
+          'goalMilestoneAlerts',
+          'weeklyImpactDigest',
+          'regulatoryUpdates',
           'createdAt',
           'updatedAt'
         ])
@@ -71,8 +78,32 @@ service cloud.firestore {
         && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
         && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120
         && data.organizationName is string && data.organizationName.size() <= 140
+        && (!('organizationType' in data) || (
+          data.organizationType is string
+          && data.organizationType.size() <= 32
+          && data.organizationType in [
+            'individual',
+            'corporate',
+            'educational',
+            'government',
+            'healthcare',
+            'retail_oem',
+            'recycler_partner',
+            'ngo_community'
+          ]
+        ))
         && data.phone is string && data.phone.size() <= 40
         && data.city is string && data.city.size() <= 80
+        && (!('preferredChannel' in data) || (
+          data.preferredChannel is string
+          && data.preferredChannel.size() <= 16
+          && data.preferredChannel in ['email', 'sms', 'whatsapp', 'in_app']
+        ))
+        && (!('emailAlerts' in data) || data.emailAlerts is bool)
+        && (!('pickupReminders' in data) || data.pickupReminders is bool)
+        && (!('goalMilestoneAlerts' in data) || data.goalMilestoneAlerts is bool)
+        && (!('weeklyImpactDigest' in data) || data.weeklyImpactDigest is bool)
+        && (!('regulatoryUpdates' in data) || data.regulatoryUpdates is bool)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -466,7 +497,20 @@ service cloud.firestore {
             && incoming().email == existing().email
             && incoming().createdAt == existing().createdAt
             && incoming().updatedAt == request.time
-            && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'organizationName', 'phone', 'city', 'updatedAt'])
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName',
+              'organizationName',
+              'organizationType',
+              'phone',
+              'city',
+              'preferredChannel',
+              'emailAlerts',
+              'pickupReminders',
+              'goalMilestoneAlerts',
+              'weeklyImpactDigest',
+              'regulatoryUpdates',
+              'updatedAt'
+            ])
           )
         );
       allow delete: if isValidId(userId) && isVerified() && (request.auth.uid == userId || isAdmin());
