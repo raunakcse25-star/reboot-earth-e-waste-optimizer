@@ -566,6 +566,74 @@ export async function mapsGroundedFacilitySearch(params: {
   throw lastError || new Error('Unable to query Google Maps grounding.');
 }
 
+const VALID_EWASTE_CATEGORIES = [
+  'IT & Telecom',
+  'Consumer Electronics',
+  'Large Appliances',
+  'Small Appliances',
+  'Batteries & Power',
+  'PCB & Components',
+  'Medical & Lab',
+  'Solar & Energy',
+] as const;
+
+const VALID_PICKUP_CONDITIONS = [
+  'Working / Refurbishable',
+  'Partially Working',
+  'Non-working',
+  'Damaged / Swollen Battery',
+] as const;
+
+function normalizeEwasteCategory(raw: unknown): string {
+  const value = String(raw || '').trim();
+  const exact = VALID_EWASTE_CATEGORIES.find(
+    (c) => c.toLowerCase() === value.toLowerCase()
+  );
+  if (exact) return exact;
+  const lower = value.toLowerCase();
+  if (/laptop|desktop|server|router|modem|phone|tablet|monitor|keyboard|printer|it|telecom/.test(lower)) {
+    return 'IT & Telecom';
+  }
+  if (/battery|ups|power|adapter|charger|inverter|cell/.test(lower)) {
+    return 'Batteries & Power';
+  }
+  if (/pcb|board|motherboard|ram|gpu|cpu|circuit|chip|component/.test(lower)) {
+    return 'PCB & Components';
+  }
+  if (/fridge|refrigerator|washer|washing|ac|air conditioner|freezer|dishwasher|large/.test(lower)) {
+    return 'Large Appliances';
+  }
+  if (/microwave|toaster|kettle|iron|blender|mixer|vacuum|fan|small appliance/.test(lower)) {
+    return 'Small Appliances';
+  }
+  if (/medical|lab|diagnostic|oscilloscope|ecg|sensor/.test(lower)) {
+    return 'Medical & Lab';
+  }
+  if (/solar|panel|pv|photovoltaic|energy/.test(lower)) {
+    return 'Solar & Energy';
+  }
+  return 'Consumer Electronics';
+}
+
+function normalizePickupCondition(raw: unknown): string {
+  const value = String(raw || '').trim();
+  const exact = VALID_PICKUP_CONDITIONS.find(
+    (c) => c.toLowerCase() === value.toLowerCase()
+  );
+  if (exact) return exact;
+  const lower = value.toLowerCase();
+  if (/swollen|damaged|hazard|cracked|leaking|broken battery|fire/.test(lower)) {
+    return 'Damaged / Swollen Battery';
+  }
+  if (/partial|intermittent|some|minor/.test(lower)) {
+    return 'Partially Working';
+  }
+  if (/working|refurb|good|functional|intact/.test(lower)) {
+    return 'Working / Refurbishable';
+  }
+  return 'Non-working';
+}
+
 export async function identifyDeviceFromImage(params: {
   imageBase64: string;
   mimeType: string;
@@ -588,9 +656,9 @@ export async function identifyDeviceFromImage(params: {
               },
             },
             {
-              text: `Identify the electronic device(s) in this photo for responsible e-waste pickup scheduling. ${
-                params.notes ? `User notes: ${params.notes}` : ''
-              } Return accurate JSON matching the schema.`,
+              text: `You are an expert e-waste intake inspector for responsible electronic recycling. Analyze the electronic device(s) visible in this image for a doorstep e-waste pickup request. Estimate the total count (quantity), realistic total weight in kilograms across the visible item(s), exact e-waste category, condition, hazardous components, recoverable materials, refurbishment vs recycling viability, and one practical safe-handling tip. ${
+                params.notes ? `Additional user notes: ${params.notes}` : ''
+              } Return accurate JSON strictly matching the schema.`,
             },
           ],
         },
@@ -599,31 +667,65 @@ export async function identifyDeviceFromImage(params: {
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              deviceName: { type: Type.STRING, description: 'Concise name of the electronic device' },
+              deviceName: {
+                type: Type.STRING,
+                description: 'Concise descriptive name of the identified electronic device or bundle (e.g., "14-inch Business Laptop & 65W Charger")',
+              },
               category: {
                 type: Type.STRING,
-                description:
-                  'One of: IT & Telecom, Consumer Electronics, Large Appliances, Small Appliances, Batteries & Power, PCB & Components, Medical & Lab, Solar & Energy',
+                enum: [...VALID_EWASTE_CATEGORIES],
+                description: 'Exact e-waste category matching the pickup catalog',
               },
-              estimatedWeightKg: { type: Type.NUMBER, description: 'Estimated weight in kilograms' },
+              quantity: {
+                type: Type.INTEGER,
+                description: 'Number of distinct electronic items visible in the frame (minimum 1)',
+              },
+              estimatedWeightKg: {
+                type: Type.NUMBER,
+                description: 'Realistic total estimated weight in kilograms for all visible items combined (e.g., 1.8)',
+              },
+              weightBasis: {
+                type: Type.STRING,
+                description: 'Brief 1-sentence basis for the weight estimate (e.g., "Typical 14-inch aluminum laptop (~1.5 kg) plus power adapter (~0.3 kg)")',
+              },
               condition: {
                 type: Type.STRING,
-                description: 'One of: Working, Partially Working, Refurbishable, Non-working, Damaged / Hazardous',
+                enum: [...VALID_PICKUP_CONDITIONS],
+                description: 'Best-fit condition for pickup scheduling',
+              },
+              confidencePct: {
+                type: Type.INTEGER,
+                description: 'Visual identification confidence percentage from 0 to 100',
               },
               hazardousMaterials: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: 'List of potential hazardous materials present (e.g., Lithium-ion battery, Lead solder)',
+                description: 'List of potential hazardous materials present (e.g., Lithium-ion battery, Lead solder, LCD backlight)',
               },
-              refurbishmentViability: { type: Type.STRING, description: 'Short assessment of refurbishment vs material recovery' },
-              safeHandlingTip: { type: Type.STRING, description: 'One actionable safe-handling tip before pickup' },
+              recoverableMaterials: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'List of key recoverable circular materials (e.g., Aluminum chassis, Copper wiring, Gold-bearing PCB)',
+              },
+              refurbishmentViability: {
+                type: Type.STRING,
+                description: 'Short assessment of refurbishment/repurposing vs material recovery',
+              },
+              safeHandlingTip: {
+                type: Type.STRING,
+                description: 'One actionable safe-handling tip before pickup',
+              },
             },
             required: [
               'deviceName',
               'category',
+              'quantity',
               'estimatedWeightKg',
+              'weightBasis',
               'condition',
+              'confidencePct',
               'hazardousMaterials',
+              'recoverableMaterials',
               'refurbishmentViability',
               'safeHandlingTip',
             ],
@@ -633,15 +735,47 @@ export async function identifyDeviceFromImage(params: {
 
       const parsed = parseJsonResponse<any>(response, {});
       const hazardousMaterials = Array.isArray(parsed.hazardousMaterials)
-        ? parsed.hazardousMaterials
+        ? parsed.hazardousMaterials.map((h: unknown) => String(h).trim()).filter(Boolean)
         : Array.isArray(parsed.hazards)
-          ? parsed.hazards
+          ? parsed.hazards.map((h: unknown) => String(h).trim()).filter(Boolean)
           : [];
+      const recoverableMaterials = Array.isArray(parsed.recoverableMaterials)
+        ? parsed.recoverableMaterials.map((m: unknown) => String(m).trim()).filter(Boolean)
+        : [];
+      const rawWeight = Number(parsed.estimatedWeightKg);
+      const estimatedWeightKg =
+        Number.isFinite(rawWeight) && rawWeight > 0
+          ? Math.max(0.05, Math.min(500, Math.round(rawWeight * 100) / 100))
+          : 1.5;
+      const rawQty = Number(parsed.quantity);
+      const quantity =
+        Number.isFinite(rawQty) && rawQty >= 1 ? Math.min(200, Math.round(rawQty)) : 1;
+      const rawConfidence = Number(parsed.confidencePct);
+      const confidencePct =
+        Number.isFinite(rawConfidence)
+          ? Math.max(10, Math.min(100, Math.round(rawConfidence)))
+          : 82;
 
       return {
         ...parsed,
+        deviceName: String(parsed.deviceName || 'Electronic Device').trim(),
+        category: normalizeEwasteCategory(parsed.category),
+        quantity,
+        estimatedWeightKg,
+        weightBasis: String(
+          parsed.weightBasis || 'Estimated from standard device form-factor mass.'
+        ).trim(),
+        condition: normalizePickupCondition(parsed.condition),
+        confidencePct,
         hazardousMaterials,
         hazards: hazardousMaterials,
+        recoverableMaterials,
+        refurbishmentViability: String(
+          parsed.refurbishmentViability || 'Suitable for certified disassembly and material recovery.'
+        ).trim(),
+        safeHandlingTip: String(
+          parsed.safeHandlingTip || 'Store in a dry area away from heat before doorstep collection.'
+        ).trim(),
       };
     } catch (err: any) {
       lastError = err;

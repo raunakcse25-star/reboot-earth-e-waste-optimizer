@@ -208,6 +208,8 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
     if (prefill.contactName) setContactName(prefill.contactName);
     if (prefill.contactPhone) setContactPhone(prefill.contactPhone);
     setInstructions(prefill.instructions);
+    if (prefill.photoDataUrl) setScannedPhotoDataUrl(prefill.photoDataUrl);
+    if (prefill.aiNote) setAiNote(prefill.aiNote);
     setFormError(null);
   }, [prefill]);
 

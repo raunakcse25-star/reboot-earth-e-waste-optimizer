@@ -10,6 +10,7 @@ import {
   BellRing,
   Boxes,
   CalendarClock,
+  Camera,
   Check,
   CheckCheck,
   Clapperboard,
@@ -105,6 +106,7 @@ import { BuyBackPriceAlertsPanel } from './BuyBackPriceAlertsPanel';
 import { DailyEwasteFactCard } from './DailyEwasteFactCard';
 import { BatteryHealthCalculator } from './BatteryHealthCalculator';
 import { CommunityLeaderboardWidget } from './CommunityLeaderboardWidget';
+import { CameraEwasteScanner } from './CameraEwasteScanner';
 import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
@@ -120,6 +122,7 @@ type DashTab =
   | 'animate'
   | 'music'
   | 'intel'
+  | 'camera-scan'
   | 'schedule'
   | 'pickups'
   | 'history'
@@ -844,6 +847,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'animate', label: 'Video Studio', icon: Clapperboard, visible: true },
     { id: 'music', label: 'Music Studio', icon: Music, visible: true },
     { id: 'intel', label: 'Live Web Intel', icon: Globe, visible: true },
+    { id: 'camera-scan', label: 'AI Camera Scanner', icon: Camera, visible: true },
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'history', label: 'Pickup History', icon: History, visible: true },
@@ -1342,7 +1346,20 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             />
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab('camera-scan')}
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-emerald-500 text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <Camera className="w-5 h-5 text-emerald-500" />
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                  AI Camera E-Waste Scanner
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-sky-200/70">
+                  Scan electronics with your camera to auto-identify category, weight, and hazards for pickup.
+                </p>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('schedule')}
@@ -1578,6 +1595,18 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           <LiveSearchIntelPanel
             title="Live E-Waste & Circular Economy Web Intel"
             subtitle="Real-time Google Search grounded market benchmarks, CPCB regulatory circulars, OEM take-back programs, and circular economy news."
+          />
+        )}
+
+        {activeTab === 'camera-scan' && (
+          <CameraEwasteScanner
+            contactName={dbUser?.fullName || firebaseUser?.displayName || ''}
+            contactPhone={dbUser?.phone || firestoreProfile?.phone || ''}
+            defaultCity={firestoreProfile?.city || dbUser?.city || ''}
+            onCreatePickup={(prefill) => {
+              setReorderPrefill(prefill);
+              setActiveTab('schedule');
+            }}
           />
         )}
 

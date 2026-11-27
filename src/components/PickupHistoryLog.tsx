@@ -61,6 +61,8 @@ export interface PickupPrefillTemplate {
   contactName: string;
   contactPhone: string;
   instructions: string;
+  photoDataUrl?: string;
+  aiNote?: string;
 }
 
 interface StatusHistoryEntry {
