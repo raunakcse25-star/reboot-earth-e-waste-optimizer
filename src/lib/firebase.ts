@@ -28,7 +28,13 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
+  BUYBACK_CATEGORY_IDS,
+  MARKETPLACE_CATEGORIES,
+  MARKETPLACE_CONDITIONS,
+  MARKETPLACE_HANDOFF_METHODS,
   PICKUP_TIME_SLOTS,
+  type BuyBackAlertCondition,
+  type BuyBackCategoryId,
   type CommunicationChannel,
   type EcoChatMessage,
   type FacilityReview,
@@ -36,6 +42,15 @@ import {
   type FirestoreNotification,
   type FirestoreOptimizationRun,
   type FirestoreUserProfile,
+  type MarketPriceAlert,
+  type MarketplaceComponentCategory,
+  type MarketplaceCondition,
+  type MarketplaceHandoffMethod,
+  type MarketplaceListing,
+  type MarketplaceListingStatus,
+  type MarketplaceListingType,
+  type MarketplaceRequest,
+  type MarketplaceRequestStatus,
   type MonthlyRecyclingTarget,
   type OrganizationType,
   type PickupTimeSlot,
@@ -291,7 +306,11 @@ export function subscribeUserNotifications(
 
 export async function createUserNotification(
   uid: string,
-  payload: { title: string; message: string; category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system' }
+  payload: {
+    title: string;
+    message: string;
+    category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'market' | 'system';
+  }
 ) {
   const notifId = `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const path = `notifications/${notifId}`;
@@ -1078,6 +1097,490 @@ export async function deleteMonthlyRecyclingTarget(targetId: string): Promise<vo
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
+
+// --- Circular Marketplace: Salvaged Component Listings & Community Exchange Requests ---
+
+export function subscribeMarketplaceListings(
+  onData: (items: MarketplaceListing[]) => void,
+  onError?: (err: Error) => void
+) {
+  const path = 'marketplaceListings';
+  const q = query(collection(db, path), where('visibility', '==', 'community'));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: MarketplaceListing[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<MarketplaceListing, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.updatedAt?.toMillis?.() ?? a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.updatedAt?.toMillis?.() ?? b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      if (onError) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      }
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Logged via handleFirestoreError
+      }
+    }
+  );
+}
+
+export function subscribeUserMarketplaceRequests(
+  uid: string,
+  onData: (items: MarketplaceRequest[]) => void,
+  onError?: (err: Error) => void
+) {
+  const path = 'marketplaceRequests';
+  const q = query(collection(db, path), where('participants', 'array-contains', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: MarketplaceRequest[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<MarketplaceRequest, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.updatedAt?.toMillis?.() ?? a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.updatedAt?.toMillis?.() ?? b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      if (onError) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      }
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Logged via handleFirestoreError
+      }
+    }
+  );
+}
+
+export async function createMarketplaceListing(
+  uid: string,
+  payload: {
+    ownerName: string;
+    title: string;
+    componentCategory: MarketplaceComponentCategory;
+    listingType: MarketplaceListingType;
+    condition: MarketplaceCondition;
+    quantity: number;
+    estimatedWeightKg: number;
+    salvagedFrom?: string;
+    tradePreference?: string;
+    description: string;
+    city: string;
+    handoffMethod: MarketplaceHandoffMethod;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const listingId = `cmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `marketplaceListings/${listingId}`;
+
+  const cleanOwnerName = (payload.ownerName.trim() || 'Community Member').slice(0, 80);
+  const cleanTitle = payload.title.trim().slice(0, 120);
+  const cleanCategory: MarketplaceComponentCategory = (
+    MARKETPLACE_CATEGORIES as readonly string[]
+  ).includes(payload.componentCategory)
+    ? payload.componentCategory
+    : 'Cables & Adapters';
+  const cleanType: MarketplaceListingType = payload.listingType === 'Trade' ? 'Trade' : 'Donate';
+  const cleanCondition: MarketplaceCondition = (
+    MARKETPLACE_CONDITIONS as readonly string[]
+  ).includes(payload.condition)
+    ? payload.condition
+    : 'Tested Working';
+  const cleanQty = Math.max(1, Math.min(500, Math.round(Number(payload.quantity) || 1)));
+  const cleanWeight = Math.max(
+    0.05,
+    Math.min(200, Number((Number(payload.estimatedWeightKg) || 0.25).toFixed(2)))
+  );
+  const cleanSalvagedFrom = (payload.salvagedFrom || '').trim().slice(0, 100);
+  const cleanTradePref = (payload.tradePreference || '').trim().slice(0, 160);
+  const cleanDesc = payload.description.trim().slice(0, 600);
+  const cleanCity = payload.city.trim().slice(0, 80);
+  const cleanHandoff: MarketplaceHandoffMethod = (
+    MARKETPLACE_HANDOFF_METHODS as readonly string[]
+  ).includes(payload.handoffMethod)
+    ? payload.handoffMethod
+    : 'Local Pickup';
+
+  if (cleanTitle.length < 3) {
+    throw new Error('Please enter a component title of at least 3 characters.');
+  }
+  if (cleanDesc.length < 5) {
+    throw new Error('Please enter a short description of at least 5 characters.');
+  }
+  if (cleanCity.length < 2) {
+    throw new Error('Please enter your city or locality.');
+  }
+
+  try {
+    await setDoc(doc(db, 'marketplaceListings', listingId), {
+      ownerId: safeUid,
+      ownerName: cleanOwnerName,
+      title: cleanTitle,
+      componentCategory: cleanCategory,
+      listingType: cleanType,
+      condition: cleanCondition,
+      quantity: cleanQty,
+      estimatedWeightKg: cleanWeight,
+      salvagedFrom: cleanSalvagedFrom,
+      tradePreference: cleanTradePref,
+      description: cleanDesc,
+      city: cleanCity,
+      handoffMethod: cleanHandoff,
+      status: 'Available',
+      visibility: 'community',
+      claimedByUid: '',
+      claimedByName: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return listingId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function updateMarketplaceListingDetails(
+  listingId: string,
+  payload: {
+    title: string;
+    componentCategory: MarketplaceComponentCategory;
+    listingType: MarketplaceListingType;
+    condition: MarketplaceCondition;
+    quantity: number;
+    estimatedWeightKg: number;
+    salvagedFrom?: string;
+    tradePreference?: string;
+    description: string;
+    city: string;
+    handoffMethod: MarketplaceHandoffMethod;
+  }
+): Promise<void> {
+  const safeId = listingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `marketplaceListings/${safeId}`;
+  const cleanTitle = payload.title.trim().slice(0, 120);
+  const cleanDesc = payload.description.trim().slice(0, 600);
+  const cleanCity = payload.city.trim().slice(0, 80);
+
+  if (cleanTitle.length < 3 || cleanDesc.length < 5 || cleanCity.length < 2) {
+    throw new Error('Title, description, and city are required to update this listing.');
+  }
+
+  try {
+    await updateDoc(doc(db, 'marketplaceListings', safeId), {
+      title: cleanTitle,
+      componentCategory: (MARKETPLACE_CATEGORIES as readonly string[]).includes(
+        payload.componentCategory
+      )
+        ? payload.componentCategory
+        : 'Cables & Adapters',
+      listingType: payload.listingType === 'Trade' ? 'Trade' : 'Donate',
+      condition: (MARKETPLACE_CONDITIONS as readonly string[]).includes(payload.condition)
+        ? payload.condition
+        : 'Tested Working',
+      quantity: Math.max(1, Math.min(500, Math.round(Number(payload.quantity) || 1))),
+      estimatedWeightKg: Math.max(
+        0.05,
+        Math.min(200, Number((Number(payload.estimatedWeightKg) || 0.25).toFixed(2)))
+      ),
+      salvagedFrom: (payload.salvagedFrom || '').trim().slice(0, 100),
+      tradePreference: (payload.tradePreference || '').trim().slice(0, 160),
+      description: cleanDesc,
+      city: cleanCity,
+      handoffMethod: (MARKETPLACE_HANDOFF_METHODS as readonly string[]).includes(
+        payload.handoffMethod
+      )
+        ? payload.handoffMethod
+        : 'Local Pickup',
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function updateMarketplaceListingStatus(
+  listingId: string,
+  status: MarketplaceListingStatus,
+  claimedByUid = '',
+  claimedByName = ''
+): Promise<void> {
+  const safeId = listingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `marketplaceListings/${safeId}`;
+  const safeClaimantUid = claimedByUid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const safeClaimantName = claimedByName.trim().slice(0, 80);
+
+  try {
+    await updateDoc(doc(db, 'marketplaceListings', safeId), {
+      status,
+      claimedByUid: status === 'Available' ? '' : safeClaimantUid,
+      claimedByName: status === 'Available' ? '' : safeClaimantName,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteMarketplaceListing(listingId: string): Promise<void> {
+  const safeId = listingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `marketplaceListings/${safeId}`;
+  try {
+    await deleteDoc(doc(db, 'marketplaceListings', safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function createMarketplaceRequest(
+  requesterUid: string,
+  payload: {
+    listingId: string;
+    listingTitle: string;
+    listingType: MarketplaceListingType;
+    ownerId: string;
+    ownerName: string;
+    requesterName: string;
+    offerItem?: string;
+    message: string;
+    contactNote?: string;
+  }
+): Promise<string> {
+  const safeRequesterId = requesterUid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const safeOwnerId = payload.ownerId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const safeListingId = payload.listingId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+
+  if (safeRequesterId === safeOwnerId) {
+    throw new Error('You cannot submit a trade or claim request for your own listing.');
+  }
+
+  const cleanMessage = payload.message.trim().slice(0, 500);
+  if (cleanMessage.length < 3) {
+    throw new Error('Please include a brief message (at least 3 characters) for the owner.');
+  }
+
+  const requestId = `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `marketplaceRequests/${requestId}`;
+
+  try {
+    await setDoc(doc(db, 'marketplaceRequests', requestId), {
+      listingId: safeListingId,
+      listingTitle: (payload.listingTitle.trim() || 'Salvaged Component').slice(0, 120),
+      listingType: payload.listingType === 'Trade' ? 'Trade' : 'Donate',
+      ownerId: safeOwnerId,
+      ownerName: (payload.ownerName.trim() || 'Community Member').slice(0, 80),
+      requesterId: safeRequesterId,
+      requesterName: (payload.requesterName.trim() || 'Community Member').slice(0, 80),
+      participants: [safeRequesterId, safeOwnerId],
+      offerItem: (payload.offerItem || '').trim().slice(0, 160),
+      message: cleanMessage,
+      contactNote: (payload.contactNote || '').trim().slice(0, 120),
+      status: 'Pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return requestId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function updateMarketplaceRequestStatus(
+  requestId: string,
+  status: MarketplaceRequestStatus
+): Promise<void> {
+  const safeId = requestId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `marketplaceRequests/${safeId}`;
+  try {
+    await updateDoc(doc(db, 'marketplaceRequests', safeId), {
+      status,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+// --- Market Buy-Back Price Threshold Push Alerts (Owner-Scoped Sync) ---
+
+export function subscribeUserPriceAlerts(
+  uid: string,
+  onData: (items: MarketPriceAlert[]) => void,
+  onError?: (err: Error) => void
+) {
+  const path = 'priceAlerts';
+  const q = query(collection(db, path), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: MarketPriceAlert[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<MarketPriceAlert, 'id'>),
+      }));
+      list.sort((a, b) => {
+        const tA = a.updatedAt?.toMillis?.() ?? a.createdAt?.toMillis?.() ?? 0;
+        const tB = b.updatedAt?.toMillis?.() ?? b.createdAt?.toMillis?.() ?? 0;
+        return tB - tA;
+      });
+      onData(list);
+    },
+    (error) => {
+      if (onError) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      }
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Logged via handleFirestoreError
+      }
+    }
+  );
+}
+
+export async function createUserPriceAlert(
+  uid: string,
+  payload: {
+    categoryId: BuyBackCategoryId;
+    categoryName: string;
+    condition: BuyBackAlertCondition;
+    targetPriceInr: number;
+    browserPushEnabled: boolean;
+    note?: string;
+  }
+): Promise<string> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const alertId = `pal_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 120);
+  const path = `priceAlerts/${alertId}`;
+
+  const safeCategoryId: BuyBackCategoryId = (BUYBACK_CATEGORY_IDS as readonly string[]).includes(
+    payload.categoryId
+  )
+    ? payload.categoryId
+    : 'gold_pcb';
+  const cleanCategoryName = (payload.categoryName.trim() || 'Gold-Bearing Circuit Boards').slice(
+    0,
+    80
+  );
+  const safeCondition: BuyBackAlertCondition = payload.condition === 'below' ? 'below' : 'above';
+  const cleanTarget = Math.max(
+    10,
+    Math.min(100000, Number((Number(payload.targetPriceInr) || 3600).toFixed(2)))
+  );
+  const cleanNote = (payload.note || '').trim().slice(0, 160);
+
+  try {
+    await setDoc(doc(db, 'priceAlerts', alertId), {
+      userId: safeUid,
+      categoryId: safeCategoryId,
+      categoryName: cleanCategoryName,
+      condition: safeCondition,
+      targetPriceInr: cleanTarget,
+      active: true,
+      browserPushEnabled: Boolean(payload.browserPushEnabled),
+      lastTriggeredPriceInr: 0,
+      triggeredCount: 0,
+      note: cleanNote,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return alertId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function updateUserPriceAlertConfig(
+  alertId: string,
+  patch: {
+    targetPriceInr?: number;
+    condition?: BuyBackAlertCondition;
+    active?: boolean;
+    browserPushEnabled?: boolean;
+    note?: string;
+  }
+): Promise<void> {
+  const safeId = alertId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `priceAlerts/${safeId}`;
+  const updateBody: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (patch.targetPriceInr !== undefined) {
+    updateBody.targetPriceInr = Math.max(
+      10,
+      Math.min(100000, Number((Number(patch.targetPriceInr) || 10).toFixed(2)))
+    );
+  }
+  if (patch.condition !== undefined) {
+    updateBody.condition = patch.condition === 'below' ? 'below' : 'above';
+  }
+  if (patch.active !== undefined) {
+    updateBody.active = Boolean(patch.active);
+  }
+  if (patch.browserPushEnabled !== undefined) {
+    updateBody.browserPushEnabled = Boolean(patch.browserPushEnabled);
+  }
+  if (patch.note !== undefined) {
+    updateBody.note = patch.note.trim().slice(0, 160);
+  }
+
+  try {
+    await updateDoc(doc(db, 'priceAlerts', safeId), updateBody);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function recordPriceAlertTrigger(
+  alertId: string,
+  spotPriceInr: number,
+  nextTriggeredCount: number
+): Promise<void> {
+  const safeId = alertId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `priceAlerts/${safeId}`;
+  const cleanSpot = Math.max(0, Math.min(100000, Number(spotPriceInr.toFixed(2))));
+  const cleanCount = Math.max(0, Math.min(10000, Math.round(nextTriggeredCount)));
+  try {
+    await updateDoc(doc(db, 'priceAlerts', safeId), {
+      lastTriggeredPriceInr: cleanSpot,
+      triggeredCount: cleanCount,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteUserPriceAlert(alertId: string): Promise<void> {
+  const safeId = alertId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `priceAlerts/${safeId}`;
+  try {
+    await deleteDoc(doc(db, 'priceAlerts', safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 
 
 

@@ -6,6 +6,7 @@ import {
   Award,
   BarChart3,
   Bell,
+  BellRing,
   Boxes,
   CalendarClock,
   Check,
@@ -23,11 +24,13 @@ import {
   Mic,
   Music,
   PackageCheck,
+  Repeat,
   Route,
   Settings,
   ShieldCheck,
   Target,
   Trash2,
+  TrendingUp,
   Truck,
   X,
 } from 'lucide-react';
@@ -36,11 +39,34 @@ import { apiFetch } from '../lib/api';
 import {
   ROLE_LABELS,
   type AnalyticsSummary,
+  type BuyBackAlertCondition,
+  type BuyBackCategoryId,
+  type BuyBackMarketQuote,
   type Facility,
+  type LivePricePushToast,
+  type MarketPriceAlert,
   type PickupRequest,
   type UserRole,
   type Vehicle,
 } from '../types';
+import {
+  createUserPriceAlert,
+  deleteUserPriceAlert,
+  recordPriceAlertTrigger,
+  subscribeUserPriceAlerts,
+  updateUserPriceAlertConfig,
+} from '../lib/firebase';
+import {
+  createInitialMarketQuotes,
+  dispatchBrowserPushNotification,
+  doesQuoteMeetAlert,
+  formatInrPerKg,
+  getBrowserPushStatus,
+  requestBrowserPushPermission,
+  simulateCategoryPriceMove,
+  stepMarketQuotes,
+  type BrowserPushPermissionState,
+} from '../lib/buybackMarket';
 import { PickupManager } from './PickupManager';
 import { SchedulePickup } from './SchedulePickup';
 import { OptimizerStudio } from './OptimizerStudio';
@@ -68,11 +94,14 @@ import {
 } from './NotificationCenterPanel';
 import { PickupHistoryLog, type PickupPrefillTemplate } from './PickupHistoryLog';
 import { CarbonSavedWidget } from './CarbonSavedWidget';
+import { CircularMarketplace } from './CircularMarketplace';
+import { BuyBackPriceAlertsPanel } from './BuyBackPriceAlertsPanel';
 import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
   | 'overview'
   | 'notifications'
+  | 'market-alerts'
   | 'impact'
   | 'targets'
   | 'voice'
@@ -84,6 +113,7 @@ type DashTab =
   | 'schedule'
   | 'pickups'
   | 'history'
+  | 'marketplace'
   | 'optimizer'
   | 'facilities'
   | 'inventory'
@@ -128,6 +158,18 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [reorderPrefill, setReorderPrefill] = useState<PickupPrefillTemplate | null>(null);
   const inFlightAlertKeysRef = useRef<Set<string>>(new Set());
+
+  // Buy-Back Market Price Push Notification State
+  const [marketQuotes, setMarketQuotes] = useState<BuyBackMarketQuote[]>(() =>
+    createInitialMarketQuotes()
+  );
+  const [priceAlerts, setPriceAlerts] = useState<MarketPriceAlert[]>([]);
+  const [autoRefreshMarket, setAutoRefreshMarket] = useState(true);
+  const [pushPermission, setPushPermission] = useState<BrowserPushPermissionState>(() =>
+    getBrowserPushStatus()
+  );
+  const [pushToasts, setPushToasts] = useState<LivePricePushToast[]>([]);
+  const alertCooldownMapRef = useRef<Map<string, number>>(new Map());
 
   const loadDashData = useCallback(async () => {
     try {
@@ -341,9 +383,292 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     void scanForPickupAndFacilityAlerts();
   }, [isAuthenticated, facilities.length, recentPickups, scanForPickupAndFacilityAlerts]);
 
+  // Subscribe to owner-scoped Firestore priceAlerts (with local fallback for local-auth sessions)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setPriceAlerts([]);
+      return;
+    }
+    const uid = firebaseUser?.uid || dbUser?.uid || 'local';
+    if (firebaseUser && firebaseUser.emailVerified) {
+      let unsub: (() => void) | undefined;
+      try {
+        unsub = subscribeUserPriceAlerts(firebaseUser.uid, (items) => {
+          setPriceAlerts(items);
+        });
+      } catch (err) {
+        console.warn('Price alerts Firestore listener unavailable:', err);
+      }
+      return () => unsub?.();
+    }
+
+    try {
+      const raw = localStorage.getItem(`reboot_earth_price_alerts_${uid}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setPriceAlerts(parsed as MarketPriceAlert[]);
+          return;
+        }
+      }
+    } catch {
+      // Ignore corrupted local cache
+    }
+    setPriceAlerts([]);
+  }, [isAuthenticated, firebaseUser, dbUser?.uid]);
+
+  const persistLocalPriceAlerts = useCallback(
+    (next: MarketPriceAlert[]) => {
+      const uid = firebaseUser?.uid || dbUser?.uid || 'local';
+      try {
+        localStorage.setItem(`reboot_earth_price_alerts_${uid}`, JSON.stringify(next));
+      } catch {
+        // Ignore storage errors
+      }
+    },
+    [firebaseUser?.uid, dbUser?.uid]
+  );
+
+  // Live market buy-back price ticker (every 12s while enabled)
+  useEffect(() => {
+    if (!isAuthenticated || !autoRefreshMarket) return;
+    const timer = window.setInterval(() => {
+      setMarketQuotes((prev) => stepMarketQuotes(prev));
+    }, 12000);
+    return () => window.clearInterval(timer);
+  }, [isAuthenticated, autoRefreshMarket]);
+
+  const dismissPushToast = useCallback((toastId: string) => {
+    setPushToasts((prev) => prev.filter((t) => t.id !== toastId));
+  }, []);
+
+  const handleRequestBrowserPush = useCallback(async () => {
+    const nextPerm = await requestBrowserPushPermission();
+    setPushPermission(nextPerm);
+  }, []);
+
+  // Evaluate live buy-back quotes against armed user price thresholds and emit push notifications
+  useEffect(() => {
+    if (!isAuthenticated || priceAlerts.length === 0) return;
+    const now = Date.now();
+    const COOLDOWN_MS = 60_000;
+    const quoteMap = new Map(marketQuotes.map((q) => [q.id, q]));
+
+    for (const alert of priceAlerts) {
+      if (!alert.active) continue;
+      const quote = quoteMap.get(alert.categoryId);
+      if (!quote) continue;
+      if (!doesQuoteMeetAlert(quote, alert)) continue;
+
+      const lastFiredAt = alertCooldownMapRef.current.get(alert.id) ?? 0;
+      if (now - lastFiredAt < COOLDOWN_MS) continue;
+      alertCooldownMapRef.current.set(alert.id, now);
+
+      const directionText = alert.condition === 'above' ? 'reached' : 'dropped to';
+      const symbol = alert.condition === 'above' ? '≥' : '≤';
+      const title = `Buy-Back Price Alert: ${quote.shortName} hit ${formatInrPerKg(quote.currentPriceInr)}`;
+      const bodyParts = [
+        `${quote.name} buy-back rate ${directionText} ${formatInrPerKg(quote.currentPriceInr)} (your target: ${symbol} ${formatInrPerKg(alert.targetPriceInr)}).`,
+      ];
+      if (alert.note) {
+        bodyParts.push(`Note: ${alert.note}.`);
+      }
+      bodyParts.push('Lock this rate now by scheduling a doorstep pickup.');
+      const message = bodyParts.join(' ');
+
+      const browserNotified = alert.browserPushEnabled
+        ? dispatchBrowserPushNotification({
+            title,
+            body: message,
+            tag: `buyback_${alert.id}`,
+          })
+        : false;
+
+      const toastId = `toast_${alert.id}_${now}`;
+      const toastItem: LivePricePushToast = {
+        id: toastId,
+        alertId: alert.id,
+        categoryId: quote.id,
+        categoryName: quote.name,
+        condition: alert.condition,
+        spotPriceInr: quote.currentPriceInr,
+        targetPriceInr: alert.targetPriceInr,
+        deltaInr: quote.currentPriceInr - alert.targetPriceInr,
+        note: alert.note,
+        browserNotified,
+        timestampMs: now,
+      };
+      setPushToasts((prev) => [toastItem, ...prev.filter((t) => t.alertId !== alert.id)].slice(0, 4));
+      window.setTimeout(() => {
+        setPushToasts((prev) => prev.filter((t) => t.id !== toastId));
+      }, 14000);
+
+      void pushNotification({
+        title: title.slice(0, 140),
+        message: message.slice(0, 500),
+        category: 'market',
+      }).catch(() => {});
+
+      const nextCount = (alert.triggeredCount || 0) + 1;
+      if (firebaseUser && firebaseUser.emailVerified && !alert.id.startsWith('local_pal_')) {
+        void recordPriceAlertTrigger(alert.id, quote.currentPriceInr, nextCount).catch(() => {});
+      } else {
+        setPriceAlerts((prev) => {
+          const updated = prev.map((item) =>
+            item.id === alert.id
+              ? {
+                  ...item,
+                  lastTriggeredPriceInr: quote.currentPriceInr,
+                  triggeredCount: nextCount,
+                }
+              : item
+          );
+          persistLocalPriceAlerts(updated);
+          return updated;
+        });
+      }
+    }
+  }, [
+    isAuthenticated,
+    marketQuotes,
+    priceAlerts,
+    firebaseUser,
+    pushNotification,
+    persistLocalPriceAlerts,
+  ]);
+
+  const handleCreatePriceAlert = useCallback(
+    async (payload: {
+      categoryId: BuyBackCategoryId;
+      categoryName: string;
+      condition: BuyBackAlertCondition;
+      targetPriceInr: number;
+      browserPushEnabled: boolean;
+      note: string;
+    }) => {
+      if (firebaseUser && firebaseUser.emailVerified) {
+        await createUserPriceAlert(firebaseUser.uid, payload);
+        return;
+      }
+      const localAlert: MarketPriceAlert = {
+        id: `local_pal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: dbUser?.uid || firebaseUser?.uid || 'local',
+        categoryId: payload.categoryId,
+        categoryName: payload.categoryName,
+        condition: payload.condition,
+        targetPriceInr: payload.targetPriceInr,
+        active: true,
+        browserPushEnabled: payload.browserPushEnabled,
+        lastTriggeredPriceInr: 0,
+        triggeredCount: 0,
+        note: payload.note,
+      };
+      setPriceAlerts((prev) => {
+        const next = [localAlert, ...prev];
+        persistLocalPriceAlerts(next);
+        return next;
+      });
+    },
+    [firebaseUser, dbUser?.uid, persistLocalPriceAlerts]
+  );
+
+  const handleUpdatePriceAlert = useCallback(
+    async (
+      alertId: string,
+      patch: {
+        targetPriceInr?: number;
+        condition?: BuyBackAlertCondition;
+        active?: boolean;
+        browserPushEnabled?: boolean;
+        note?: string;
+      }
+    ) => {
+      // Clear cooldown when user edits threshold or re-enables alert so it can fire cleanly
+      alertCooldownMapRef.current.delete(alertId);
+      if (firebaseUser && firebaseUser.emailVerified && !alertId.startsWith('local_pal_')) {
+        await updateUserPriceAlertConfig(alertId, patch);
+        return;
+      }
+      setPriceAlerts((prev) => {
+        const next = prev.map((item) => (item.id === alertId ? { ...item, ...patch } : item));
+        persistLocalPriceAlerts(next);
+        return next;
+      });
+    },
+    [firebaseUser, persistLocalPriceAlerts]
+  );
+
+  const handleDeletePriceAlert = useCallback(
+    async (alertId: string) => {
+      alertCooldownMapRef.current.delete(alertId);
+      if (firebaseUser && firebaseUser.emailVerified && !alertId.startsWith('local_pal_')) {
+        await deleteUserPriceAlert(alertId);
+        return;
+      }
+      setPriceAlerts((prev) => {
+        const next = prev.filter((item) => item.id !== alertId);
+        persistLocalPriceAlerts(next);
+        return next;
+      });
+    },
+    [firebaseUser, persistLocalPriceAlerts]
+  );
+
+  const handleSimulateAlertTrigger = useCallback((alert: MarketPriceAlert) => {
+    alertCooldownMapRef.current.delete(alert.id);
+    if (!alert.active) {
+      void handleUpdatePriceAlert(alert.id, { active: true });
+    }
+    setMarketQuotes((prev) =>
+      simulateCategoryPriceMove(prev, alert.categoryId, alert.targetPriceInr, alert.condition)
+    );
+  }, [handleUpdatePriceAlert]);
+
+  const handleSchedulePickupForBuyBack = useCallback((quote: BuyBackMarketQuote) => {
+    setReorderPrefill({
+      deviceName: quote.name,
+      category: quote.linkedPickupCategory,
+      quantity: 1,
+      estimatedWeightKg: 5,
+      condition: 'For Recycling / Material Recovery',
+      pickupAddress: '',
+      lat: 0,
+      lng: 0,
+      timeSlot: '10:00 AM - 01:00 PM',
+      contactName: dbUser?.fullName || firebaseUser?.displayName || '',
+      contactPhone: dbUser?.phone || firestoreProfile?.phone || '',
+      instructions: `Buy-back rate target lock (${quote.name} at ${formatInrPerKg(quote.currentPriceInr)}).`,
+    });
+    setActiveTab('schedule');
+  }, [dbUser?.fullName, dbUser?.phone, firebaseUser?.displayName, firestoreProfile?.phone]);
+
+  const marketNotifications = useMemo(
+    () => notifications.filter((n) => n.category === 'market'),
+    [notifications]
+  );
+
+  const activePriceAlertsCount = useMemo(
+    () => priceAlerts.filter((a) => a.active).length,
+    [priceAlerts]
+  );
+
+  const hitPriceAlertsCount = useMemo(() => {
+    const qMap = new Map(marketQuotes.map((q) => [q.id, q]));
+    return priceAlerts.filter((a) => {
+      const q = qMap.get(a.categoryId);
+      return q ? doesQuoteMeetAlert(q, a) : false;
+    }).length;
+  }, [marketQuotes, priceAlerts]);
+
+  const goldPcbQuote = useMemo(
+    () => marketQuotes.find((q) => q.id === 'gold_pcb') || marketQuotes[0],
+    [marketQuotes]
+  );
+
   const navItems: { id: DashTab; label: string; icon: React.ComponentType<any>; visible: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, visible: true },
     { id: 'notifications', label: 'Notification Center', icon: Bell, visible: true },
+    { id: 'market-alerts', label: 'Buy-Back Price Alerts', icon: TrendingUp, visible: true },
     { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
@@ -355,6 +680,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'history', label: 'Pickup History', icon: History, visible: true },
+    { id: 'marketplace', label: 'Circular Marketplace', icon: Repeat, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
     { id: 'facilities', label: 'Facility Map', icon: MapPin, visible: true },
     {
@@ -564,6 +890,19 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
+                    {item.id === 'market-alerts' && (hitPriceAlertsCount > 0 || activePriceAlertsCount > 0) && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          hitPriceAlertsCount > 0
+                            ? 'bg-emerald-500 text-white'
+                            : active
+                              ? 'bg-white/25 text-white dark:bg-sky-950/30 dark:text-sky-950'
+                              : 'bg-slate-200 dark:bg-sky-900/70 text-slate-700 dark:text-sky-200'
+                        }`}
+                      >
+                        {hitPriceAlertsCount > 0 ? `${hitPriceAlertsCount} HIT` : activePriceAlertsCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -619,6 +958,25 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           </div>
 
           <div className="relative flex items-center gap-2">
+            {goldPcbQuote && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('market-alerts')}
+                title="Live Gold-Bearing PCB buy-back rate — click to manage price push alerts"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/80 dark:bg-emerald-950/40 text-xs font-semibold text-emerald-800 dark:text-emerald-300 hover:border-emerald-500 transition-colors cursor-pointer"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Gold PCB:</span>
+                <span className="font-mono tabular-nums">
+                  {formatInrPerKg(goldPcbQuote.currentPriceInr)}
+                </span>
+                {activePriceAlertsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-mono">
+                    {activePriceAlertsCount}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleExportCollectionCsv}
@@ -706,6 +1064,8 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                                 ? 'Collector Pickup'
                                 : n.category === 'facility'
                                 ? 'Area Center Match'
+                                : n.category === 'market'
+                                ? 'Buy-Back Price Alert'
                                 : n.category}
                             </span>
                             <p className="font-semibold text-slate-900 dark:text-sky-50 leading-snug">
@@ -808,11 +1168,11 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             />
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <button
                 type="button"
                 onClick={() => setActiveTab('schedule')}
-                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors"
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <CalendarClock className="w-5 h-5 text-sky-500" />
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
@@ -824,8 +1184,21 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('marketplace')}
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-emerald-500 text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <Repeat className="w-5 h-5 text-emerald-500" />
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                  Circular Marketplace
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-sky-200/70">
+                  Trade or donate functional salvaged cables, chargers, RAM, and spare components.
+                </p>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('optimizer')}
-                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors"
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <Route className="w-5 h-5 text-sky-500" />
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
@@ -838,7 +1211,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('workspace')}
-                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors"
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-sky-500 text-left space-y-1.5 transition-colors cursor-pointer"
               >
                 <Cloud className="w-5 h-5 text-sky-500" />
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
@@ -934,6 +1307,24 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           />
         )}
 
+        {activeTab === 'market-alerts' && (
+          <BuyBackPriceAlertsPanel
+            quotes={marketQuotes}
+            alerts={priceAlerts}
+            marketNotifications={marketNotifications}
+            pushPermission={pushPermission}
+            autoRefreshEnabled={autoRefreshMarket}
+            onToggleAutoRefresh={() => setAutoRefreshMarket((v) => !v)}
+            onRequestPushPermission={handleRequestBrowserPush}
+            onRefreshQuotes={() => setMarketQuotes((prev) => stepMarketQuotes(prev))}
+            onCreateAlert={handleCreatePriceAlert}
+            onUpdateAlert={handleUpdatePriceAlert}
+            onDeleteAlert={handleDeletePriceAlert}
+            onSimulateAlertTrigger={handleSimulateAlertTrigger}
+            onSchedulePickupForCategory={handleSchedulePickupForBuyBack}
+          />
+        )}
+
         {activeTab === 'impact' && (
           <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} />
         )}
@@ -1005,6 +1396,8 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           />
         )}
 
+        {activeTab === 'marketplace' && <CircularMarketplace pickups={recentPickups} />}
+
         {activeTab === 'optimizer' && <OptimizerStudio />}
 
         {activeTab === 'facilities' && <FacilityMap facilities={facilities} />}
@@ -1035,6 +1428,95 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           />
         )}
       </main>
+
+      {/* Floating Live Market Buy-Back Push Notification Toasts (visible across all Dashboard tabs) */}
+      {pushToasts.length > 0 && (
+        <div
+          aria-live="polite"
+          className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] max-w-sm space-y-2.5 pointer-events-none"
+        >
+          {pushToasts.map((toast) => {
+            const matchedQuote = marketQuotes.find((q) => q.id === toast.categoryId);
+            return (
+              <div
+                key={toast.id}
+                className="pointer-events-auto rounded-xl border border-emerald-400 dark:border-emerald-600 bg-white dark:bg-[#071D34] shadow-2xl p-4 space-y-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                      <BellRing className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                        Buy-Back Price Push Alert
+                        {toast.browserNotified ? ' · Desktop Sent' : ''}
+                      </p>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-sky-50 truncate">
+                        {toast.categoryName}
+                      </h5>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismissPushToast(toast.id)}
+                    aria-label="Dismiss price push notification"
+                    className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-sky-200 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2 px-2.5 py-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60">
+                  <div>
+                    <p className="text-[10px] text-slate-500 dark:text-sky-200/70">Live Spot Rate</p>
+                    <p className="text-base font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-300">
+                      {formatInrPerKg(toast.spotPriceInr)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-500 dark:text-sky-200/70">Your Target</p>
+                    <p className="text-xs font-mono font-semibold text-slate-800 dark:text-sky-100">
+                      {toast.condition === 'above' ? '≥' : '≤'} {formatInrPerKg(toast.targetPriceInr)}
+                    </p>
+                  </div>
+                </div>
+
+                {toast.note && (
+                  <p className="text-[11px] text-slate-600 dark:text-sky-200/80 italic">
+                    “{toast.note}”
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 pt-0.5">
+                  {matchedQuote && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSchedulePickupForBuyBack(matchedQuote);
+                        dismissPushToast(toast.id);
+                      }}
+                      className="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
+                    >
+                      Schedule Pickup
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('market-alerts');
+                      dismissPushToast(toast.id);
+                    }}
+                    className="py-1.5 px-2.5 rounded-lg text-[11px] font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
+                  >
+                    Manage Alerts
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  TrendingUp,
   Truck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -150,10 +151,12 @@ interface NotificationCenterPanelProps {
   vehicles: Vehicle[];
   onRefreshData: () => void;
   onScanNow: (overrideCity?: string) => Promise<number>;
-  onNavigateTab: (tab: 'pickups' | 'facilities' | 'schedule' | 'targets' | 'optimizer') => void;
+  onNavigateTab: (
+    tab: 'pickups' | 'facilities' | 'schedule' | 'targets' | 'optimizer' | 'market-alerts'
+  ) => void;
 }
 
-type FilterMode = 'all' | 'unread' | 'pickup' | 'facility' | 'goal' | 'system';
+type FilterMode = 'all' | 'unread' | 'market' | 'pickup' | 'facility' | 'goal' | 'system';
 
 export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = ({
   pickups,
@@ -263,6 +266,13 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
             <Target className="w-3 h-3" />
             Goal Milestone
+          </span>
+        );
+      case 'market':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/70">
+            <TrendingUp className="w-3 h-3" />
+            Buy-Back Price
           </span>
         );
       case 'optimization':
@@ -380,6 +390,7 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
                   [
                     { id: 'all', label: `All (${notifications.length})` },
                     { id: 'unread', label: `Unread (${unreadCount})` },
+                    { id: 'market', label: 'Buy-Back Prices' },
                     { id: 'pickup', label: 'Pickup Accepted' },
                     { id: 'facility', label: 'Area Matches' },
                     { id: 'goal', label: 'Goals' },
@@ -494,6 +505,15 @@ export const NotificationCenterPanel: React.FC<NotificationCenterPanelProps> = (
                             className="text-[11px] font-semibold text-sky-700 dark:text-sky-400 hover:underline cursor-pointer"
                           >
                             Open Monthly Targets →
+                          </button>
+                        )}
+                        {n.category === 'market' && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateTab('market-alerts')}
+                            className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            Open Buy-Back Price Alerts →
                           </button>
                         )}
                       </div>

@@ -139,7 +139,7 @@ export interface FirestoreNotification {
   userId: string;
   title: string;
   message: string;
-  category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
+  category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'market' | 'system';
   read: boolean;
   createdAt?: any;
 }
@@ -334,3 +334,151 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   producer: 'Producer / Manufacturer',
   admin: 'Administrator',
 };
+
+export const MARKETPLACE_CATEGORIES = [
+  'Cables & Adapters',
+  'Chargers & Power',
+  'RAM & Storage',
+  'Fans & Thermal',
+  'Displays & Panels',
+  'Peripherals',
+  'Spare Parts & PCBs',
+  'Networking & Audio',
+] as const;
+
+export type MarketplaceComponentCategory = (typeof MARKETPLACE_CATEGORIES)[number];
+
+export const MARKETPLACE_CONDITIONS = [
+  'Tested Working',
+  'Like New',
+  'Minor Wear',
+  'For Parts / Repair',
+] as const;
+
+export type MarketplaceCondition = (typeof MARKETPLACE_CONDITIONS)[number];
+
+export const MARKETPLACE_HANDOFF_METHODS = [
+  'Local Pickup',
+  'Facility Drop-off',
+  'Community Meetup',
+  'Courier',
+] as const;
+
+export type MarketplaceHandoffMethod = (typeof MARKETPLACE_HANDOFF_METHODS)[number];
+
+export type MarketplaceListingType = 'Donate' | 'Trade';
+export type MarketplaceListingStatus = 'Available' | 'Reserved' | 'Completed';
+export type MarketplaceRequestStatus =
+  | 'Pending'
+  | 'Accepted'
+  | 'Declined'
+  | 'Completed'
+  | 'Cancelled';
+
+export interface MarketplaceListing {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  title: string;
+  componentCategory: MarketplaceComponentCategory;
+  listingType: MarketplaceListingType;
+  condition: MarketplaceCondition;
+  quantity: number;
+  estimatedWeightKg: number;
+  salvagedFrom: string;
+  tradePreference: string;
+  description: string;
+  city: string;
+  handoffMethod: MarketplaceHandoffMethod;
+  status: MarketplaceListingStatus;
+  visibility: 'community';
+  claimedByUid: string;
+  claimedByName: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface MarketplaceRequest {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  listingType: MarketplaceListingType;
+  ownerId: string;
+  ownerName: string;
+  requesterId: string;
+  requesterName: string;
+  participants: [string, string];
+  offerItem: string;
+  message: string;
+  contactNote: string;
+  status: MarketplaceRequestStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const BUYBACK_CATEGORY_IDS = [
+  'gold_pcb',
+  'ram_cpu',
+  'smartphone_boards',
+  'laptop_boards',
+  'copper_cables',
+  'li_ion_batteries',
+  'power_supplies',
+  'solar_pv_cells',
+] as const;
+
+export type BuyBackCategoryId = (typeof BUYBACK_CATEGORY_IDS)[number];
+
+export type BuyBackAlertCondition = 'above' | 'below';
+
+export interface BuyBackMarketQuote {
+  id: BuyBackCategoryId;
+  name: string;
+  shortName: string;
+  description: string;
+  metalHighlights: string;
+  linkedPickupCategory: string;
+  basePriceInr: number;
+  minBandInr: number;
+  maxBandInr: number;
+  currentPriceInr: number;
+  previousPriceInr: number;
+  dayHighInr: number;
+  dayLowInr: number;
+  changePct: number;
+  defaultTargetInr: number;
+  demandLevel: 'Surging' | 'High' | 'Steady';
+  history: number[];
+  updatedAtIso: string;
+}
+
+export interface MarketPriceAlert {
+  id: string;
+  userId: string;
+  categoryId: BuyBackCategoryId;
+  categoryName: string;
+  condition: BuyBackAlertCondition;
+  targetPriceInr: number;
+  active: boolean;
+  browserPushEnabled: boolean;
+  lastTriggeredPriceInr: number;
+  triggeredCount: number;
+  note: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface LivePricePushToast {
+  id: string;
+  alertId: string;
+  categoryId: BuyBackCategoryId;
+  categoryName: string;
+  condition: BuyBackAlertCondition;
+  spotPriceInr: number;
+  targetPriceInr: number;
+  deltaInr: number;
+  note: string;
+  browserNotified: boolean;
+  timestampMs: number;
+}
+

@@ -73,7 +73,7 @@ interface AuthContextValue {
   pushNotification: (payload: {
     title: string;
     message: string;
-    category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
+    category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'market' | 'system';
   }) => Promise<void>;
 }
 
@@ -526,7 +526,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (payload: {
       title: string;
       message: string;
-      category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'system';
+      category: 'pickup' | 'optimization' | 'facility' | 'goal' | 'market' | 'system';
     }) => {
       if (firebaseUser && firebaseUser.emailVerified) {
         await createUserNotification(firebaseUser.uid, payload);

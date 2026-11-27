@@ -54,7 +54,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["pickup", "optimization", "facility", "goal", "system"],
+          "enum": ["pickup", "optimization", "facility", "goal", "market", "system"],
           "maxLength": 32
         },
         "read": {
@@ -677,6 +677,299 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "MarketplaceListing": {
+      "title": "MarketplaceListing",
+      "description": "Community listing for trading or donating functional electronic components salvaged from e-waste (zero PII; display name and city only).",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "componentCategory": {
+          "type": "string",
+          "enum": [
+            "Cables & Adapters",
+            "Chargers & Power",
+            "RAM & Storage",
+            "Fans & Thermal",
+            "Displays & Panels",
+            "Peripherals",
+            "Spare Parts & PCBs",
+            "Networking & Audio"
+          ],
+          "maxLength": 40
+        },
+        "listingType": {
+          "type": "string",
+          "enum": ["Donate", "Trade"],
+          "maxLength": 16
+        },
+        "condition": {
+          "type": "string",
+          "enum": ["Tested Working", "Like New", "Minor Wear", "For Parts / Repair"],
+          "maxLength": 32
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Number of functional units available (1 to 500)."
+        },
+        "estimatedWeightKg": {
+          "type": "number",
+          "description": "Estimated component weight in kilograms (0.05 to 200)."
+        },
+        "salvagedFrom": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "tradePreference": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 600
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "handoffMethod": {
+          "type": "string",
+          "enum": ["Local Pickup", "Facility Drop-off", "Community Meetup", "Courier"],
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Available", "Reserved", "Completed"],
+          "maxLength": 24
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["community"],
+          "maxLength": 16
+        },
+        "claimedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^$|^[a-zA-Z0-9_\\-]+$"
+        },
+        "claimedByName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "ownerName",
+        "title",
+        "componentCategory",
+        "listingType",
+        "condition",
+        "quantity",
+        "estimatedWeightKg",
+        "salvagedFrom",
+        "tradePreference",
+        "description",
+        "city",
+        "handoffMethod",
+        "status",
+        "visibility",
+        "claimedByUid",
+        "claimedByName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MarketplaceRequest": {
+      "title": "MarketplaceRequest",
+      "description": "Participant-scoped trade offer or donation claim request between a community requester and listing owner.",
+      "type": "object",
+      "properties": {
+        "listingId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "listingTitle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "listingType": {
+          "type": "string",
+          "enum": ["Donate", "Trade"],
+          "maxLength": 16
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "requesterId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "requesterName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "participants": {
+          "type": "array",
+          "description": "Fixed 2-element array containing [requesterId, ownerId] for participant-scoped queries."
+        },
+        "offerItem": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "message": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 500
+        },
+        "contactNote": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Accepted", "Declined", "Completed", "Cancelled"],
+          "maxLength": 24
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "listingId",
+        "listingTitle",
+        "listingType",
+        "ownerId",
+        "ownerName",
+        "requesterId",
+        "requesterName",
+        "participants",
+        "offerItem",
+        "message",
+        "contactNote",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MarketPriceAlert": {
+      "title": "MarketPriceAlert",
+      "description": "User-defined e-waste buy-back market price threshold alert for triggering push notifications.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryId": {
+          "type": "string",
+          "enum": [
+            "gold_pcb",
+            "ram_cpu",
+            "smartphone_boards",
+            "laptop_boards",
+            "copper_cables",
+            "li_ion_batteries",
+            "power_supplies",
+            "solar_pv_cells"
+          ],
+          "maxLength": 32
+        },
+        "categoryName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "condition": {
+          "type": "string",
+          "enum": ["above", "below"],
+          "maxLength": 16
+        },
+        "targetPriceInr": {
+          "type": "number",
+          "description": "Target buy-back threshold price in INR per kg (10 to 100000)."
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "browserPushEnabled": {
+          "type": "boolean"
+        },
+        "lastTriggeredPriceInr": {
+          "type": "number",
+          "description": "Most recent spot buy-back price that triggered this alert (0 if never triggered)."
+        },
+        "triggeredCount": {
+          "type": "integer",
+          "description": "Number of times this threshold alert has fired (0 to 10000)."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "categoryId",
+        "categoryName",
+        "condition",
+        "targetPriceInr",
+        "active",
+        "browserPushEnabled",
+        "lastTriggeredPriceInr",
+        "triggeredCount",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -723,6 +1016,18 @@
     "/recyclingTargets/{targetId}": {
       "schema": { "$ref": "#/entities/MonthlyRecyclingTarget" },
       "description": "Owner-scoped monthly recycling targets and progress milestone tracking."
+    },
+    "/marketplaceListings/{listingId}": {
+      "schema": { "$ref": "#/entities/MarketplaceListing" },
+      "description": "Community-visible salvaged component listings for trading or donating functional e-waste parts (zero PII)."
+    },
+    "/marketplaceRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/MarketplaceRequest" },
+      "description": "Participant-scoped trade offers and donation claims between listing owners and community requesters."
+    },
+    "/priceAlerts/{alertId}": {
+      "schema": { "$ref": "#/entities/MarketPriceAlert" },
+      "description": "Owner-scoped market buy-back price threshold alerts for push notifications."
     }
   }
 }

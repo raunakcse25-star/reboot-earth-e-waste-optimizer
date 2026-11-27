@@ -11,6 +11,7 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  FileDown,
   History,
   Image as ImageIcon,
   List,
@@ -28,11 +29,13 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { createScheduledPickup } from '../lib/firebase';
+import { generateRecyclingImpactPdf } from '../lib/recyclingReportPdf';
 import { useAuth } from '../context/AuthContext';
 import {
   EWASTE_CATEGORIES,
   PICKUP_STATUS_FLOW,
   PICKUP_TIME_SLOTS,
+  ROLE_LABELS,
   type Facility,
   type PickupRequest,
   type PickupTimeSlot,
@@ -245,13 +248,15 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
   onRefreshData,
   onCustomizeReorder,
 }) => {
-  const { firebaseUser, pushNotification } = useAuth();
+  const { firebaseUser, dbUser, firestoreProfile, pushNotification } = useAuth();
 
   const [searchText, setSearchText] = useState('');
   const [statusTab, setStatusTab] = useState<'all' | 'completed' | 'active' | 'cancelled'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'weight_desc' | 'weight_asc'>('date_desc');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [historyByPickupId, setHistoryByPickupId] = useState<Record<number, StatusHistoryEntry[]>>({});
   const [loadingHistoryId, setLoadingHistoryId] = useState<number | null>(null);
@@ -617,6 +622,29 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
     }
   };
 
+  const handleDownloadReport = () => {
+    setDownloadingReport(true);
+    setReportNotice(null);
+    try {
+      const roleLabel = dbUser?.role ? ROLE_LABELS[dbUser.role] : undefined;
+      const result = generateRecyclingImpactPdf({
+        pickups,
+        facilities,
+        userName: dbUser?.fullName || firebaseUser?.displayName || undefined,
+        userEmail: dbUser?.email || firebaseUser?.email || undefined,
+        userRole: roleLabel,
+        userCity: firestoreProfile?.city || dbUser?.city || undefined,
+      });
+      setReportNotice(`Downloaded ${result.fileName}`);
+      window.setTimeout(() => setReportNotice(null), 4000);
+    } catch {
+      setReportNotice('Unable to generate PDF report. Please try again.');
+      window.setTimeout(() => setReportNotice(null), 4000);
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -659,6 +687,20 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
           </div>
           <button
             type="button"
+            onClick={handleDownloadReport}
+            disabled={downloadingReport}
+            className="px-3.5 py-2 rounded-lg border border-sky-500/50 bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-50 text-xs font-semibold text-white dark:text-sky-950 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Download a formatted PDF summary of your recycled e-waste, carbon savings, and milestones"
+          >
+            {downloadingReport ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileDown className="w-3.5 h-3.5" />
+            )}
+            {downloadingReport ? 'Generating PDF...' : 'Download Report'}
+          </button>
+          <button
+            type="button"
             onClick={() => openShareModal()}
             disabled={stats.totalWeightKg <= 0}
             className="px-3.5 py-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-45 text-xs font-semibold text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -680,6 +722,27 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
           </button>
         </div>
       </div>
+
+      {/* PDF Download Confirmation Banner */}
+      {reportNotice && (
+        <div
+          role="status"
+          className="px-4 py-3 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/40 flex items-center justify-between gap-3 text-xs text-sky-900 dark:text-sky-100"
+        >
+          <span className="inline-flex items-center gap-2 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+            {reportNotice}
+          </span>
+          <button
+            type="button"
+            onClick={() => setReportNotice(null)}
+            className="text-sky-700 dark:text-sky-300 cursor-pointer"
+            aria-label="Dismiss report notice"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Re-Order Confirmation Banner */}
       {reorderSuccess && (

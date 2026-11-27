@@ -115,7 +115,7 @@ service cloud.firestore {
         && (data.userId == request.auth.uid || isAdmin())
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
         && data.message is string && data.message.size() >= 1 && data.message.size() <= 500
-        && data.category is string && data.category.size() <= 32 && data.category in ['pickup', 'optimization', 'facility', 'goal', 'system']
+        && data.category is string && data.category.size() <= 32 && data.category in ['pickup', 'optimization', 'facility', 'goal', 'market', 'system']
         && data.read is bool
         && data.createdAt is timestamp;
     }
@@ -441,6 +441,195 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidMarketplaceListing(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'ownerName',
+          'title',
+          'componentCategory',
+          'listingType',
+          'condition',
+          'quantity',
+          'estimatedWeightKg',
+          'salvagedFrom',
+          'tradePreference',
+          'description',
+          'city',
+          'handoffMethod',
+          'status',
+          'visibility',
+          'claimedByUid',
+          'claimedByName',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'ownerName',
+          'title',
+          'componentCategory',
+          'listingType',
+          'condition',
+          'quantity',
+          'estimatedWeightKg',
+          'salvagedFrom',
+          'tradePreference',
+          'description',
+          'city',
+          'handoffMethod',
+          'status',
+          'visibility',
+          'claimedByUid',
+          'claimedByName',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.ownerId)
+        && (data.ownerId == request.auth.uid || isAdmin())
+        && data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 120
+        && data.componentCategory is string && data.componentCategory.size() <= 40 && data.componentCategory in [
+          'Cables & Adapters',
+          'Chargers & Power',
+          'RAM & Storage',
+          'Fans & Thermal',
+          'Displays & Panels',
+          'Peripherals',
+          'Spare Parts & PCBs',
+          'Networking & Audio'
+        ]
+        && data.listingType is string && data.listingType.size() <= 16 && data.listingType in ['Donate', 'Trade']
+        && data.condition is string && data.condition.size() <= 32 && data.condition in [
+          'Tested Working',
+          'Like New',
+          'Minor Wear',
+          'For Parts / Repair'
+        ]
+        && data.quantity is int && data.quantity >= 1 && data.quantity <= 500
+        && data.estimatedWeightKg is number && data.estimatedWeightKg >= 0.05 && data.estimatedWeightKg <= 200
+        && data.salvagedFrom is string && data.salvagedFrom.size() <= 100
+        && data.tradePreference is string && data.tradePreference.size() <= 160
+        && data.description is string && data.description.size() >= 5 && data.description.size() <= 600
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.handoffMethod is string && data.handoffMethod.size() <= 32 && data.handoffMethod in [
+          'Local Pickup',
+          'Facility Drop-off',
+          'Community Meetup',
+          'Courier'
+        ]
+        && data.status is string && data.status.size() <= 24 && data.status in ['Available', 'Reserved', 'Completed']
+        && data.visibility is string && data.visibility.size() <= 16 && data.visibility == 'community'
+        && data.claimedByUid is string && data.claimedByUid.size() <= 128 && data.claimedByUid.matches('^$|^[a-zA-Z0-9_\\-]+$')
+        && data.claimedByName is string && data.claimedByName.size() <= 80
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMarketplaceRequest(data) {
+      return data.keys().hasAll([
+          'listingId',
+          'listingTitle',
+          'listingType',
+          'ownerId',
+          'ownerName',
+          'requesterId',
+          'requesterName',
+          'participants',
+          'offerItem',
+          'message',
+          'contactNote',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'listingId',
+          'listingTitle',
+          'listingType',
+          'ownerId',
+          'ownerName',
+          'requesterId',
+          'requesterName',
+          'participants',
+          'offerItem',
+          'message',
+          'contactNote',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.listingId)
+        && data.listingTitle is string && data.listingTitle.size() >= 2 && data.listingTitle.size() <= 120
+        && data.listingType is string && data.listingType.size() <= 16 && data.listingType in ['Donate', 'Trade']
+        && isValidId(data.ownerId)
+        && data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80
+        && isValidId(data.requesterId)
+        && data.requesterName is string && data.requesterName.size() >= 1 && data.requesterName.size() <= 80
+        && (data.requesterId == request.auth.uid || data.ownerId == request.auth.uid || isAdmin())
+        && data.participants is list && data.participants.size() == 2
+        && data.participants[0] is string && data.participants[0] == data.requesterId
+        && data.participants[1] is string && data.participants[1] == data.ownerId
+        && data.offerItem is string && data.offerItem.size() <= 160
+        && data.message is string && data.message.size() >= 3 && data.message.size() <= 500
+        && data.contactNote is string && data.contactNote.size() <= 120
+        && data.status is string && data.status.size() <= 24 && data.status in ['Pending', 'Accepted', 'Declined', 'Completed', 'Cancelled']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMarketPriceAlert(data) {
+      return data.keys().hasAll([
+          'userId',
+          'categoryId',
+          'categoryName',
+          'condition',
+          'targetPriceInr',
+          'active',
+          'browserPushEnabled',
+          'lastTriggeredPriceInr',
+          'triggeredCount',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'categoryId',
+          'categoryName',
+          'condition',
+          'targetPriceInr',
+          'active',
+          'browserPushEnabled',
+          'lastTriggeredPriceInr',
+          'triggeredCount',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.categoryId is string && data.categoryId.size() <= 32 && data.categoryId in [
+          'gold_pcb',
+          'ram_cpu',
+          'smartphone_boards',
+          'laptop_boards',
+          'copper_cables',
+          'li_ion_batteries',
+          'power_supplies',
+          'solar_pv_cells'
+        ]
+        && data.categoryName is string && data.categoryName.size() >= 2 && data.categoryName.size() <= 80
+        && data.condition is string && data.condition.size() <= 16 && data.condition in ['above', 'below']
+        && data.targetPriceInr is number && data.targetPriceInr >= 10 && data.targetPriceInr <= 100000
+        && data.active is bool
+        && data.browserPushEnabled is bool
+        && data.lastTriggeredPriceInr is number && data.lastTriggeredPriceInr >= 0 && data.lastTriggeredPriceInr <= 100000
+        && data.triggeredCount is int && data.triggeredCount >= 0 && data.triggeredCount <= 10000
+        && data.note is string && data.note.size() <= 160
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // Connection probe path (read-only ping)
     match /test/connection {
       allow get: if true;
@@ -760,6 +949,174 @@ service cloud.firestore {
           )
         );
       allow delete: if isValidId(targetId)
+        && isVerified()
+        && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Circular Marketplace: Community salvaged component listings (zero PII)
+    match /marketplaceListings/{listingId} {
+      allow get: if isValidId(listingId) && isSignedIn() && (
+        existing().visibility == 'community' ||
+        existing().ownerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && resource.data.visibility == 'community';
+      allow create: if isValidId(listingId)
+        && isVerified()
+        && isValidMarketplaceListing(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().status == 'Available'
+        && incoming().claimedByUid == ''
+        && incoming().claimedByName == ''
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(listingId)
+        && isVerified()
+        && isValidMarketplaceListing(incoming())
+        && (
+          isAdmin() || (
+            existing().ownerId == request.auth.uid
+            && existing().status != 'Completed'
+            && incoming().ownerId == existing().ownerId
+            && incoming().visibility == existing().visibility
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              (
+                existing().status == 'Available'
+                && incoming().status == 'Available'
+                && incoming().claimedByUid == ''
+                && incoming().claimedByName == ''
+                && incoming().diff(existing()).affectedKeys().hasOnly([
+                  'title',
+                  'componentCategory',
+                  'listingType',
+                  'condition',
+                  'quantity',
+                  'estimatedWeightKg',
+                  'salvagedFrom',
+                  'tradePreference',
+                  'description',
+                  'city',
+                  'handoffMethod',
+                  'updatedAt'
+                ])
+              ) || (
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'status',
+                  'claimedByUid',
+                  'claimedByName',
+                  'updatedAt'
+                ])
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(listingId)
+        && isVerified()
+        && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Circular Marketplace: Participant-scoped trade offers & donation claims
+    match /marketplaceRequests/{requestId} {
+      allow get: if isValidId(requestId)
+        && isSignedIn()
+        && (request.auth.uid in existing().participants || isAdmin());
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isValidId(requestId)
+        && isVerified()
+        && isValidMarketplaceRequest(incoming())
+        && incoming().requesterId == request.auth.uid
+        && incoming().ownerId != request.auth.uid
+        && incoming().status == 'Pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/marketplaceListings/$(incoming().listingId))
+        && get(/databases/$(database)/documents/marketplaceListings/$(incoming().listingId)).data.ownerId == incoming().ownerId
+        && get(/databases/$(database)/documents/marketplaceListings/$(incoming().listingId)).data.status == 'Available';
+      allow update: if isValidId(requestId)
+        && isVerified()
+        && isValidMarketplaceRequest(incoming())
+        && (
+          isAdmin() || (
+            !(existing().status in ['Declined', 'Completed', 'Cancelled'])
+            && incoming().listingId == existing().listingId
+            && incoming().listingTitle == existing().listingTitle
+            && incoming().listingType == existing().listingType
+            && incoming().ownerId == existing().ownerId
+            && incoming().ownerName == existing().ownerName
+            && incoming().requesterId == existing().requesterId
+            && incoming().requesterName == existing().requesterName
+            && incoming().participants == existing().participants
+            && incoming().offerItem == existing().offerItem
+            && incoming().message == existing().message
+            && incoming().contactNote == existing().contactNote
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+            && (
+              (
+                existing().ownerId == request.auth.uid
+                && (
+                  (existing().status == 'Pending' && incoming().status in ['Accepted', 'Declined']) ||
+                  (existing().status == 'Accepted' && incoming().status in ['Completed', 'Declined'])
+                )
+              ) || (
+                existing().requesterId == request.auth.uid
+                && (
+                  (existing().status == 'Pending' && incoming().status == 'Cancelled') ||
+                  (existing().status == 'Accepted' && incoming().status in ['Completed', 'Cancelled'])
+                )
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(requestId) && isVerified() && isAdmin();
+    }
+
+    // Owner-scoped market buy-back price threshold push alerts
+    match /priceAlerts/{alertId} {
+      allow get: if isValidId(alertId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(alertId)
+        && isVerified()
+        && isValidMarketPriceAlert(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().lastTriggeredPriceInr == 0
+        && incoming().triggeredCount == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(alertId)
+        && isVerified()
+        && isValidMarketPriceAlert(incoming())
+        && (
+          isAdmin() || (
+            existing().userId == request.auth.uid
+            && incoming().userId == existing().userId
+            && incoming().categoryId == existing().categoryId
+            && incoming().categoryName == existing().categoryName
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'targetPriceInr',
+                'condition',
+                'active',
+                'browserPushEnabled',
+                'note',
+                'updatedAt'
+              ]) ||
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'lastTriggeredPriceInr',
+                'triggeredCount',
+                'updatedAt'
+              ])
+            )
+          )
+        );
+      allow delete: if isValidId(alertId)
         && isVerified()
         && (existing().userId == request.auth.uid || isAdmin());
     }
