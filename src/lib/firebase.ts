@@ -299,7 +299,11 @@ export function subscribeUserNotifications(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }
@@ -426,7 +430,11 @@ export function subscribePublicFacilityReviews(
       onData(sortReviewsDesc(list));
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }
@@ -520,7 +528,11 @@ export function subscribeUserScheduledPickups(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }
@@ -562,22 +574,47 @@ export async function createScheduledPickup(
   const cleanQty = Math.max(1, Math.min(5000, Math.round(Number(payload.quantity) || 1)));
   const cleanWeight = Math.max(0.1, Math.min(50000, Number(payload.estimatedWeightKg) || 1));
 
+  const safeDeviceName = (() => {
+    const t = (payload.deviceName || '').trim();
+    return (t.length >= 2 ? t : 'Electronic Waste Item').slice(0, 140);
+  })();
+  const safeCategory = (() => {
+    const t = (payload.category || '').trim();
+    return (t.length >= 2 ? t : 'IT & Telecom').slice(0, 60);
+  })();
+  const safeCondition = (() => {
+    const t = (payload.condition || '').trim();
+    return (t.length >= 2 ? t : 'Non-working').slice(0, 60);
+  })();
+  const safeAddress = (() => {
+    const t = (payload.pickupAddress || '').trim();
+    return (t.length >= 5 ? t : 'Address Pending Verification').slice(0, 300);
+  })();
+  const safeContactName = (() => {
+    const t = (payload.contactName || '').trim();
+    return (t.length >= 2 ? t : 'Account Holder').slice(0, 120);
+  })();
+  const safeContactPhone = (() => {
+    const t = (payload.contactPhone || '').trim();
+    return (t.length >= 6 ? t : '0000000000').slice(0, 40);
+  })();
+
   try {
     await setDoc(doc(db, 'scheduledPickups', bookingId), {
       userId: uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128),
       requestCode: safeCode,
-      deviceName: (payload.deviceName.trim() || 'Electronic Waste Item').slice(0, 140),
-      category: (payload.category.trim() || 'IT & Telecom').slice(0, 60),
+      deviceName: safeDeviceName,
+      category: safeCategory,
       quantity: cleanQty,
       estimatedWeightKg: cleanWeight,
-      condition: (payload.condition.trim() || 'Non-working').slice(0, 60),
-      pickupAddress: (payload.pickupAddress.trim() || 'Address Pending').slice(0, 300),
+      condition: safeCondition,
+      pickupAddress: safeAddress,
       lat: cleanLat,
       lng: cleanLng,
       preferredDate: cleanDate,
       timeSlot: normalizeTimeSlot(payload.timeSlot),
-      contactName: (payload.contactName.trim() || 'Account Holder').slice(0, 120),
-      contactPhone: (payload.contactPhone.trim() || '0000000000').slice(0, 40),
+      contactName: safeContactName,
+      contactPhone: safeContactPhone,
       instructions: (payload.instructions || '').trim().slice(0, 500),
       status: 'Submitted',
       createdAt: serverTimestamp(),
@@ -771,7 +808,11 @@ export function subscribeUserOptimizationRuns(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }
@@ -871,7 +912,11 @@ export function subscribeUserInventoryBatches(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }
@@ -1011,7 +1056,11 @@ export function subscribeUserRecyclingTargets(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
     }
   );
 }

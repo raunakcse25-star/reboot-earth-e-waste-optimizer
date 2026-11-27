@@ -481,7 +481,7 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
         }),
       });
 
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
         void createScheduledPickup(firebaseUser.uid, {
           requestCode: created.requestCode,
           deviceName: created.deviceName,

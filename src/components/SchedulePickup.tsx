@@ -186,15 +186,27 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
     if (!prefill) return;
     setDeviceName(prefill.deviceName);
     setCategory(prefill.category);
-    setCondition(prefill.condition);
+    const validConditions = [
+      'Working / Refurbishable',
+      'Partially Working',
+      'Non-working',
+      'Damaged / Swollen Battery',
+    ];
+    setCondition(validConditions.includes(prefill.condition) ? prefill.condition : 'Non-working');
     setQuantity(prefill.quantity);
     setEstimatedWeightKg(prefill.estimatedWeightKg);
-    setPickupAddress(prefill.pickupAddress);
-    setLat(prefill.lat);
-    setLng(prefill.lng);
+    if (prefill.pickupAddress) setPickupAddress(prefill.pickupAddress);
+    if (
+      Number.isFinite(prefill.lat) &&
+      Number.isFinite(prefill.lng) &&
+      (prefill.lat !== 0 || prefill.lng !== 0)
+    ) {
+      setLat(prefill.lat);
+      setLng(prefill.lng);
+    }
     setTimeSlot(prefill.timeSlot);
-    setContactName(prefill.contactName);
-    setContactPhone(prefill.contactPhone);
+    if (prefill.contactName) setContactName(prefill.contactName);
+    if (prefill.contactPhone) setContactPhone(prefill.contactPhone);
     setInstructions(prefill.instructions);
     setFormError(null);
   }, [prefill]);
@@ -440,7 +452,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
   };
 
   const handleBookSlot = async (confirmDuplicate = false) => {
-    if (!firebaseUser) return;
+    if (!firebaseUser && !dbUser) return;
 
     const cleanDevice = deviceName.trim();
     const cleanAddress = pickupAddress.trim();
@@ -489,23 +501,25 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         }),
       });
 
-      // Sync booking to Firestore so it persists across sessions and updates in real time
-      await createScheduledPickup(firebaseUser.uid, {
-        requestCode: created.requestCode,
-        deviceName: created.deviceName,
-        category: created.category,
-        quantity: created.quantity,
-        estimatedWeightKg: created.estimatedWeightKg,
-        condition: created.condition,
-        pickupAddress: created.pickupAddress,
-        lat: created.lat,
-        lng: created.lng,
-        preferredDate: created.preferredDate,
-        timeSlot: created.timeSlot,
-        contactName: created.contactName,
-        contactPhone: created.contactPhone,
-        instructions: created.instructions || '',
-      });
+      // Sync booking to Firestore when user has a verified Firebase session
+      if (firebaseUser && firebaseUser.emailVerified) {
+        await createScheduledPickup(firebaseUser.uid, {
+          requestCode: created.requestCode,
+          deviceName: created.deviceName,
+          category: created.category,
+          quantity: created.quantity,
+          estimatedWeightKg: created.estimatedWeightKg,
+          condition: created.condition,
+          pickupAddress: created.pickupAddress,
+          lat: created.lat,
+          lng: created.lng,
+          preferredDate: created.preferredDate,
+          timeSlot: created.timeSlot,
+          contactName: created.contactName,
+          contactPhone: created.contactPhone,
+          instructions: created.instructions || '',
+        }).catch(() => {});
+      }
 
       setDuplicateWarning(null);
       setConfirmedBooking({
@@ -576,7 +590,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
     }
   };
 
-  if (!firebaseUser) {
+  if (!firebaseUser && !dbUser) {
     return (
       <section className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-4">
         <div className="space-y-1">

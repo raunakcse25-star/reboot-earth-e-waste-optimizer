@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url';
 import { optionalAuth, requireAuth, requireRoles, type AuthRequest } from './src/middleware/auth.ts';
 import { attachLiveVoiceWebSocket } from './src/server/liveVoice.ts';
 import {
+  EWASTE_FACTS,
+  getDailyEwasteFact,
+  getDateKey,
+  getRandomEwasteFact,
+} from './src/lib/ewasteFacts.ts';
+import {
   applyInitialOnboardingRole,
   approveOptimizationRun,
   approveUserRole,
@@ -118,6 +124,19 @@ async function startServer() {
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Failed to load facilities.' });
     }
+  });
+
+  app.get('/api/ewaste-fact', (req, res) => {
+    const mode = req.query.mode === 'random' ? 'random' : 'daily';
+    const excludeId =
+      typeof req.query.exclude === 'string' ? req.query.exclude.trim().slice(0, 64) : undefined;
+    const fact = mode === 'random' ? getRandomEwasteFact(excludeId) : getDailyEwasteFact();
+    res.json({
+      fact,
+      mode,
+      dateKey: getDateKey(),
+      totalFacts: EWASTE_FACTS.length,
+    });
   });
 
   app.post('/api/support', rateLimit(15), optionalAuth, async (req: AuthRequest, res) => {

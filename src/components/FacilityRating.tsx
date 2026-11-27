@@ -276,14 +276,16 @@ export const FacilityRating: React.FC<FacilityRatingProps> = ({
           },
           true
         ),
-        saveFacilityReview({
-          facilityId: facility.id,
-          facilityName: facility.name,
-          userId: firebaseUser.uid,
-          authorName,
-          rating: ratingInput,
-          comment: trimmedComment,
-        }),
+        firebaseUser.emailVerified
+          ? saveFacilityReview({
+              facilityId: facility.id,
+              facilityName: facility.name,
+              userId: firebaseUser.uid,
+              authorName,
+              rating: ratingInput,
+              comment: trimmedComment,
+            })
+          : Promise.resolve(),
       ]);
 
       if (apiOutcome.status === 'rejected' && firestoreOutcome.status === 'rejected') {

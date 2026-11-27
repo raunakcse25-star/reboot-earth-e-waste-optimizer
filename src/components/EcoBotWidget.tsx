@@ -202,7 +202,7 @@ export const EcoBotWidget: React.FC = () => {
       const updated = [...nextHistory, botMsg];
       setMessages(updated);
 
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
         void saveEcoBotSession(
           firebaseUser.uid,
           sessionId,

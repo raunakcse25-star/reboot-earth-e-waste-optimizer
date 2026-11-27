@@ -303,7 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback(
     (mode: ThemeMode) => {
       setThemeState(mode);
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
         void saveUserPreferences(firebaseUser.uid, {
           theme: mode,
           language,
@@ -317,7 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback(
     (lang: 'en' | 'hi' | 'hinglish') => {
       setLanguageState(lang);
-      if (firebaseUser) {
+      if (firebaseUser && firebaseUser.emailVerified) {
         void saveUserPreferences(firebaseUser.uid, {
           theme,
           language: lang,

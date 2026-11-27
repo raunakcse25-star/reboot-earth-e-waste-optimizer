@@ -5,6 +5,7 @@ import {
   AudioLines,
   Award,
   BarChart3,
+  BatteryCharging,
   Bell,
   BellRing,
   Boxes,
@@ -96,6 +97,8 @@ import { PickupHistoryLog, type PickupPrefillTemplate } from './PickupHistoryLog
 import { CarbonSavedWidget } from './CarbonSavedWidget';
 import { CircularMarketplace } from './CircularMarketplace';
 import { BuyBackPriceAlertsPanel } from './BuyBackPriceAlertsPanel';
+import { DailyEwasteFactCard } from './DailyEwasteFactCard';
+import { BatteryHealthCalculator } from './BatteryHealthCalculator';
 import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
@@ -114,6 +117,7 @@ type DashTab =
   | 'pickups'
   | 'history'
   | 'marketplace'
+  | 'battery-health'
   | 'optimizer'
   | 'facilities'
   | 'inventory'
@@ -630,10 +634,10 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
       category: quote.linkedPickupCategory,
       quantity: 1,
       estimatedWeightKg: 5,
-      condition: 'For Recycling / Material Recovery',
+      condition: 'Non-working',
       pickupAddress: '',
-      lat: 0,
-      lng: 0,
+      lat: 28.6139,
+      lng: 77.209,
       timeSlot: '10:00 AM - 01:00 PM',
       contactName: dbUser?.fullName || firebaseUser?.displayName || '',
       contactPhone: dbUser?.phone || firestoreProfile?.phone || '',
@@ -681,6 +685,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
     { id: 'history', label: 'Pickup History', icon: History, visible: true },
     { id: 'marketplace', label: 'Circular Marketplace', icon: Repeat, visible: true },
+    { id: 'battery-health', label: 'Battery Health', icon: BatteryCharging, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
     { id: 'facilities', label: 'Facility Map', icon: MapPin, visible: true },
     {
@@ -1167,8 +1172,14 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               onSchedulePickup={() => setActiveTab('schedule')}
             />
 
+            {/* Daily E-Waste & Circular Economy Fact */}
+            <DailyEwasteFactCard
+              onSchedulePickup={() => setActiveTab('schedule')}
+              onOpenMarketplace={() => setActiveTab('marketplace')}
+            />
+
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               <button
                 type="button"
                 onClick={() => setActiveTab('schedule')}
@@ -1180,6 +1191,19 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-sky-200/70">
                   Reserve a collection time slot from your location with GPS pinning and live sync.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('battery-health')}
+                className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] hover:border-amber-500 text-left space-y-1.5 transition-colors cursor-pointer"
+              >
+                <BatteryCharging className="w-5 h-5 text-amber-500" />
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                  Battery Health Calculator
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-sky-200/70">
+                  Estimate remaining useful life to decide whether to optimize, repurpose, or recycle.
                 </p>
               </button>
               <button
@@ -1397,6 +1421,19 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         )}
 
         {activeTab === 'marketplace' && <CircularMarketplace pickups={recentPickups} />}
+
+        {activeTab === 'battery-health' && (
+          <BatteryHealthCalculator
+            userKey={firebaseUser?.uid || dbUser?.uid || 'guest'}
+            contactName={dbUser?.fullName || firebaseUser?.displayName || ''}
+            contactPhone={dbUser?.phone || firestoreProfile?.phone || ''}
+            onScheduleRecyclePickup={(prefill) => {
+              setReorderPrefill(prefill);
+              setActiveTab('schedule');
+            }}
+            onOpenMarketplace={() => setActiveTab('marketplace')}
+          />
+        )}
 
         {activeTab === 'optimizer' && <OptimizerStudio />}
 
