@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AudioLines,
+  Check,
+  Copy,
+  Database,
   Loader2,
   Mic,
   MicOff,
   PhoneCall,
   PhoneOff,
   Send,
+  Trash2,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -18,6 +22,13 @@ interface TranscriptTurn {
   id: string;
   role: 'user' | 'model';
   text: string;
+  timestamp: string;
+}
+
+interface ToolActivityState {
+  tool: string;
+  status: 'running' | 'done';
+  summary: string;
 }
 
 interface LiveVoicePanelProps {
@@ -32,8 +43,33 @@ const VOICE_OPTIONS: { id: LiveVoiceName; label: string; tone: string }[] = [
   { id: 'Charon', label: 'Charon', tone: 'Informative' },
 ];
 
+const QUICK_VOICE_PROMPTS: Record<'en' | 'hi' | 'hinglish', string[]> = {
+  en: [
+    'Find verified e-waste collection centers in Bengaluru',
+    'How much e-waste and CO2 has Reboot Earth saved?',
+    'How do I safely pack a swollen lithium battery?',
+    'Explain India E-Waste Rules 2022 EPR compliance',
+  ],
+  hi: [
+    'बेंगलुरु में वेरिफाइड ई-कचरा कलेक्शन सेंटर बताएं',
+    'सूजी हुई लिथियम बैटरी को सुरक्षित कैसे पैक करें?',
+    'रीबूट अर्थ ने अब तक कितना ई-कचरा और CO2 बचाया है?',
+  ],
+  hinglish: [
+    'Mumbai ya Bengaluru mein verified e-waste centres batao',
+    'Laptop recycle karne se pehle data wipe kaise karun?',
+    'Reboot Earth ka live CO2 impact kitna hai?',
+  ],
+};
+
 const TARGET_INPUT_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
+
+function formatDuration(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
 
 function downsampleFloat32(
   input: Float32Array,
@@ -104,6 +140,9 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const [error, setError] = useState<string | null>(null);
   const [textNudge, setTextNudge] = useState('');
   const [transcripts, setTranscripts] = useState<TranscriptTurn[]>([]);
+  const [toolActivity, setToolActivity] = useState<ToolActivityState | null>(null);
+  const [callSeconds, setCallSeconds] = useState(0);
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [levels, setLevels] = useState<number[]>(() => new Array(16).fill(0.12));
 
   // Refs for callbacks to prevent stale closures inside onaudioprocess / ws.onmessage
@@ -119,6 +158,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const micMutedRef = useRef<boolean>(false);
   const speakerMutedRef = useRef<boolean>(false);
   const isLiveReadyRef = useRef<boolean>(false);
+  const pendingInitialPromptRef = useRef<string | null>(null);
   const inputLevelRef = useRef<number>(0);
   const outputLevelRef = useRef<number>(0);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
@@ -144,6 +184,19 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
     }
   }, [transcripts]);
 
+  // Call duration timer
+  useEffect(() => {
+    if (status !== 'live') {
+      setCallSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setCallSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [status]);
+
   // Smooth visualizer meter driven by live input/output audio RMS
   useEffect(() => {
     if (status !== 'live') {
@@ -158,7 +211,10 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
       const next = new Array(16).fill(0).map((_, idx) => {
         const wave = Math.sin(now * 0.008 + idx * 0.55) * 0.5 + 0.5;
         const centerWeight = 1 - Math.abs(idx - 7.5) / 9;
-        return Math.min(1, Math.max(0.1, 0.1 + energy * (0.55 + wave * 0.65) * (0.45 + centerWeight * 0.7)));
+        return Math.min(
+          1,
+          Math.max(0.1, 0.1 + energy * (0.55 + wave * 0.65) * (0.45 + centerWeight * 0.7))
+        );
       });
       setLevels(next);
       rafId = requestAnimationFrame(tick);
@@ -229,7 +285,10 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
         wsRef.current.onmessage = null;
         wsRef.current.onerror = null;
         wsRef.current.onclose = null;
-        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        if (
+          wsRef.current.readyState === WebSocket.OPEN ||
+          wsRef.current.readyState === WebSocket.CONNECTING
+        ) {
           wsRef.current.close();
         }
       } catch {
@@ -239,8 +298,10 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
     }
 
     isLiveReadyRef.current = false;
+    pendingInitialPromptRef.current = null;
     setStatus('idle');
     setIsModelSpeaking(false);
+    setToolActivity(null);
   }, [stopQueuedOutput]);
 
   useEffect(() => {
@@ -250,6 +311,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const appendTranscript = useCallback((role: 'user' | 'model', chunk: string) => {
     const clean = chunk.replace(/\s+/g, ' ');
     if (!clean.trim()) return;
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setTranscripts((prev) => {
       const last = prev[prev.length - 1];
       if (last && last.role === role) {
@@ -257,8 +319,13 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
         return [...prev.slice(0, -1), { ...last, text: merged }];
       }
       return [
-        ...prev.slice(-24),
-        { id: `${role}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, role, text: clean.trim() },
+        ...prev.slice(-30),
+        {
+          id: `${role}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          role,
+          text: clean.trim(),
+          timestamp: nowTime,
+        },
       ];
     });
   }, []);
@@ -306,10 +373,22 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
     src.start(startAt);
   }, []);
 
-  const startVoiceSession = async () => {
+  const sendLiveTextTurn = useCallback(
+    (text: string) => {
+      const clean = text.trim();
+      if (!clean || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+      wsRef.current.send(JSON.stringify({ text: clean }));
+      appendTranscript('user', clean);
+    },
+    [appendTranscript]
+  );
+
+  const startVoiceSession = async (initialPrompt?: string) => {
     if (status !== 'idle') return;
     setError(null);
+    setToolActivity(null);
     setStatus('connecting');
+    pendingInitialPromptRef.current = initialPrompt?.trim() || null;
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -326,7 +405,9 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
       });
       mediaStreamRef.current = stream;
 
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const inputCtx = new AudioCtx({ sampleRate: TARGET_INPUT_RATE });
       const outputCtx = new AudioCtx({ sampleRate: OUTPUT_SAMPLE_RATE });
       void inputCtx.resume().catch(() => {});
@@ -355,10 +436,22 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
             isLiveReadyRef.current = true;
             setStatus('live');
             setError(null);
+            if (pendingInitialPromptRef.current) {
+              const queued = pendingInitialPromptRef.current;
+              pendingInitialPromptRef.current = null;
+              ws.send(JSON.stringify({ text: queued }));
+              appendTranscript('user', queued);
+            }
           } else if (msg.audio) {
             schedulePcm24kPlayback(msg.audio);
           } else if (msg.interrupted) {
             stopQueuedOutput();
+          } else if (msg.type === 'toolActivity' && msg.summary) {
+            setToolActivity({
+              tool: String(msg.tool || ''),
+              status: msg.status === 'done' ? 'done' : 'running',
+              summary: String(msg.summary),
+            });
           } else if (msg.type === 'inputTranscript' && msg.text) {
             appendTranscript('user', msg.text);
           } else if (msg.type === 'outputTranscript' && msg.text) {
@@ -440,14 +533,37 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const handleSendTextNudge = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = textNudge.trim();
-    if (!clean || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ text: clean }));
-    appendTranscript('user', clean);
+    if (!clean) return;
+    sendLiveTextTurn(clean);
     setTextNudge('');
   };
 
+  const handleQuickPrompt = (prompt: string) => {
+    if (status === 'live') {
+      sendLiveTextTurn(prompt);
+    } else if (status === 'idle') {
+      void startVoiceSession(prompt);
+    }
+  };
+
+  const handleCopyTranscript = () => {
+    if (transcripts.length === 0) return;
+    const text = transcripts
+      .map((t) => `[${t.timestamp}] ${t.role === 'user' ? 'You' : 'EcoBot Voice'}: ${t.text}`)
+      .join('\n');
+    navigator.clipboard?.writeText(text);
+    setCopiedTranscript(true);
+    window.setTimeout(() => setCopiedTranscript(false), 1800);
+  };
+
   return (
-    <div className={`flex flex-col ${compact ? 'h-full' : 'rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden'}`}>
+    <div
+      className={`flex flex-col ${
+        compact
+          ? 'h-full'
+          : 'rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden shadow-sm'
+      }`}
+    >
       {/* Settings Strip: Voice Persona & Language */}
       <div className="px-3.5 py-2.5 border-b border-slate-200 dark:border-sky-900/50 bg-slate-50/80 dark:bg-[#07182B] flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-1.5">
@@ -477,7 +593,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
               type="button"
               disabled={status !== 'idle'}
               onClick={() => setLanguage(lang)}
-              className={`px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-60 ${
+              className={`px-2 py-1 rounded-md font-medium transition-colors disabled:opacity-60 cursor-pointer ${
                 language === lang
                   ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
                   : 'text-slate-600 dark:text-sky-200/70 hover:bg-slate-200/60 dark:hover:bg-sky-900/40'
@@ -492,29 +608,33 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
       {/* Live Audio Visualizer & Call Stage */}
       <div className="px-4 py-5 bg-gradient-to-b from-[#06182C] via-[#092340] to-[#06182C] text-sky-50 flex flex-col items-center gap-4">
         <div className="text-center space-y-1">
-          <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cyan-300">
-            {status === 'live'
-              ? isModelSpeaking
-                ? 'EcoBot Voice Speaking'
-                : micMuted
-                  ? 'Microphone Muted'
-                  : 'Listening in Real Time'
-              : status === 'connecting'
-                ? 'Connecting to Gemini Live'
-                : 'Gemini Live Voice Assistant'}
-          </p>
+          <div className="inline-flex items-center gap-2">
+            <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cyan-300">
+              {status === 'live'
+                ? isModelSpeaking
+                  ? 'EcoBot Voice Speaking'
+                  : micMuted
+                    ? 'Microphone Muted'
+                    : 'Listening in Real Time'
+                : status === 'connecting'
+                  ? 'Connecting to Gemini Live'
+                  : 'Gemini Live Voice Assistant'}
+            </p>
+            {status === 'live' && (
+              <span className="font-mono text-[11px] text-sky-300/80 tabular-nums">
+                · {formatDuration(callSeconds)}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-sky-200/75">
             {status === 'live'
-              ? 'Speak naturally — interrupt anytime for instant answers.'
-              : 'Low-latency bidirectional voice powered by gemini-3.8-live.'}
+              ? 'Speak naturally — interrupt anytime or ask about live centers and CO₂ impact.'
+              : 'Real-time bidirectional voice conversation powered by gemini-3.8-live.'}
           </p>
         </div>
 
         {/* Audio Spectrum Bars */}
-        <div
-          aria-hidden="true"
-          className="h-14 flex items-center justify-center gap-1.5 px-4"
-        >
+        <div aria-hidden="true" className="h-14 flex items-center justify-center gap-1.5 px-4">
           {levels.map((lvl, idx) => (
             <span
               key={idx}
@@ -531,6 +651,18 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
             />
           ))}
         </div>
+
+        {/* Live Tool Lookup Activity */}
+        {toolActivity && (
+          <div className="px-3 py-1.5 rounded-lg bg-sky-950/80 border border-sky-700/60 text-[11px] text-cyan-200 inline-flex items-center gap-2 max-w-full">
+            {toolActivity.status === 'running' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-300 shrink-0" />
+            ) : (
+              <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            )}
+            <span className="truncate">{toolActivity.summary}</span>
+          </div>
+        )}
 
         {/* Call Controls */}
         <div className="flex items-center gap-2.5">
@@ -600,15 +732,59 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
         </div>
       )}
 
+      {/* Quick Conversation Starters */}
+      <div className="px-3.5 py-2 border-b border-slate-200 dark:border-sky-900/50 bg-slate-50/70 dark:bg-[#07182B] flex items-center gap-1.5 overflow-x-auto">
+        {QUICK_VOICE_PROMPTS[language].map((prompt, idx) => (
+          <button
+            key={idx}
+            type="button"
+            disabled={status === 'connecting'}
+            onClick={() => handleQuickPrompt(prompt)}
+            className="px-2.5 py-1 rounded-md text-[11px] bg-white dark:bg-[#102D4F] border border-slate-200 dark:border-sky-800/70 text-slate-700 dark:text-sky-100 hover:border-sky-500 disabled:opacity-50 whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      {/* Transcript Toolbar */}
+      {transcripts.length > 0 && (
+        <div className="px-3.5 py-1.5 border-b border-slate-100 dark:border-sky-900/40 flex items-center justify-between text-[11px] text-slate-500 dark:text-sky-200/65">
+          <span>Live Conversation Transcript ({transcripts.length})</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyTranscript}
+              className="inline-flex items-center gap-1 hover:text-sky-600 dark:hover:text-sky-300 cursor-pointer"
+            >
+              {copiedTranscript ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+              {copiedTranscript ? 'Copied' : 'Copy'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTranscripts([])}
+              className="inline-flex items-center gap-1 hover:text-red-500 cursor-pointer"
+            >
+              <Trash2 className="w-3 h-3" />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Live Transcripts */}
-      <div className={`flex-1 overflow-y-auto p-3.5 space-y-2.5 ${compact ? 'min-h-[160px]' : 'min-h-[200px] max-h-[300px]'}`}>
+      <div
+        className={`flex-1 overflow-y-auto p-3.5 space-y-2.5 ${
+          compact ? 'min-h-[140px]' : 'min-h-[240px] max-h-[360px]'
+        }`}
+      >
         {transcripts.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-4 py-6 space-y-1.5 text-slate-500 dark:text-sky-200/65">
             <p className="text-xs font-medium text-slate-700 dark:text-sky-100">
               Real-Time Voice Transcript
             </p>
-            <p className="text-[11px] leading-relaxed">
-              Start a voice call and ask about doorstep pickup scheduling, swollen battery safety, CPCB EPR compliance, or monthly recycling goals.
+            <p className="text-[11px] leading-relaxed max-w-md">
+              Start a live voice call or tap any prompt above to converse in real time about nearby verified collection centers, swollen battery safety, CPCB EPR compliance, or live recycling impact.
             </p>
           </div>
         ) : (
@@ -618,7 +794,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
               className={`flex flex-col ${t.role === 'user' ? 'items-end' : 'items-start'}`}
             >
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-sky-300/60 mb-0.5 px-1">
-                {t.role === 'user' ? 'You' : 'EcoBot Voice'}
+                {t.role === 'user' ? 'You' : 'EcoBot Voice'} · {t.timestamp}
               </span>
               <div
                 className={`max-w-[88%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
@@ -652,7 +828,7 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
             type="submit"
             disabled={!textNudge.trim()}
             aria-label="Send follow-up text"
-            className="px-3 py-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 disabled:opacity-50 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

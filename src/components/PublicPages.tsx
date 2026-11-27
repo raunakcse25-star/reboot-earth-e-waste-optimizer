@@ -33,7 +33,7 @@ import { apiFetch } from '../lib/api';
 import { createSupportTicketInFirestore } from '../lib/firebase';
 import type { AnalyticsSummary } from '../types';
 
-export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'scenes' | 'knowledge' | 'about' | 'legal' | 'auth';
+export type PublicRoute = 'home' | 'centres' | 'optimizer' | 'voice' | 'scenes' | 'knowledge' | 'about' | 'legal' | 'auth';
 
 interface HomePageProps {
   analytics: AnalyticsSummary | null;

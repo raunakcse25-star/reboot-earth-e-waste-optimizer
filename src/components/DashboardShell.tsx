@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Activity,
+  ArrowUpRight,
   AudioLines,
   BarChart3,
   Bell,
   Boxes,
   CalendarClock,
   Check,
+  CheckCheck,
   Cloud,
   Download,
   Globe,
@@ -19,6 +21,7 @@ import {
   Settings,
   ShieldCheck,
   Target,
+  Trash2,
   Truck,
   X,
 } from 'lucide-react';
@@ -49,9 +52,15 @@ import { LiveVoicePanel } from './LiveVoicePanel';
 import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
 import { AudioTranscriberPanel } from './AudioTranscriber';
 import { UserProfilePanel } from './UserProfilePanel';
+import {
+  COLLECTOR_ACCEPTED_STATUSES,
+  NotificationCenterPanel,
+  findAreaFacilityMatches,
+} from './NotificationCenterPanel';
 
 type DashTab =
   | 'overview'
+  | 'notifications'
   | 'impact'
   | 'targets'
   | 'voice'
@@ -84,9 +93,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const {
     dbUser,
     firebaseUser,
+    firestoreProfile,
     isAuthenticated,
     notifications,
     markNotificationRead,
+    markAllNotificationsRead,
+    deleteNotification,
+    pushNotification,
     signOut,
   } = useAuth();
 
@@ -95,6 +108,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [recentPickups, setRecentPickups] = useState<PickupRequest[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const inFlightAlertKeysRef = useRef<Set<string>>(new Set());
 
   const loadDashData = useCallback(async () => {
     try {
@@ -118,8 +132,198 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const role: UserRole = dbUser?.role || 'citizen';
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const scanForPickupAndFacilityAlerts = useCallback(
+    async (overrideCity?: string): Promise<number> => {
+      if (!isAuthenticated) return 0;
+      const uid = firebaseUser?.uid || dbUser?.uid;
+      if (!uid) return 0;
+
+      const storageKey = `reboot_earth_notif_seen_v1_${uid}`;
+      let seen: { pickupStatuses: Record<string, string>; facilityIds: number[] } = {
+        pickupStatuses: {},
+        facilityIds: [],
+      };
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            seen = {
+              pickupStatuses:
+                parsed.pickupStatuses && typeof parsed.pickupStatuses === 'object'
+                  ? parsed.pickupStatuses
+                  : {},
+              facilityIds: Array.isArray(parsed.facilityIds) ? parsed.facilityIds : [],
+            };
+          }
+        }
+      } catch {
+        // Ignore corrupted localStorage cache
+      }
+
+      let emittedCount = 0;
+      const acceptedSet = new Set<string>(COLLECTOR_ACCEPTED_STATUSES);
+      const facilityById = new Map(facilities.map((f) => [f.id, f]));
+      const vehicleById = new Map(vehicles.map((v) => [v.id, v]));
+
+      // Scope pickup alerts to the user's own scheduled requests
+      const ownPickups = recentPickups.filter((p) => {
+        if (p.userUid && uid) return p.userUid === uid;
+        return role === 'citizen' || role === 'organization';
+      });
+
+      for (const pickup of ownPickups) {
+        if (!acceptedSet.has(pickup.status)) continue;
+        if (seen.pickupStatuses[pickup.requestCode] === pickup.status) continue;
+
+        const flightKey = `pickup:${pickup.requestCode}:${pickup.status}`;
+        if (inFlightAlertKeysRef.current.has(flightKey)) continue;
+        inFlightAlertKeysRef.current.add(flightKey);
+
+        try {
+          const facility = pickup.assignedFacilityId
+            ? facilityById.get(pickup.assignedFacilityId)
+            : undefined;
+          const vehicle = pickup.assignedVehicleId
+            ? vehicleById.get(pickup.assignedVehicleId)
+            : undefined;
+
+          const title = `Collector Update: ${pickup.requestCode} is ${pickup.status}`.slice(0, 140);
+          const details: string[] = [
+            `Your pickup for ${pickup.deviceName} (${pickup.estimatedWeightKg} kg) has been accepted/updated to "${pickup.status}".`,
+          ];
+          if (facility) {
+            details.push(`Assigned center: ${facility.name} (${facility.city}).`);
+          }
+          if (vehicle) {
+            details.push(`Collector vehicle: ${vehicle.registrationNo} (${vehicle.vehicleType}).`);
+          }
+          details.push(`Scheduled window: ${pickup.preferredDate} · ${pickup.timeSlot}.`);
+
+          await pushNotification({
+            title,
+            message: details.join(' ').slice(0, 500),
+            category: 'pickup',
+          });
+
+          seen.pickupStatuses[pickup.requestCode] = pickup.status;
+          emittedCount += 1;
+        } catch {
+          // Non-fatal
+        } finally {
+          inFlightAlertKeysRef.current.delete(flightKey);
+        }
+      }
+
+      // Check for new verified collection center matches in the user's area
+      const targetCity =
+        (overrideCity && overrideCity.trim()) ||
+        firestoreProfile?.city ||
+        dbUser?.city ||
+        '';
+      const matches = findAreaFacilityMatches({
+        facilities,
+        pickups: ownPickups,
+        city: targetCity,
+        radiusKm: 40,
+      });
+
+      const seenFacilitySet = new Set(seen.facilityIds);
+      const newMatches = matches.filter((m) => !seenFacilitySet.has(m.facility.id));
+
+      if (newMatches.length > 0) {
+        const batchKey = `facility:${newMatches.map((m) => m.facility.id).join(',')}`;
+        if (!inFlightAlertKeysRef.current.has(batchKey)) {
+          inFlightAlertKeysRef.current.add(batchKey);
+          try {
+            if (newMatches.length <= 2) {
+              for (const m of newMatches) {
+                const distText =
+                  m.distanceKm !== null ? `${m.distanceKm} km away` : `${m.facility.city}`;
+                const acceptedList = m.facility.acceptedCategories
+                  .split(',')
+                  .map((c) => c.trim())
+                  .filter(Boolean);
+                const catText =
+                  m.matchedCategories.length > 0
+                    ? `Matches your categories: ${m.matchedCategories.slice(0, 3).join(', ')}.`
+                    : acceptedList.length > 0
+                    ? `Accepts: ${acceptedList.slice(0, 3).join(', ')}.`
+                    : 'Verified for multi-category e-waste intake.';
+
+                await pushNotification({
+                  title: `New Collection Center Match: ${m.facility.name}`.slice(0, 140),
+                  message: `${m.facility.name} (${distText}) is verified with ${m.availableCapacityKg.toLocaleString()} kg open capacity. ${catText}`.slice(
+                    0,
+                    500
+                  ),
+                  category: 'facility',
+                });
+                seen.facilityIds.push(m.facility.id);
+                emittedCount += 1;
+              }
+            } else {
+              const topNames = newMatches
+                .slice(0, 3)
+                .map((m) => m.facility.name)
+                .join(', ');
+              const areaLabel = targetCity || newMatches[0].facility.city || 'your area';
+              await pushNotification({
+                title: `${newMatches.length} Collection Centers Matched Near ${areaLabel}`.slice(
+                  0,
+                  140
+                ),
+                message: `Verified e-waste centers with available capacity are ready in your area, including ${topNames}. Open the Facility Map or Notification Center to inspect details.`.slice(
+                  0,
+                  500
+                ),
+                category: 'facility',
+              });
+              for (const m of newMatches) {
+                seen.facilityIds.push(m.facility.id);
+              }
+              emittedCount += 1;
+            }
+          } catch {
+            // Non-fatal
+          } finally {
+            inFlightAlertKeysRef.current.delete(batchKey);
+          }
+        }
+      }
+
+      if (emittedCount > 0) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(seen));
+        } catch {
+          // Ignore storage quota errors
+        }
+      }
+
+      return emittedCount;
+    },
+    [
+      isAuthenticated,
+      firebaseUser?.uid,
+      dbUser?.uid,
+      dbUser?.city,
+      firestoreProfile?.city,
+      facilities,
+      vehicles,
+      recentPickups,
+      role,
+      pushNotification,
+    ]
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || facilities.length === 0) return;
+    void scanForPickupAndFacilityAlerts();
+  }, [isAuthenticated, facilities.length, recentPickups, scanForPickupAndFacilityAlerts]);
+
   const navItems: { id: DashTab; label: string; icon: React.ComponentType<any>; visible: boolean }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, visible: true },
+    { id: 'notifications', label: 'Notification Center', icon: Bell, visible: true },
     { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
@@ -283,14 +487,27 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => setActiveTab(item.id)}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center gap-2.5 whitespace-nowrap transition-colors ${
+                    className={`px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center justify-between gap-2 whitespace-nowrap transition-colors ${
                       active
                         ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 font-semibold'
                         : 'text-slate-600 dark:text-sky-100/75 hover:bg-slate-100 dark:hover:bg-sky-900/40'
                     }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    {item.label}
+                    <span className="inline-flex items-center gap-2.5">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </span>
+                    {item.id === 'notifications' && unreadCount > 0 && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          active
+                            ? 'bg-white/25 text-white dark:bg-sky-950/30 dark:text-sky-950'
+                            : 'bg-sky-600 text-white'
+                        }`}
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -370,50 +587,106 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-12 z-40 w-80 rounded-xl border border-slate-200 dark:border-sky-800 bg-white dark:bg-[#0B223B] shadow-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-sky-50">
-                    Realtime Notifications
-                  </h4>
-                  <button type="button" onClick={() => setNotifOpen(false)}>
-                    <X className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
+              <div className="absolute right-0 top-12 z-40 w-80 sm:w-96 rounded-xl border border-slate-200 dark:border-sky-800 bg-white dark:bg-[#0B223B] shadow-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-sky-50">
+                      Notification Center
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-sky-200/60">
+                      {unreadCount} unread · Pickup &amp; area center alerts
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void markAllNotificationsRead()}
+                        className="px-2 py-1 rounded text-[11px] font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1"
+                        title="Mark all notifications as read"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Read all
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setNotifOpen(false)}
+                      className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-sky-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="text-xs text-slate-500 dark:text-sky-200/65">
-                    No notifications yet.
+                  <p className="text-xs text-slate-500 dark:text-sky-200/65 py-2">
+                    No notifications yet. You will be alerted when collectors accept pickups or verified centers match your area.
                   </p>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {notifications.map((n) => (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+                    {notifications.slice(0, 8).map((n) => (
                       <div
                         key={n.id}
                         className={`p-2.5 rounded-lg border text-xs ${
                           n.read
-                            ? 'border-slate-100 dark:border-sky-900/40 opacity-70'
+                            ? 'border-slate-100 dark:border-sky-900/40 opacity-75'
                             : 'border-sky-300 dark:border-sky-700 bg-sky-50/60 dark:bg-sky-950/40'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-semibold text-slate-900 dark:text-sky-50">{n.title}</p>
-                          {!n.read && (
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+                              {n.category === 'pickup'
+                                ? 'Collector Pickup'
+                                : n.category === 'facility'
+                                ? 'Area Center Match'
+                                : n.category}
+                            </span>
+                            <p className="font-semibold text-slate-900 dark:text-sky-50 leading-snug">
+                              {n.title}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {!n.read && (
+                              <button
+                                type="button"
+                                onClick={() => void markNotificationRead(n.id)}
+                                className="p-1 text-sky-700 dark:text-sky-400 hover:bg-sky-500/10 rounded"
+                                title="Mark read"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => void markNotificationRead(n.id)}
-                              className="text-sky-700 dark:text-sky-400"
-                              title="Mark read"
+                              onClick={() => void deleteNotification(n.id)}
+                              className="p-1 text-slate-400 hover:text-red-500 rounded"
+                              title="Dismiss notification"
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
-                          )}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-600 dark:text-sky-200/75 mt-0.5">
+                        <p className="text-[11px] text-slate-600 dark:text-sky-200/75 mt-1 leading-relaxed">
                           {n.message}
                         </p>
                       </div>
                     ))}
                   </div>
                 )}
+                <div className="pt-2 border-t border-slate-200 dark:border-sky-900/60 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('notifications');
+                      setNotifOpen(false);
+                    }}
+                    className="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 inline-flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <span>Open Notification Center</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -564,6 +837,20 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               </table>
             </div>
           </div>
+        )}
+
+        {activeTab === 'notifications' && (
+          <NotificationCenterPanel
+            pickups={recentPickups}
+            facilities={facilities}
+            vehicles={vehicles}
+            onRefreshData={() => {
+              void loadDashData();
+              onRefreshGlobal();
+            }}
+            onScanNow={scanForPickupAndFacilityAlerts}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
         )}
 
         {activeTab === 'impact' && (

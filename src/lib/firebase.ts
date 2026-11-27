@@ -318,6 +318,16 @@ export async function markNotificationAsRead(notificationId: string) {
   }
 }
 
+export async function deleteUserNotification(notificationId: string) {
+  const safeId = notificationId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `notifications/${safeId}`;
+  try {
+    await deleteDoc(doc(db, 'notifications', safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 export async function saveEcoBotSession(
   uid: string,
   sessionId: string,

@@ -9,6 +9,7 @@ import { OptimizerStudio } from './components/OptimizerStudio';
 import { DashboardShell } from './components/DashboardShell';
 import { AuthPage, type AuthMode } from './components/AuthPage';
 import { EcoBotWidget } from './components/EcoBotWidget';
+import { LiveVoicePanel } from './components/LiveVoicePanel';
 import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
 import { ScenesStudio } from './components/three/ScenesStudio';
 
@@ -131,6 +132,7 @@ export default function App() {
     { id: 'home', label: 'Home' },
     { id: 'centres', label: 'Find Centres' },
     { id: 'optimizer', label: 'Optimizer' },
+    { id: 'voice', label: 'Voice AI' },
     { id: 'scenes', label: '3D Scenes' },
     { id: 'knowledge', label: 'Knowledge Hub' },
     { id: 'about', label: 'About' },
@@ -345,6 +347,76 @@ export default function App() {
               </div>
             )}
 
+            {route === 'voice' && (
+              <div className="relative">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-sky-200/40 via-sky-100/20 to-transparent dark:from-sky-900/25 dark:via-sky-950/10 dark:to-transparent"
+                />
+                <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
+                  <div className="space-y-2.5 max-w-3xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+                      Gemini 3.8 Live · Real-Time Voice Conversation
+                    </p>
+                    <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
+                      Speak Directly with EcoBot Voice
+                    </h1>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
+                      Have a low-latency, bidirectional voice conversation in English, हिन्दी, or Hinglish. Interrupt naturally at any time and query live verified collection centres, CO₂e impact stats, or safe battery disposal steps hands-free.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-8">
+                      <LiveVoicePanel />
+                    </div>
+                    <aside className="lg:col-span-4 space-y-4">
+                      <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                          Live Voice Capabilities
+                        </h3>
+                        <ul className="space-y-2.5 text-xs text-slate-600 dark:text-sky-200/80 leading-relaxed">
+                          <li>
+                            <strong className="text-slate-900 dark:text-sky-100">Real-Time Audio Streaming:</strong>{' '}
+                            16 kHz microphone input and gapless 24 kHz spoken replies with instant barge-in interruption.
+                          </li>
+                          <li>
+                            <strong className="text-slate-900 dark:text-sky-100">Live Database Tooling:</strong>{' '}
+                            Ask for verified e-waste centers in any city or live platform CO₂e savings to trigger real-time lookups mid-call.
+                          </li>
+                          <li>
+                            <strong className="text-slate-900 dark:text-sky-100">Multilingual &amp; Transcripts:</strong>{' '}
+                            Switch between 5 voice personas and English, हिन्दी, or Hinglish with synchronized live transcripts.
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                          Continue in Platform
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate('centres')}
+                            className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
+                          >
+                            Browse Verified Facility Map →
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleOpenDashboard}
+                            className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 text-left transition-colors cursor-pointer"
+                          >
+                            Schedule a Doorstep Pickup in Dashboard →
+                          </button>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {route === 'scenes' && <ScenesStudio />}
 
             {route === 'knowledge' && (
@@ -462,7 +534,7 @@ export default function App() {
       )}
 
       {/* Floating EcoBot AI Assistant */}
-      {route !== 'scenes' && <EcoBotWidget />}
+      {route !== 'scenes' && route !== 'voice' && <EcoBotWidget />}
     </div>
   );
 }

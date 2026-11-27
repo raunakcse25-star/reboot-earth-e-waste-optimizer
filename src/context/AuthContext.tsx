@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { User } from 'firebase/auth';
 import {
   createUserNotification,
+  deleteUserNotification,
   loadUserPreferences,
   loadUserProfile,
   logoutUser,
@@ -67,6 +68,8 @@ interface AuthContextValue {
     regulatoryUpdates?: boolean;
   }) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   pushNotification: (payload: {
     title: string;
     message: string;
@@ -487,7 +490,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const markNotificationRead = useCallback(async (id: string) => {
+    if (id.startsWith('local_ntf_')) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      return;
+    }
     await markNotificationAsRead(id);
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    const unread = notifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+
+    const localIds = new Set(unread.filter((n) => n.id.startsWith('local_ntf_')).map((n) => n.id));
+    if (localIds.size > 0) {
+      setNotifications((prev) =>
+        prev.map((n) => (localIds.has(n.id) ? { ...n, read: true } : n))
+      );
+    }
+
+    const remoteIds = unread.filter((n) => !n.id.startsWith('local_ntf_')).map((n) => n.id);
+    if (remoteIds.length > 0) {
+      await Promise.all(remoteIds.map((id) => markNotificationAsRead(id).catch(() => {})));
+    }
+  }, [notifications]);
+
+  const deleteNotification = useCallback(async (id: string) => {
+    if (id.startsWith('local_ntf_')) {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      return;
+    }
+    await deleteUserNotification(id);
   }, []);
 
   const pushNotification = useCallback(
@@ -500,7 +532,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await createUserNotification(firebaseUser.uid, payload);
         return;
       }
-      // Fallback for unverified/local-auth sessions so progress notifications still appear in the bell dropdown
+      // Fallback for unverified/local-auth sessions so notifications still appear in the Notification Center
       setNotifications((prev) => [
         {
           id: `local_ntf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -509,6 +541,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           message: payload.message.slice(0, 500),
           category: payload.category,
           read: false,
+          createdAt: { toMillis: () => Date.now() },
         },
         ...prev,
       ]);
@@ -547,6 +580,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshProfile: refreshProfileVoid,
         syncFirestoreProfile,
         markNotificationRead,
+        markAllNotificationsRead,
+        deleteNotification,
         pushNotification,
       }}
     >

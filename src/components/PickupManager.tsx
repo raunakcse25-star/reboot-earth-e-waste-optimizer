@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { createUserNotification } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import {
   PICKUP_STATUS_FLOW,
@@ -79,7 +80,7 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
   vehicles,
   onDataChanged,
 }) => {
-  const { dbUser, firebaseUser, workspaceToken, signInWithGoogle } = useAuth();
+  const { dbUser, firebaseUser, workspaceToken, signInWithGoogle, pushNotification } = useAuth();
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
@@ -146,14 +147,49 @@ export const PickupManager: React.FC<PickupManagerProps> = ({
   const handleAdvanceStatus = async (pickup: PickupRequest, nextStatus: string) => {
     setUpdatingId(pickup.id);
     try {
+      const assignedFacilityId = pickup.assignedFacilityId ?? facilities[0]?.id;
+      const assignedVehicleId = pickup.assignedVehicleId ?? vehicles[0]?.id;
+
       await apiFetch(`/api/pickups/${pickup.id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({
           status: nextStatus,
-          assignedFacilityId: pickup.assignedFacilityId ?? facilities[0]?.id,
-          assignedVehicleId: pickup.assignedVehicleId ?? vehicles[0]?.id,
+          assignedFacilityId,
+          assignedVehicleId,
         }),
       });
+
+      if (['Approved', 'Scheduled', 'Transporter Assigned', 'Collected'].includes(nextStatus)) {
+        const facility = facilities.find((f) => f.id === assignedFacilityId);
+        const vehicle = vehicles.find((v) => v.id === assignedVehicleId);
+        const title = `Collector Accepted: ${pickup.requestCode} (${nextStatus})`.slice(0, 140);
+        const parts = [
+          `Your pickup request for ${pickup.deviceName} (${pickup.estimatedWeightKg} kg) is now "${nextStatus}".`,
+        ];
+        if (facility) {
+          parts.push(`Collection center: ${facility.name} (${facility.city}).`);
+        }
+        if (vehicle) {
+          parts.push(`Assigned vehicle: ${vehicle.registrationNo} (${vehicle.vehicleType}).`);
+        }
+        const message = parts.join(' ').slice(0, 500);
+        const currentUid = firebaseUser?.uid || dbUser?.uid;
+
+        if (pickup.userUid && pickup.userUid === currentUid) {
+          void pushNotification({ title, message, category: 'pickup' }).catch(() => {});
+        } else if (
+          pickup.userUid &&
+          firebaseUser?.emailVerified &&
+          dbUser?.role === 'admin'
+        ) {
+          void createUserNotification(pickup.userUid, {
+            title,
+            message,
+            category: 'pickup',
+          }).catch(() => {});
+        }
+      }
+
       await loadPickups();
       onDataChanged?.();
     } catch (err: any) {
