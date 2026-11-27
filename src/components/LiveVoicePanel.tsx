@@ -4,6 +4,8 @@ import {
   Check,
   Copy,
   Database,
+  ExternalLink,
+  Globe,
   Loader2,
   Mic,
   MicOff,
@@ -43,22 +45,28 @@ const VOICE_OPTIONS: { id: LiveVoiceName; label: string; tone: string }[] = [
   { id: 'Charon', label: 'Charon', tone: 'Informative' },
 ];
 
+interface GroundedSource {
+  title: string;
+  uri: string;
+  domain?: string;
+}
+
 const QUICK_VOICE_PROMPTS: Record<'en' | 'hi' | 'hinglish', string[]> = {
   en: [
+    'What are current scrap copper & e-waste metal prices in India?',
+    'Latest CPCB India E-Waste Rules EPR updates & deadlines',
     'Find verified e-waste collection centers in Bengaluru',
     'How much e-waste and CO2 has Reboot Earth saved?',
-    'How do I safely pack a swollen lithium battery?',
-    'Explain India E-Waste Rules 2022 EPR compliance',
   ],
   hi: [
+    'भारत में आज कॉपर और ई-वेस्ट मेटल स्क्रैप के रेट क्या हैं?',
     'बेंगलुरु में वेरिफाइड ई-कचरा कलेक्शन सेंटर बताएं',
-    'सूजी हुई लिथियम बैटरी को सुरक्षित कैसे पैक करें?',
     'रीबूट अर्थ ने अब तक कितना ई-कचरा और CO2 बचाया है?',
   ],
   hinglish: [
+    'India mein aaj copper aur e-waste scrap prices kya chal rahe hain?',
     'Mumbai ya Bengaluru mein verified e-waste centres batao',
-    'Laptop recycle karne se pehle data wipe kaise karun?',
-    'Reboot Earth ka live CO2 impact kitna hai?',
+    'Latest CPCB EPR rules 2022 ke updates kya hain?',
   ],
 };
 
@@ -141,6 +149,8 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
   const [textNudge, setTextNudge] = useState('');
   const [transcripts, setTranscripts] = useState<TranscriptTurn[]>([]);
   const [toolActivity, setToolActivity] = useState<ToolActivityState | null>(null);
+  const [groundedSources, setGroundedSources] = useState<GroundedSource[]>([]);
+  const [groundedQueries, setGroundedQueries] = useState<string[]>([]);
   const [callSeconds, setCallSeconds] = useState(0);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [levels, setLevels] = useState<number[]>(() => new Array(16).fill(0.12));
@@ -452,6 +462,12 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
               status: msg.status === 'done' ? 'done' : 'running',
               summary: String(msg.summary),
             });
+            if (Array.isArray(msg.sources) && msg.sources.length > 0) {
+              setGroundedSources(msg.sources);
+            }
+            if (Array.isArray(msg.webSearchQueries) && msg.webSearchQueries.length > 0) {
+              setGroundedQueries(msg.webSearchQueries);
+            }
           } else if (msg.type === 'inputTranscript' && msg.text) {
             appendTranscript('user', msg.text);
           } else if (msg.type === 'outputTranscript' && msg.text) {
@@ -657,6 +673,8 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
           <div className="px-3 py-1.5 rounded-lg bg-sky-950/80 border border-sky-700/60 text-[11px] text-cyan-200 inline-flex items-center gap-2 max-w-full">
             {toolActivity.status === 'running' ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-300 shrink-0" />
+            ) : toolActivity.tool === 'search_live_web' ? (
+              <Globe className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
             ) : (
               <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             )}
@@ -746,6 +764,54 @@ export const LiveVoicePanel: React.FC<LiveVoicePanelProps> = ({ compact = false 
           </button>
         ))}
       </div>
+
+      {/* Live Google Search Grounded Sources Cited During Call */}
+      {groundedSources.length > 0 && (
+        <div className="px-3.5 py-2.5 border-b border-slate-200 dark:border-sky-900/50 bg-sky-50/70 dark:bg-sky-950/35 space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="font-semibold text-sky-800 dark:text-sky-300 inline-flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-sky-500" />
+              Verified Google Search Sources ({groundedSources.length})
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setGroundedSources([]);
+                setGroundedQueries([]);
+              }}
+              className="text-slate-500 hover:text-slate-800 dark:text-sky-300/70 dark:hover:text-sky-200 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+          {groundedQueries.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {groundedQueries.slice(0, 3).map((q, idx) => (
+                <span
+                  key={idx}
+                  className="px-1.5 py-0.5 rounded bg-white/80 dark:bg-[#07182B] border border-sky-200 dark:border-sky-800/70 text-[10px] text-slate-600 dark:text-sky-200/80"
+                >
+                  {q}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {groundedSources.slice(0, 5).map((src, idx) => (
+              <a
+                key={idx}
+                href={src.uri}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 rounded-md bg-white dark:bg-[#0B223B] border border-sky-200 dark:border-sky-800/70 text-[11px] text-sky-700 dark:text-sky-300 hover:border-sky-500 inline-flex items-center gap-1 max-w-[230px]"
+              >
+                <ExternalLink className="w-3 h-3 shrink-0" />
+                <span className="truncate">{src.title}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Transcript Toolbar */}
       {transcripts.length > 0 && (

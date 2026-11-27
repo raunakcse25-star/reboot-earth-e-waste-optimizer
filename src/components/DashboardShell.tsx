@@ -1,17 +1,21 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowUpRight,
   AudioLines,
+  Award,
   BarChart3,
   Bell,
   Boxes,
   CalendarClock,
   Check,
   CheckCheck,
+  Clapperboard,
   Cloud,
   Download,
+  Gamepad2,
   Globe,
+  History,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -51,12 +55,16 @@ import { MonthlyTargetsPanel } from './MonthlyTargetsPanel';
 import { LiveVoicePanel } from './LiveVoicePanel';
 import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
 import { AudioTranscriberPanel } from './AudioTranscriber';
+import { ImageToVideoPanel } from './ImageToVideoPanel';
 import { UserProfilePanel } from './UserProfilePanel';
 import {
   COLLECTOR_ACCEPTED_STATUSES,
   NotificationCenterPanel,
   findAreaFacilityMatches,
 } from './NotificationCenterPanel';
+import { PickupHistoryLog, type PickupPrefillTemplate } from './PickupHistoryLog';
+import { CarbonSavedWidget } from './CarbonSavedWidget';
+import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
   | 'overview'
@@ -65,9 +73,11 @@ type DashTab =
   | 'targets'
   | 'voice'
   | 'transcribe'
+  | 'animate'
   | 'intel'
   | 'schedule'
   | 'pickups'
+  | 'history'
   | 'optimizer'
   | 'facilities'
   | 'inventory'
@@ -82,6 +92,7 @@ interface DashboardShellProps {
   facilities: Facility[];
   onRefreshGlobal: () => void;
   onExitDashboard: () => void;
+  onLaunchGame?: () => void;
 }
 
 export const DashboardShell: React.FC<DashboardShellProps> = ({
@@ -89,6 +100,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   facilities,
   onRefreshGlobal,
   onExitDashboard,
+  onLaunchGame,
 }) => {
   const {
     dbUser,
@@ -108,6 +120,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [recentPickups, setRecentPickups] = useState<PickupRequest[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [reorderPrefill, setReorderPrefill] = useState<PickupPrefillTemplate | null>(null);
   const inFlightAlertKeysRef = useRef<Set<string>>(new Set());
 
   const loadDashData = useCallback(async () => {
@@ -131,6 +144,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
   const role: UserRole = dbUser?.role || 'citizen';
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const ecoExperience = useMemo(() => computeEcoExperience(recentPickups, false), [recentPickups]);
 
   const scanForPickupAndFacilityAlerts = useCallback(
     async (overrideCity?: string): Promise<number> => {
@@ -328,9 +342,11 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
     { id: 'transcribe', label: 'Audio Transcribe', icon: Mic, visible: true },
+    { id: 'animate', label: 'Animate to Video', icon: Clapperboard, visible: true },
     { id: 'intel', label: 'Live Web Intel', icon: Globe, visible: true },
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
+    { id: 'history', label: 'Pickup History', icon: History, visible: true },
     { id: 'optimizer', label: 'Smart Optimizer', icon: Route, visible: true },
     { id: 'facilities', label: 'Facility Map', icon: MapPin, visible: true },
     {
@@ -474,6 +490,38 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             <p className="text-[11px] font-mono text-slate-500 dark:text-sky-200/60 truncate">
               {dbUser?.email || firebaseUser?.email}
             </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className="mt-2 w-full p-2 rounded-lg border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-[#061526] hover:border-emerald-400 transition-colors text-left space-y-1.5 cursor-pointer"
+              title="View your recycling experience level, badges, and milestones"
+            >
+              <div className="flex items-center justify-between gap-1.5 text-[11px]">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 dark:text-emerald-300 truncate">
+                  <Award className="w-3.5 h-3.5 shrink-0" />
+                  Lvl {ecoExperience.currentTier.level} · {ecoExperience.currentTier.title}
+                </span>
+                <span className="font-mono text-[10px] text-slate-500 dark:text-sky-300/75 shrink-0">
+                  {ecoExperience.verifiedRecycledKg} kg
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-sky-950 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-500"
+                  style={{ width: `${Math.max(4, ecoExperience.levelProgressPct)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-sky-200/65 flex items-center justify-between">
+                <span>
+                  {ecoExperience.unlockedBadgesCount}/{ecoExperience.badges.length} badges
+                </span>
+                <span>
+                  {ecoExperience.nextTier
+                    ? `${ecoExperience.kgToNextLevel} kg to Lvl ${ecoExperience.nextTier.level}`
+                    : 'Max Level'}
+                </span>
+              </p>
+            </button>
           </div>
 
           <nav className="flex lg:flex-col gap-1 overflow-x-auto pb-1 lg:pb-0">
@@ -515,6 +563,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         </div>
 
         <div className="hidden lg:flex flex-col gap-2 pt-4 border-t border-slate-200 dark:border-sky-900/50">
+          {onLaunchGame && (
+            <button
+              type="button"
+              onClick={onLaunchGame}
+              className="w-full px-3 py-2 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 hover:border-emerald-400 transition-colors inline-flex items-center gap-2 text-left cursor-pointer"
+            >
+              <Gamepad2 className="w-4 h-4 shrink-0" />
+              Play Circuit Rush
+            </button>
+          )}
           <button
             type="button"
             onClick={onExitDashboard}
@@ -734,6 +792,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               </div>
             </div>
 
+            {/* Carbon Saved Widget (calculated from user's e-waste history log) */}
+            <CarbonSavedWidget
+              pickups={recentPickups}
+              onOpenHistory={() => setActiveTab('history')}
+              onSchedulePickup={() => setActiveTab('schedule')}
+            />
+
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
@@ -801,6 +866,14 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('history')}
+                    className="text-xs font-medium text-slate-600 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-200 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    History Log
                   </button>
                   <button
                     type="button"
@@ -872,6 +945,8 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
         {activeTab === 'transcribe' && <AudioTranscriberPanel />}
 
+        {activeTab === 'animate' && <ImageToVideoPanel />}
+
         {activeTab === 'intel' && (
           <LiveSearchIntelPanel
             title="Live E-Waste & Circular Economy Web Intel"
@@ -882,7 +957,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         {activeTab === 'schedule' && (
           <SchedulePickup
             facilities={facilities}
+            prefill={reorderPrefill}
             onBooked={() => {
+              setReorderPrefill(null);
               void loadDashData();
               onRefreshGlobal();
             }}
@@ -896,6 +973,22 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             onDataChanged={() => {
               void loadDashData();
               onRefreshGlobal();
+            }}
+          />
+        )}
+
+        {activeTab === 'history' && (
+          <PickupHistoryLog
+            pickups={recentPickups}
+            facilities={facilities}
+            vehicles={vehicles}
+            onRefreshData={() => {
+              void loadDashData();
+              onRefreshGlobal();
+            }}
+            onCustomizeReorder={(template) => {
+              setReorderPrefill(template);
+              setActiveTab('schedule');
             }}
           />
         )}
@@ -923,7 +1016,12 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           />
         )}
 
-        {activeTab === 'settings' && <UserProfilePanel />}
+        {activeTab === 'settings' && (
+          <UserProfilePanel
+            pickups={recentPickups}
+            onSchedulePickup={() => setActiveTab('schedule')}
+          />
+        )}
       </main>
     </div>
   );

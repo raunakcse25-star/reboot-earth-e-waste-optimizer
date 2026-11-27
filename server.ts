@@ -50,10 +50,13 @@ import {
   fastDeviceTriage,
   formatGeminiError,
   generateCampaignVisual,
+  getCachedAnimatedVideo,
   identifyDeviceFromImage,
   mapsGroundedFacilitySearch,
+  pollVideoAnimationInteraction,
   queryLiveSearchIntel,
   searchEWasteRegulations,
+  startImageToVideoAnimation,
   transcribeAudio,
 } from './src/server/gemini.ts';
 
@@ -1016,6 +1019,140 @@ async function startServer() {
           ? 'High-resolution image generation (gemini-3-pro-image-preview) requires a billing-enabled Gemini API key in Settings > Secrets.'
           : rawMsg,
       });
+    }
+  });
+
+  // --- Image-to-Video Animation (gemini-omni-1.2-flash via Interactions API) ---
+  app.post('/api/ai/animate-video', rateLimit(6), async (req, res) => {
+    try {
+      const {
+        imageBase64,
+        mimeType,
+        prompt = '',
+        aspectRatio = '16:9',
+        duration = '8s',
+        resolution = '720p',
+        previousInteractionId,
+      } = req.body || {};
+
+      const validRatios = ['16:9', '9:16'] as const;
+      const safeAspectRatio = validRatios.includes(aspectRatio) ? aspectRatio : '16:9';
+
+      const validDurations = ['5s', '8s', '10s'] as const;
+      const safeDuration = validDurations.includes(duration) ? duration : '8s';
+
+      const validResolutions = ['720p', '1080p'] as const;
+      const safeResolution = validResolutions.includes(resolution) ? resolution : '720p';
+
+      const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'] as const;
+      let safeMime: 'image/jpeg' | 'image/png' | 'image/webp' | undefined;
+
+      if (imageBase64) {
+        if (typeof imageBase64 !== 'string' || imageBase64.length > 14_000_000) {
+          return res.status(400).json({ error: 'Uploaded image is too large. Keep photos under 10 MB.' });
+        }
+        if (typeof mimeType !== 'string' || !allowedImageMimes.includes(mimeType as any)) {
+          return res.status(400).json({ error: 'Only JPEG, PNG, and WebP photos are supported.' });
+        }
+        safeMime = mimeType as 'image/jpeg' | 'image/png' | 'image/webp';
+      } else if (!previousInteractionId || typeof previousInteractionId !== 'string') {
+        return res.status(400).json({ error: 'Please upload a photo (JPEG, PNG, or WebP) to animate.' });
+      }
+
+      const result = await startImageToVideoAnimation({
+        imageBase64: typeof imageBase64 === 'string' ? imageBase64 : undefined,
+        mimeType: safeMime,
+        prompt: typeof prompt === 'string' ? prompt.slice(0, 800) : '',
+        aspectRatio: safeAspectRatio,
+        duration: safeDuration,
+        resolution: safeResolution,
+        previousInteractionId:
+          typeof previousInteractionId === 'string' && previousInteractionId.trim()
+            ? previousInteractionId.trim().slice(0, 200)
+            : undefined,
+      });
+
+      res.status(202).json(result);
+    } catch (error: any) {
+      console.error('Image-to-video animation error:', error);
+      const rawMsg = error?.message || 'Unable to start video animation.';
+      const isPaidKeyError =
+        /\b(402|403|429)\b|PERMISSION_DENIED|RESOURCE_EXHAUSTED|billing|paid|quota/i.test(rawMsg);
+      if (isPaidKeyError) {
+        return res.status(402).json({
+          error:
+            'Video generation with gemini-omni-1.2-flash requires a paid Gemini API key configured in AI Studio Settings > Secrets (GEMINI_API_KEY).',
+        });
+      }
+      const formatted = formatGeminiError(error, 'Unable to start video generation with gemini-omni-1.2-flash.');
+      res.status(formatted.status).json({ error: formatted.message });
+    }
+  });
+
+  app.get('/api/ai/animate-video/:id', rateLimit(60), async (req, res) => {
+    try {
+      const interactionId = String(req.params.id || '').trim();
+      if (!interactionId || interactionId.length > 200) {
+        return res.status(400).json({ error: 'Invalid interaction ID.' });
+      }
+      const statusResult = await pollVideoAnimationInteraction(interactionId);
+      res.json(statusResult);
+    } catch (error: any) {
+      console.error('Video polling error:', error);
+      const formatted = formatGeminiError(error, 'Unable to check video generation status.');
+      res.status(formatted.status).json({ error: formatted.message });
+    }
+  });
+
+  app.get('/api/ai/animate-video/:id/media', async (req, res) => {
+    try {
+      const interactionId = String(req.params.id || '').trim();
+      let entry = getCachedAnimatedVideo(interactionId);
+      if (!entry) {
+        // Attempt to hydrate cache from Interactions API if server still has access
+        const polled = await pollVideoAnimationInteraction(interactionId);
+        if (polled.videoReady) {
+          entry = getCachedAnimatedVideo(interactionId);
+        }
+      }
+      if (!entry) {
+        return res.status(404).json({ error: 'Generated video not found or expired.' });
+      }
+
+      const totalSize = entry.buffer.length;
+      const mimeType = entry.mimeType || 'video/mp4';
+      const downloadMode = req.query.download === '1';
+
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'private, max-age=1800');
+      if (downloadMode) {
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="reboot-earth-animated-${interactionId.slice(0, 8)}.mp4"`
+        );
+      }
+
+      const rangeHeader = req.headers.range;
+      if (rangeHeader && !downloadMode) {
+        const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+        if (match) {
+          const start = match[1] ? parseInt(match[1], 10) : 0;
+          const end = match[2] ? Math.min(parseInt(match[2], 10), totalSize - 1) : totalSize - 1;
+          if (start >= 0 && start <= end && end < totalSize) {
+            res.status(206);
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`);
+            res.setHeader('Content-Length', String(end - start + 1));
+            return res.end(entry.buffer.subarray(start, end + 1));
+          }
+        }
+      }
+
+      res.setHeader('Content-Length', String(totalSize));
+      return res.end(entry.buffer);
+    } catch (error: any) {
+      console.error('Video media stream error:', error);
+      res.status(500).json({ error: 'Unable to stream generated video.' });
     }
   });
 

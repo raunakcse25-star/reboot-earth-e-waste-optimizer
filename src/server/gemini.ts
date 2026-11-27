@@ -1,7 +1,6 @@
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 
 const PRIMARY_TEXT_MODEL = 'gemini-4-hydrogen';
-const SECONDARY_SEARCH_MODEL = 'gemini-4-neon';
 const FALLBACK_TEXT_MODEL = 'gemini-3.1-flash-lite';
 
 function getAiClient() {
@@ -256,7 +255,6 @@ export async function chatWithEcoBot(params: {
     ? [
         { model: PRIMARY_TEXT_MODEL, useSearch: true },
         { model: PRIMARY_TEXT_MODEL, useSearch: true, delayMs: 900 },
-        { model: SECONDARY_SEARCH_MODEL, useSearch: true },
         { model: FALLBACK_TEXT_MODEL, useSearch: true },
         { model: FALLBACK_TEXT_MODEL, useSearch: false },
       ]
@@ -318,7 +316,6 @@ export async function searchEWasteRegulations(query: string) {
   const attempts = [
     { model: PRIMARY_TEXT_MODEL },
     { model: PRIMARY_TEXT_MODEL, delayMs: 900 },
-    { model: SECONDARY_SEARCH_MODEL },
     { model: FALLBACK_TEXT_MODEL },
   ];
 
@@ -385,7 +382,6 @@ export async function queryLiveSearchIntel(params: {
   const attempts = [
     { model: PRIMARY_TEXT_MODEL },
     { model: PRIMARY_TEXT_MODEL, delayMs: 900 },
-    { model: SECONDARY_SEARCH_MODEL },
     { model: FALLBACK_TEXT_MODEL },
   ];
 
@@ -815,3 +811,268 @@ export async function transcribeAudio(params: {
 
   throw lastError || new Error('Unable to transcribe audio right now.');
 }
+
+/* -------------------- Image-to-Video Animation (Gemini Omni Flash via Interactions API) -------------------- */
+const OMNI_VIDEO_MODEL = 'gemini-omni-1.2-flash';
+
+interface CachedVideoEntry {
+  buffer: Buffer;
+  mimeType: string;
+  createdAt: number;
+}
+
+const MAX_CACHED_VIDEOS = 8;
+const VIDEO_CACHE_TTL_MS = 30 * 60 * 1000;
+const animatedVideoCache = new Map<string, CachedVideoEntry>();
+
+function pruneVideoCache() {
+  const now = Date.now();
+  for (const [key, entry] of animatedVideoCache.entries()) {
+    if (now - entry.createdAt > VIDEO_CACHE_TTL_MS) {
+      animatedVideoCache.delete(key);
+    }
+  }
+  while (animatedVideoCache.size > MAX_CACHED_VIDEOS) {
+    const oldestKey = animatedVideoCache.keys().next().value;
+    if (!oldestKey) break;
+    animatedVideoCache.delete(oldestKey);
+  }
+}
+
+export function getCachedAnimatedVideo(interactionId: string): CachedVideoEntry | null {
+  pruneVideoCache();
+  return animatedVideoCache.get(interactionId) ?? null;
+}
+
+async function extractVideoFromInteraction(interaction: any): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  const candidates: any[] = [];
+  if (interaction?.output_video) {
+    candidates.push(interaction.output_video);
+  }
+  if (Array.isArray(interaction?.steps)) {
+    for (const step of interaction.steps) {
+      if (step?.type === 'model_output' && Array.isArray(step?.content)) {
+        for (const block of step.content) {
+          if (block?.type === 'video') {
+            candidates.push(block);
+          }
+        }
+      }
+    }
+  }
+  if (Array.isArray(interaction?.outputs)) {
+    for (const block of interaction.outputs) {
+      if (block?.type === 'video') {
+        candidates.push(block);
+      }
+    }
+  }
+
+  for (const videoPart of candidates) {
+    const mimeType =
+      typeof videoPart?.mime_type === 'string' && videoPart.mime_type.startsWith('video/')
+        ? videoPart.mime_type
+        : 'video/mp4';
+
+    if (typeof videoPart?.data === 'string' && videoPart.data.length > 0) {
+      const cleaned = videoPart.data.replace(/^data:[^;]+;base64,/, '');
+      return {
+        buffer: Buffer.from(cleaned, 'base64'),
+        mimeType,
+      };
+    }
+
+    if (typeof videoPart?.uri === 'string' && videoPart.uri.startsWith('http')) {
+      const apiKey = process.env.GEMINI_API_KEY || '';
+      const resp = await fetch(videoPart.uri, {
+        headers: apiKey ? { 'x-goog-api-key': apiKey } : undefined,
+      });
+      if (resp.ok) {
+        const arrBuf = await resp.arrayBuffer();
+        const headerMime = resp.headers.get('content-type');
+        return {
+          buffer: Buffer.from(arrBuf),
+          mimeType: headerMime && headerMime.startsWith('video/') ? headerMime.split(';')[0] : mimeType,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+export async function startImageToVideoAnimation(params: {
+  imageBase64?: string;
+  mimeType?: 'image/jpeg' | 'image/png' | 'image/webp';
+  prompt: string;
+  aspectRatio: '16:9' | '9:16';
+  duration?: '5s' | '8s' | '10s';
+  resolution?: '720p' | '1080p';
+  previousInteractionId?: string;
+}) {
+  const ai = getAiClient();
+  const motionPrompt =
+    params.prompt.trim() ||
+    'Smooth cinematic camera motion bringing this scene to life with realistic lighting and subtle natural movement.';
+  const duration = params.duration || '8s';
+  const resolution = params.resolution || '720p';
+
+  let input: any;
+  if (params.imageBase64 && params.mimeType) {
+    const base64Clean = params.imageBase64.replace(/^data:[^;]+;base64,/, '').trim();
+    if (!base64Clean) {
+      throw new Error('Uploaded image data is empty.');
+    }
+    input = [
+      {
+        type: 'image' as const,
+        mime_type: params.mimeType,
+        data: base64Clean,
+      },
+      {
+        type: 'text' as const,
+        text: motionPrompt,
+      },
+    ];
+  } else if (params.previousInteractionId) {
+    input = motionPrompt;
+  } else {
+    throw new Error('Please upload a photo (JPEG, PNG, or WebP) to animate into a video.');
+  }
+
+  const createPayload: any = {
+    model: OMNI_VIDEO_MODEL,
+    input,
+    background: true,
+    store: true,
+    stream: false,
+    response_format: {
+      type: 'video',
+      aspect_ratio: params.aspectRatio,
+      duration,
+      resolution,
+    },
+  };
+
+  if (params.previousInteractionId) {
+    createPayload.previous_interaction_id = params.previousInteractionId;
+  }
+
+  const interaction: any = await ai.interactions.create(createPayload, { timeout: 300000 });
+  const interactionId = String(interaction?.id || '');
+  const status = String(interaction?.status || 'in_progress');
+
+  if (!interactionId) {
+    throw new Error('The Interactions API did not return an interaction ID for video generation.');
+  }
+
+  let videoReady = false;
+  let videoMimeType: string | undefined;
+
+  if (status === 'completed') {
+    const extracted = await extractVideoFromInteraction(interaction);
+    if (extracted) {
+      pruneVideoCache();
+      animatedVideoCache.set(interactionId, {
+        buffer: extracted.buffer,
+        mimeType: extracted.mimeType,
+        createdAt: Date.now(),
+      });
+      videoReady = true;
+      videoMimeType = extracted.mimeType;
+    }
+  }
+
+  return {
+    interactionId,
+    model: OMNI_VIDEO_MODEL,
+    status,
+    aspectRatio: params.aspectRatio,
+    duration,
+    resolution,
+    done: status === 'completed',
+    failed: status === 'failed' || status === 'cancelled',
+    videoReady,
+    videoMimeType,
+    mediaUrl: videoReady ? `/api/ai/animate-video/${encodeURIComponent(interactionId)}/media` : undefined,
+  };
+}
+
+export async function pollVideoAnimationInteraction(interactionId: string) {
+  const ai = getAiClient();
+  const cached = getCachedAnimatedVideo(interactionId);
+  if (cached) {
+    return {
+      interactionId,
+      model: OMNI_VIDEO_MODEL,
+      status: 'completed',
+      done: true,
+      failed: false,
+      videoReady: true,
+      videoMimeType: cached.mimeType,
+      mediaUrl: `/api/ai/animate-video/${encodeURIComponent(interactionId)}/media`,
+    };
+  }
+
+  const interaction: any = await ai.interactions.get(interactionId);
+  const status = String(interaction?.status || 'in_progress');
+
+  if (status === 'failed' || status === 'cancelled') {
+    const errText =
+      interaction?.error?.message ||
+      interaction?.status_message ||
+      `Video generation ${status}. Please try another photo or motion prompt.`;
+    return {
+      interactionId,
+      model: OMNI_VIDEO_MODEL,
+      status,
+      done: true,
+      failed: true,
+      videoReady: false,
+      error: errText,
+    };
+  }
+
+  if (status === 'completed') {
+    const extracted = await extractVideoFromInteraction(interaction);
+    if (!extracted) {
+      return {
+        interactionId,
+        model: OMNI_VIDEO_MODEL,
+        status: 'failed',
+        done: true,
+        failed: true,
+        videoReady: false,
+        error: 'Video interaction completed, but no video payload was returned by the model.',
+      };
+    }
+
+    pruneVideoCache();
+    animatedVideoCache.set(interactionId, {
+      buffer: extracted.buffer,
+      mimeType: extracted.mimeType,
+      createdAt: Date.now(),
+    });
+
+    return {
+      interactionId,
+      model: OMNI_VIDEO_MODEL,
+      status: 'completed',
+      done: true,
+      failed: false,
+      videoReady: true,
+      videoMimeType: extracted.mimeType,
+      mediaUrl: `/api/ai/animate-video/${encodeURIComponent(interactionId)}/media`,
+    };
+  }
+
+  return {
+    interactionId,
+    model: OMNI_VIDEO_MODEL,
+    status,
+    done: false,
+    failed: false,
+    videoReady: false,
+  };
+}
+

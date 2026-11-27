@@ -8,7 +8,11 @@ import {
 } from '@google/genai';
 import { WebSocket, WebSocketServer } from 'ws';
 import { computeEnvironmentalAnalytics, listFacilities } from '../db/queries.ts';
-import { formatGeminiError } from './gemini.ts';
+import {
+  formatGeminiError,
+  queryLiveSearchIntel,
+  type SearchGroundingSource,
+} from './gemini.ts';
 
 const LIVE_VOICE_MODEL = 'gemini-3.8-live';
 const ALLOWED_VOICES = new Set(['Zephyr', 'Puck', 'Kore', 'Fenrir', 'Charon']);
@@ -78,12 +82,36 @@ const LIVE_VOICE_TOOLS: FunctionDeclaration[] = [
       required: ['deviceType'],
     },
   },
+  {
+    name: 'search_live_web',
+    description:
+      'Run a real-time Google Search grounded query via gemini-4-hydrogen to get up-to-date market prices for scrap e-waste metals (copper, aluminum, gold, PCB scrap), latest CPCB India E-Waste or Battery Rules updates, OEM take-back programs, or recent circular-economy news.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: 'The up-to-date web search query to answer accurately.',
+        },
+        topic: {
+          type: Type.STRING,
+          description: 'Optional topic category: metals, regulations, news, programs, or custom.',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];
 
 async function executeLiveVoiceTool(
   name: string,
   args: Record<string, unknown>
-): Promise<{ result: Record<string, unknown>; summary: string }> {
+): Promise<{
+  result: Record<string, unknown>;
+  summary: string;
+  sources?: SearchGroundingSource[];
+  webSearchQueries?: string[];
+}> {
   if (name === 'find_collection_centers') {
     const cityFilter = typeof args.city === 'string' ? args.city.trim().toLowerCase() : '';
     const categoryFilter = typeof args.category === 'string' ? args.category.trim().toLowerCase() : '';
@@ -191,6 +219,36 @@ async function executeLiveVoiceTool(
     };
   }
 
+  if (name === 'search_live_web') {
+    const queryText = typeof args.query === 'string' ? args.query.trim() : '';
+    const rawTopic = typeof args.topic === 'string' ? args.topic.trim().toLowerCase() : 'custom';
+    const validTopics = ['metals', 'regulations', 'news', 'programs', 'custom'] as const;
+    const topic = (validTopics.includes(rawTopic as any) ? rawTopic : 'custom') as
+      | 'metals'
+      | 'regulations'
+      | 'news'
+      | 'programs'
+      | 'custom';
+
+    const intel = await queryLiveSearchIntel({
+      query: queryText || 'India e-waste recycling rules and scrap metal prices',
+      topic,
+      region: 'India',
+    });
+
+    return {
+      summary: `Google Search grounded (${intel.sources.length} source${intel.sources.length === 1 ? '' : 's'})`,
+      sources: intel.sources,
+      webSearchQueries: intel.webSearchQueries,
+      result: {
+        answer: intel.answer.slice(0, 1800),
+        grounded: intel.grounded,
+        sourcesCount: intel.sources.length,
+        topSources: intel.sources.slice(0, 4).map((s) => ({ title: s.title, domain: s.domain })),
+      },
+    };
+  }
+
   return {
     summary: `Executed ${name}`,
     result: { error: `Unknown tool: ${name}` },
@@ -208,7 +266,7 @@ function buildVoiceSystemInstruction(language: string): string {
   return [
     'You are EcoBot Voice, the real-time spoken assistant for Reboot Earth — an intelligent e-waste collection, circular recycling, and smart route optimization platform.',
     langGuide,
-    'Use your live tools whenever the user asks about collection centers in a city, live platform recycling impact stats, or safe device/battery preparation steps.',
+    'Use your live tools whenever the user asks about collection centers in a city (find_collection_centers), live platform recycling impact stats (get_platform_impact), safe device/battery preparation steps (get_safety_preparation_guide), or up-to-date real-time web information like current scrap metal prices, latest CPCB EPR circulars, OEM take-back offers, or recent sustainability news (search_live_web).',
     'Help users with scheduling doorstep e-waste pickups, locating verified CPCB-compliant collection centres, understanding India E-Waste (Management) Rules 2022 & EPR compliance, safe lithium-ion battery handling, data wiping before device recycling, material recovery metrics (copper, aluminum, plastics, precious metals), CO2 savings, and setting monthly recycling targets.',
     'Keep answers crisp (2-4 spoken sentences per turn unless the user asks for step-by-step details) and never invent fake pickup confirmation numbers.',
   ].join(' ');
@@ -328,10 +386,12 @@ export function attachLiveVoiceWebSocket(httpServer: HttpServer) {
                         ? 'Checking verified Reboot Earth collection centers...'
                         : toolName === 'get_platform_impact'
                           ? 'Fetching live recycling & CO₂ impact stats...'
-                          : 'Loading e-waste safety preparation checklist...',
+                          : toolName === 'search_live_web'
+                            ? 'Searching live Google Search data via gemini-4-hydrogen...'
+                            : 'Loading e-waste safety preparation checklist...',
                   });
                   try {
-                    const { result, summary } = await executeLiveVoiceTool(
+                    const { result, summary, sources, webSearchQueries } = await executeLiveVoiceTool(
                       toolName,
                       (call.args as Record<string, unknown>) || {}
                     );
@@ -340,6 +400,8 @@ export function attachLiveVoiceWebSocket(httpServer: HttpServer) {
                       tool: toolName,
                       status: 'done',
                       summary,
+                      ...(sources && sources.length > 0 ? { sources } : {}),
+                      ...(webSearchQueries && webSearchQueries.length > 0 ? { webSearchQueries } : {}),
                     });
                     functionResponses.push({
                       id: call.id,

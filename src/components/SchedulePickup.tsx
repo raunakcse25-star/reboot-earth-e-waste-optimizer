@@ -40,6 +40,7 @@ import {
 } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { savePickupMaterialPhoto, type PickupPrefillTemplate } from './PickupHistoryLog';
 
 export interface SchedulePickupProps {
   facilities?: Facility[];
@@ -47,6 +48,8 @@ export interface SchedulePickupProps {
   onCancel?: () => void;
   /** When true, hides the side-by-side live bookings list (useful when embedded inside PickupManager). */
   compact?: boolean;
+  /** Optional prefill template when customizing a recurring pickup re-order from PickupHistoryLog. */
+  prefill?: PickupPrefillTemplate | null;
 }
 
 const SLOT_DESCRIPTIONS: Record<PickupTimeSlot, string> = {
@@ -81,6 +84,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
   onBooked,
   onCancel,
   compact = false,
+  prefill = null,
 }) => {
   const {
     firebaseUser,
@@ -129,6 +133,7 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
   const [visionLoading, setVisionLoading] = useState(false);
   const [triageLoading, setTriageLoading] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
+  const [scannedPhotoDataUrl, setScannedPhotoDataUrl] = useState<string | null>(null);
 
   // Google Contacts autofill
   const [contacts, setContacts] = useState<GoogleContact[]>([]);
@@ -176,6 +181,23 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
       setContactPhone((prev) => prev || dbUser?.phone || '');
     }
   }, [dbUser, firebaseUser]);
+
+  useEffect(() => {
+    if (!prefill) return;
+    setDeviceName(prefill.deviceName);
+    setCategory(prefill.category);
+    setCondition(prefill.condition);
+    setQuantity(prefill.quantity);
+    setEstimatedWeightKg(prefill.estimatedWeightKg);
+    setPickupAddress(prefill.pickupAddress);
+    setLat(prefill.lat);
+    setLng(prefill.lng);
+    setTimeSlot(prefill.timeSlot);
+    setContactName(prefill.contactName);
+    setContactPhone(prefill.contactPhone);
+    setInstructions(prefill.instructions);
+    setFormError(null);
+  }, [prefill]);
 
   useEffect(() => {
     if (compact || !authReady || !firebaseUser) {
@@ -246,15 +268,14 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
     setFormError(null);
     setAiNote(null);
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          const result = String(reader.result || '');
-          resolve(result.includes(',') ? result.split(',')[1] : result);
-        };
+        reader.onload = () => resolve(String(reader.result || ''));
         reader.onerror = () => reject(new Error('Unable to read image file.'));
         reader.readAsDataURL(file);
       });
+      setScannedPhotoDataUrl(dataUrl);
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
 
       const identified = await apiFetch<{
         deviceName?: string;
@@ -495,9 +516,18 @@ export const SchedulePickup: React.FC<SchedulePickupProps> = ({
         deviceName: created.deviceName,
       });
 
+      if (scannedPhotoDataUrl) {
+        savePickupMaterialPhoto(
+          created.requestCode,
+          scannedPhotoDataUrl,
+          `Device photo scanned at booking (${created.deviceName})`
+        );
+      }
+
       setDeviceName('');
       setInstructions('');
       setAiNote(null);
+      setScannedPhotoDataUrl(null);
 
       void pushNotification({
         title: `Pickup Booked — ${created.requestCode}`,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Calendar,
   CalendarPlus,
+  Clapperboard,
   CloudUpload,
   Download,
   ExternalLink,
@@ -39,6 +40,7 @@ import {
 } from '../lib/workspace';
 import { ConfirmDialog } from './ConfirmDialog';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { ImageToVideoPanel } from './ImageToVideoPanel';
 import type { AnalyticsSummary } from '../types';
 
 function toLocalDateTimeInput(isoOrDate: string): string {
@@ -69,7 +71,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
   analytics,
 }) => {
   const { workspaceToken, firebaseUser, signingIn, signInWithGoogle } = useAuth();
-  const [activeTab, setActiveTab] = useState<'calendar' | 'gmail' | 'drive' | 'chat' | 'contacts' | 'studio'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'gmail' | 'drive' | 'chat' | 'contacts' | 'studio' | 'video'>('calendar');
 
   // Google Calendar state
   const [calendars, setCalendars] = useState<CalendarListItem[]>([]);
@@ -263,6 +265,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               { id: 'chat', label: 'Chat', icon: MessageSquare },
               { id: 'contacts', label: 'Contacts', icon: Users },
               { id: 'studio', label: 'AI Visual Studio', icon: Sparkles },
+              { id: 'video', label: 'Animate to Video', icon: Clapperboard },
             ] as const
           ).map((t) => {
             const Icon = t.icon;
@@ -289,7 +292,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
         </div>
       </div>
 
-      {!workspaceToken && activeTab !== 'studio' && (
+      {!workspaceToken && activeTab !== 'studio' && activeTab !== 'video' && (
         <div className="p-5 rounded-xl border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
@@ -987,6 +990,8 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
           )}
         </div>
       )}
+
+      {activeTab === 'video' && <ImageToVideoPanel />}
 
       <ConfirmDialog
         open={Boolean(pendingAction)}

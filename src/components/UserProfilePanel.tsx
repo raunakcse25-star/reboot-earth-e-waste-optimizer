@@ -21,8 +21,10 @@ import {
   ROLE_LABELS,
   type CommunicationChannel,
   type OrganizationType,
+  type PickupRequest,
   type UserRole,
 } from '../types';
+import { EcoLevelProfileSection } from './EcoLevelProfileSection';
 
 const CHANNEL_OPTIONS: {
   id: CommunicationChannel;
@@ -36,7 +38,15 @@ const CHANNEL_OPTIONS: {
   { id: 'in_app', label: 'In-App Only', desc: 'Dashboard bell alerts', icon: Bell },
 ];
 
-export const UserProfilePanel: React.FC = () => {
+interface UserProfilePanelProps {
+  pickups?: PickupRequest[];
+  onSchedulePickup?: () => void;
+}
+
+export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({
+  pickups = [],
+  onSchedulePickup,
+}) => {
   const {
     dbUser,
     firestoreProfile,
@@ -174,7 +184,10 @@ export const UserProfilePanel: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="space-y-6">
+      <EcoLevelProfileSection pickups={pickups} onSchedulePickup={onSchedulePickup} />
+
+      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Left Column: Identity, Organization Type & Role */}
       <div className="lg:col-span-7 space-y-6">
         <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-5">
@@ -498,5 +511,6 @@ export const UserProfilePanel: React.FC = () => {
         </div>
       </div>
     </form>
+    </div>
   );
 };

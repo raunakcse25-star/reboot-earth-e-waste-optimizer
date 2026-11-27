@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Menu, Moon, Recycle, Sun, X } from 'lucide-react';
+import { AudioLines, Clapperboard, Menu, Mic, Moon, Recycle, Sun, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { apiFetch } from './lib/api';
 import type { AnalyticsSummary, Facility } from './types';
@@ -10,8 +10,12 @@ import { DashboardShell } from './components/DashboardShell';
 import { AuthPage, type AuthMode } from './components/AuthPage';
 import { EcoBotWidget } from './components/EcoBotWidget';
 import { LiveVoicePanel } from './components/LiveVoicePanel';
+import { LiveSearchIntelPanel } from './components/LiveSearchIntelPanel';
+import { AudioTranscriberPanel } from './components/AudioTranscriber';
+import { ImageToVideoPanel } from './components/ImageToVideoPanel';
 import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
 import { ScenesStudio } from './components/three/ScenesStudio';
+import { CircuitRushGame } from './components/CircuitRushGame';
 
 const QUOTA_DOC_URL =
   'https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors';
@@ -23,6 +27,8 @@ export default function App() {
   const [inDashboard, setInDashboard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
+  const [aiStudioTab, setAiStudioTab] = useState<'voice' | 'transcribe' | 'animate'>('voice');
+  const [returnToDashboardAfterGame, setReturnToDashboardAfterGame] = useState(false);
 
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -78,9 +84,29 @@ export default function App() {
 
   const handleNavigate = (target: PublicRoute) => {
     setInDashboard(false);
+    if (target === 'game') {
+      setReturnToDashboardAfterGame(false);
+    }
     setRoute(target);
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLaunchGameFromDashboard = () => {
+    setReturnToDashboardAfterGame(true);
+    setInDashboard(false);
+    setRoute('game');
+  };
+
+  const handleExitGame = () => {
+    if (returnToDashboardAfterGame && isAuthenticated) {
+      setReturnToDashboardAfterGame(false);
+      setRoute('home');
+      setInDashboard(true);
+    } else {
+      setReturnToDashboardAfterGame(false);
+      setRoute('home');
+    }
   };
 
   const handleGlobalSearchSelect = (selection: GlobalSearchSelection) => {
@@ -134,9 +160,15 @@ export default function App() {
     { id: 'optimizer', label: 'Optimizer' },
     { id: 'voice', label: 'Voice AI' },
     { id: 'scenes', label: '3D Scenes' },
+    { id: 'game', label: 'Arcade' },
     { id: 'knowledge', label: 'Knowledge Hub' },
     { id: 'about', label: 'About' },
   ];
+
+  // Full-viewport Game Shell replaces website chrome completely when active
+  if (!inDashboard && route === 'game') {
+    return <CircuitRushGame onExit={handleExitGame} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#EFF7FF] dark:bg-[#040E1A] text-slate-900 dark:text-sky-50 transition-colors">
@@ -276,6 +308,7 @@ export default function App() {
             facilities={facilities}
             onRefreshGlobal={() => void loadPublicData()}
             onExitDashboard={() => setInDashboard(false)}
+            onLaunchGame={handleLaunchGameFromDashboard}
           />
         ) : (
           <>
@@ -354,65 +387,124 @@ export default function App() {
                   className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-sky-200/40 via-sky-100/20 to-transparent dark:from-sky-900/25 dark:via-sky-950/10 dark:to-transparent"
                 />
                 <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-                  <div className="space-y-2.5 max-w-3xl">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
-                      Gemini 3.8 Live · Real-Time Voice Conversation
-                    </p>
-                    <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
-                      Speak Directly with EcoBot Voice
-                    </h1>
-                    <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
-                      Have a low-latency, bidirectional voice conversation in English, हिन्दी, or Hinglish. Interrupt naturally at any time and query live verified collection centres, CO₂e impact stats, or safe battery disposal steps hands-free.
-                    </p>
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div className="space-y-2.5 max-w-3xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+                        Multimodal Gemini AI Studio
+                      </p>
+                      <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
+                        Voice AI, Audio Transcription &amp; Video Animator
+                      </h1>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
+                        Talk live with EcoBot Voice, transcribe microphone recordings verbatim with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-3.5-transcribe</code>, or animate uploaded photos into 16:9 / 9:16 videos with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-omni-1.2-flash</code>.
+                      </p>
+                    </div>
+
+                    <div className="inline-flex flex-wrap rounded-xl border border-slate-200 dark:border-sky-900/70 p-1 bg-white dark:bg-[#0B223B] gap-1 self-start md:self-auto shrink-0">
+                      {(
+                        [
+                          { id: 'voice', label: 'Live Voice & Search', icon: AudioLines },
+                          { id: 'transcribe', label: 'Audio Transcribe', icon: Mic },
+                          { id: 'animate', label: 'Animate Photo to Video', icon: Clapperboard },
+                        ] as const
+                      ).map((tab) => {
+                        const Icon = tab.icon;
+                        const active = aiStudioTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setAiStudioTab(tab.id)}
+                            className={`px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                              active
+                                ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                                : 'text-slate-600 dark:text-sky-200/80 hover:bg-slate-100 dark:hover:bg-sky-900/40'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    <div className="lg:col-span-8">
-                      <LiveVoicePanel />
-                    </div>
-                    <aside className="lg:col-span-4 space-y-4">
-                      <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
-                          Live Voice Capabilities
-                        </h3>
-                        <ul className="space-y-2.5 text-xs text-slate-600 dark:text-sky-200/80 leading-relaxed">
-                          <li>
-                            <strong className="text-slate-900 dark:text-sky-100">Real-Time Audio Streaming:</strong>{' '}
-                            16 kHz microphone input and gapless 24 kHz spoken replies with instant barge-in interruption.
-                          </li>
-                          <li>
-                            <strong className="text-slate-900 dark:text-sky-100">Live Database Tooling:</strong>{' '}
-                            Ask for verified e-waste centers in any city or live platform CO₂e savings to trigger real-time lookups mid-call.
-                          </li>
-                          <li>
-                            <strong className="text-slate-900 dark:text-sky-100">Multilingual &amp; Transcripts:</strong>{' '}
-                            Switch between 5 voice personas and English, हिन्दी, or Hinglish with synchronized live transcripts.
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
-                          Continue in Platform
-                        </h3>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleNavigate('centres')}
-                            className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
-                          >
-                            Browse Verified Facility Map →
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleOpenDashboard}
-                            className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 text-left transition-colors cursor-pointer"
-                          >
-                            Schedule a Doorstep Pickup in Dashboard →
-                          </button>
+                  {aiStudioTab === 'voice' && (
+                    <>
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <div className="lg:col-span-8">
+                          <LiveVoicePanel />
                         </div>
+                        <aside className="lg:col-span-4 space-y-4">
+                          <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                              Live Voice Capabilities
+                            </h3>
+                            <ul className="space-y-2.5 text-xs text-slate-600 dark:text-sky-200/80 leading-relaxed">
+                              <li>
+                                <strong className="text-slate-900 dark:text-sky-100">Real-Time Audio Streaming:</strong>{' '}
+                                16 kHz microphone input and gapless 24 kHz spoken replies with instant barge-in interruption.
+                              </li>
+                              <li>
+                                <strong className="text-slate-900 dark:text-sky-100">Live Database Tooling:</strong>{' '}
+                                Ask for verified e-waste centers in any city or live platform CO₂e savings to trigger real-time lookups mid-call.
+                              </li>
+                              <li>
+                                <strong className="text-slate-900 dark:text-sky-100">Live Google Search Grounding:</strong>{' '}
+                                Ask for today&apos;s scrap metal prices, CPCB EPR updates, or OEM take-back offers — EcoBot Voice queries Google Search via <code className="font-mono text-[11px]">gemini-4-hydrogen</code> and cites verified sources live.
+                              </li>
+                              <li>
+                                <strong className="text-slate-900 dark:text-sky-100">Multilingual &amp; Transcripts:</strong>{' '}
+                                Switch between 5 voice personas and English, हिन्दी, or Hinglish with synchronized live transcripts.
+                              </li>
+                            </ul>
+                          </div>
+                          <div className="p-5 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-3">
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+                              Continue in Platform
+                            </h3>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setAiStudioTab('transcribe')}
+                                className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
+                              >
+                                Record &amp; Transcribe Audio (gemini-3.5-transcribe) →
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAiStudioTab('animate')}
+                                className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
+                              >
+                                Animate Photo into 16:9 / 9:16 Video →
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleOpenDashboard}
+                                className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 text-left transition-colors cursor-pointer"
+                              >
+                                Schedule a Doorstep Pickup in Dashboard →
+                              </button>
+                            </div>
+                          </div>
+                        </aside>
                       </div>
-                    </aside>
-                  </div>
+
+                      {/* Companion Live Google Search Grounding Panel */}
+                      <div className="pt-4">
+                        <LiveSearchIntelPanel
+                          title="Real-Time Google Search Grounded E-Waste Intel"
+                          subtitle="Powered by gemini-4-hydrogen with live Google Search — verify current scrap metal prices, CPCB E-Waste & Battery Rules updates, and OEM take-back programs with direct web citations."
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {aiStudioTab === 'transcribe' && <AudioTranscriberPanel />}
+
+                  {aiStudioTab === 'animate' && <ImageToVideoPanel />}
                 </div>
               </div>
             )}
