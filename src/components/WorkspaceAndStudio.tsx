@@ -4,12 +4,11 @@ import {
   CalendarPlus,
   Clapperboard,
   CloudUpload,
-  Download,
   ExternalLink,
-  Image as ImageIcon,
   Loader2,
   Mail,
   MessageSquare,
+  Music,
   Pencil,
   RefreshCw,
   Send,
@@ -18,7 +17,6 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../lib/api';
 import {
   CHAT_CONSOLE_CONFIG_URL,
   createGoogleCalendarEvent,
@@ -41,6 +39,8 @@ import {
 import { ConfirmDialog } from './ConfirmDialog';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { ImageToVideoPanel } from './ImageToVideoPanel';
+import { ImageStudioPanel } from './ImageStudioPanel';
+import { MusicStudioPanel } from './MusicStudioPanel';
 import type { AnalyticsSummary } from '../types';
 
 function toLocalDateTimeInput(isoOrDate: string): string {
@@ -71,7 +71,9 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
   analytics,
 }) => {
   const { workspaceToken, firebaseUser, signingIn, signInWithGoogle } = useAuth();
-  const [activeTab, setActiveTab] = useState<'calendar' | 'gmail' | 'drive' | 'chat' | 'contacts' | 'studio' | 'video'>('calendar');
+  const [activeTab, setActiveTab] = useState<
+    'calendar' | 'gmail' | 'drive' | 'chat' | 'contacts' | 'studio' | 'video' | 'music'
+  >('calendar');
 
   // Google Calendar state
   const [calendars, setCalendars] = useState<CalendarListItem[]>([]);
@@ -132,16 +134,6 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
     run: () => Promise<void>;
   }>(null);
   const [actionBusy, setActionBusy] = useState(false);
-
-  // AI Campaign Studio state
-  const [studioPrompt, setStudioPrompt] = useState(
-    'Clean editorial poster for an urban electronic waste recycling drive, emerald leaves emerging from recycled circuit board copper traces, minimalist modern design, no text'
-  );
-  const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
-  const [aspectRatio, setAspectRatio] = useState<'16:9' | '1:1' | '4:3' | '3:4' | '9:16'>('16:9');
-  const [studioLoading, setStudioLoading] = useState(false);
-  const [studioError, setStudioError] = useState<string | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
   const runConfirmedAction = async () => {
     if (!pendingAction) return;
@@ -219,31 +211,6 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
     }
   };
 
-  const handleGenerateVisual = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStudioLoading(true);
-    setStudioError(null);
-    try {
-      const res = await apiFetch<{ dataUrl?: string; imageUrl?: string }>(
-        '/api/ai/generate-image',
-        {
-          method: 'POST',
-          body: JSON.stringify({ prompt: studioPrompt, imageSize, aspectRatio }),
-        },
-        false
-      );
-      const url = res.dataUrl || res.imageUrl;
-      if (!url) {
-        throw new Error('No image data was returned by the generator.');
-      }
-      setGeneratedImage(url);
-    } catch (err: any) {
-      setStudioError(err?.message || 'Unable to generate campaign visual.');
-    } finally {
-      setStudioLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -264,8 +231,9 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
               { id: 'drive', label: 'Drive', icon: CloudUpload },
               { id: 'chat', label: 'Chat', icon: MessageSquare },
               { id: 'contacts', label: 'Contacts', icon: Users },
-              { id: 'studio', label: 'AI Visual Studio', icon: Sparkles },
-              { id: 'video', label: 'Animate to Video', icon: Clapperboard },
+              { id: 'studio', label: 'Image Studio', icon: Sparkles },
+              { id: 'video', label: 'Video Studio', icon: Clapperboard },
+              { id: 'music', label: 'Music Studio', icon: Music },
             ] as const
           ).map((t) => {
             const Icon = t.icon;
@@ -278,7 +246,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
                   setWsError(null);
                   setWsSuccess(null);
                 }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                   activeTab === t.id
                     ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
                     : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
@@ -292,7 +260,7 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
         </div>
       </div>
 
-      {!workspaceToken && activeTab !== 'studio' && activeTab !== 'video' && (
+      {!workspaceToken && activeTab !== 'studio' && activeTab !== 'video' && activeTab !== 'music' && (
         <div className="p-5 rounded-xl border border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
@@ -895,103 +863,14 @@ export const WorkspaceAndStudio: React.FC<{ analytics: AnalyticsSummary | null }
         </div>
       )}
 
-      {/* AI Campaign Visual Studio Tab */}
-      {activeTab === 'studio' && (
-        <div className="p-6 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] space-y-5">
-          <div>
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-sky-500" />
-              Eco-Campaign Visual Generator (Gemini Pro Image)
-            </h4>
-            <p className="text-xs text-slate-600 dark:text-sky-200/70 mt-1">
-              Create custom high-resolution awareness posters for campus, residential, or corporate e-waste drives with 1K, 2K, or 4K output.
-            </p>
-          </div>
+      {/* AI Image Create & Edit Studio Tab */}
+      {activeTab === 'studio' && <ImageStudioPanel />}
 
-          <form onSubmit={handleGenerateVisual} className="space-y-4">
-            <textarea
-              rows={3}
-              required
-              value={studioPrompt}
-              onChange={(e) => setStudioPrompt(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
-            />
-
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 dark:text-sky-200/70">Resolution:</span>
-                  {(['1K', '2K', '4K'] as const).map((sz) => (
-                    <button
-                      key={sz}
-                      type="button"
-                      onClick={() => setImageSize(sz)}
-                      className={`px-2.5 py-1 rounded text-xs font-mono font-semibold border ${
-                        imageSize === sz
-                          ? 'border-sky-500 bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
-                          : 'border-slate-300 dark:border-sky-800 text-slate-600 dark:text-sky-200/75'
-                      }`}
-                    >
-                      {sz}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 dark:text-sky-200/70">Ratio:</span>
-                  <select
-                    value={aspectRatio}
-                    onChange={(e) => setAspectRatio(e.target.value as any)}
-                    className="px-2.5 py-1 text-xs rounded border border-slate-300 dark:border-sky-800 bg-slate-50 dark:bg-[#061526] text-slate-900 dark:text-sky-50"
-                  >
-                    <option value="16:9">16:9 Banner</option>
-                    <option value="1:1">1:1 Square</option>
-                    <option value="4:3">4:3 Presentation</option>
-                    <option value="3:4">3:4 Poster</option>
-                    <option value="9:16">9:16 Story</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={studioLoading}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 disabled:opacity-60 inline-flex items-center gap-1.5"
-              >
-                {studioLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                Generate {imageSize} Visual
-              </button>
-            </div>
-          </form>
-
-          {studioError && (
-            <div className="p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/35 text-xs text-amber-900 dark:text-amber-200">
-              {studioError}
-            </div>
-          )}
-
-          {generatedImage && (
-            <div className="space-y-3 pt-2">
-              <img
-                src={generatedImage}
-                alt="Generated e-waste awareness visual"
-                referrerPolicy="no-referrer"
-                className="w-full max-h-[460px] object-contain rounded-xl border border-slate-200 dark:border-sky-900/60 bg-slate-950"
-              />
-              <a
-                href={generatedImage}
-                download={`reboot-earth-campaign-${imageSize}.png`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download Artwork
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* AI Video Studio (Text & Photo to Video) Tab */}
       {activeTab === 'video' && <ImageToVideoPanel />}
+
+      {/* AI Music Studio (Lyria 3 Clip & Pro) Tab */}
+      {activeTab === 'music' && <MusicStudioPanel />}
 
       <ConfirmDialog
         open={Boolean(pendingAction)}

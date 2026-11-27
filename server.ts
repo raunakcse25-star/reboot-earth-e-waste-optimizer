@@ -50,6 +50,7 @@ import {
   fastDeviceTriage,
   formatGeminiError,
   generateCampaignVisual,
+  generateMusicTrack,
   getCachedAnimatedVideo,
   identifyDeviceFromImage,
   mapsGroundedFacilitySearch,
@@ -58,6 +59,7 @@ import {
   searchEWasteRegulations,
   startImageToVideoAnimation,
   transcribeAudio,
+  type ChatModelMode,
 } from './src/server/gemini.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -830,15 +832,18 @@ async function startServer() {
   // --- Server-Side Gemini AI Routes ---
   app.post('/api/ai/chat', rateLimit(25), async (req, res) => {
     try {
-      const { message, history = [], language = 'en', useSearch = false } = req.body || {};
+      const { message, history = [], language = 'en', useSearch = false, modelMode = 'general' } = req.body || {};
       if (!message || typeof message !== 'string' || !message.trim()) {
         return res.status(400).json({ error: 'A chat message is required.' });
       }
+      const allowedModes = new Set<ChatModelMode>(['fast', 'general', 'complex', 'deep']);
+      const safeMode: ChatModelMode = allowedModes.has(modelMode) ? modelMode : 'general';
       const data = await chatWithEcoBot({
         message: message.trim().slice(0, 1500),
         history: Array.isArray(history) ? history : [],
         language: String(language),
         useSearch: Boolean(useSearch),
+        modelMode: safeMode,
       });
       res.json(data);
     } catch (error: any) {
@@ -993,20 +998,40 @@ async function startServer() {
 
   app.post('/api/ai/generate-image', rateLimit(8), async (req, res) => {
     try {
-      const { prompt, imageSize = '1K', aspectRatio = '16:9' } = req.body || {};
-      if (!prompt || typeof prompt !== 'string') {
-        return res.status(400).json({ error: 'A campaign visual prompt is required.' });
+      const {
+        prompt,
+        imageSize = '1K',
+        aspectRatio = '16:9',
+        sourceImageBase64,
+        sourceMimeType,
+      } = req.body || {};
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        return res.status(400).json({ error: 'An image creation or edit prompt is required.' });
       }
       const validSizes = ['1K', '2K', '4K'];
       const validRatios = ['1:1', '16:9', '4:3', '3:4', '9:16'];
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'] as const;
+      let safeSourceMime: 'image/jpeg' | 'image/png' | 'image/webp' | undefined;
+      if (sourceImageBase64) {
+        if (typeof sourceImageBase64 !== 'string' || sourceImageBase64.length > 14_000_000) {
+          return res.status(400).json({ error: 'Uploaded source image is too large. Keep images under 10 MB.' });
+        }
+        if (typeof sourceMimeType !== 'string' || !allowedMimes.includes(sourceMimeType as any)) {
+          return res.status(400).json({ error: 'Only JPEG, PNG, and WebP images are supported for editing.' });
+        }
+        safeSourceMime = sourceMimeType as 'image/jpeg' | 'image/png' | 'image/webp';
+      }
+
       const result = await generateCampaignVisual({
-        prompt: prompt.slice(0, 800),
+        prompt: prompt.trim().slice(0, 1000),
         imageSize: validSizes.includes(imageSize) ? imageSize : '1K',
         aspectRatio: validRatios.includes(aspectRatio) ? aspectRatio : '16:9',
+        sourceImageBase64: typeof sourceImageBase64 === 'string' ? sourceImageBase64 : undefined,
+        sourceMimeType: safeSourceMime,
       });
       res.json(result);
     } catch (error: any) {
-      console.error('Image generation error:', error);
+      console.error('Image generation/edit error:', error);
       const rawMsg = error?.message || 'Image generation failed.';
       const isBilling =
         rawMsg.includes('429') ||
@@ -1016,13 +1041,56 @@ async function startServer() {
         rawMsg.includes('billing');
       res.status(isBilling ? 402 : 502).json({
         error: isBilling
-          ? 'High-resolution image generation (gemini-3-pro-image-preview) requires a billing-enabled Gemini API key in Settings > Secrets.'
+          ? 'Image creation and editing with gemini-nano-banana-2.1 requires a billing-enabled Gemini API key in Settings > Secrets.'
           : rawMsg,
       });
     }
   });
 
-  // --- Image-to-Video Animation (gemini-omni-1.2-flash via Interactions API) ---
+  // --- Music Generation (lyria-3-clip-preview / lyria-3-pro-preview) ---
+  app.post('/api/ai/generate-music', rateLimit(6), async (req, res) => {
+    try {
+      const { prompt, trackType = 'clip', imageBase64, mimeType } = req.body || {};
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        return res.status(400).json({ error: 'A music prompt is required.' });
+      }
+      const safeTrackType = trackType === 'pro' ? 'pro' : 'clip';
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'] as const;
+      let safeMime: 'image/jpeg' | 'image/png' | 'image/webp' | undefined;
+      if (imageBase64) {
+        if (typeof imageBase64 !== 'string' || imageBase64.length > 10_000_000) {
+          return res.status(400).json({ error: 'Reference image is too large. Keep images under 7 MB.' });
+        }
+        if (typeof mimeType !== 'string' || !allowedMimes.includes(mimeType as any)) {
+          return res.status(400).json({ error: 'Only JPEG, PNG, and WebP reference images are supported.' });
+        }
+        safeMime = mimeType as 'image/jpeg' | 'image/png' | 'image/webp';
+      }
+
+      const result = await generateMusicTrack({
+        prompt: prompt.trim().slice(0, 800),
+        trackType: safeTrackType,
+        imageBase64: typeof imageBase64 === 'string' ? imageBase64 : undefined,
+        mimeType: safeMime,
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error('Lyria music generation error:', error);
+      const rawMsg = error?.message || 'Unable to generate music track.';
+      const isPaidKeyError =
+        /\b(402|403|429)\b|PERMISSION_DENIED|RESOURCE_EXHAUSTED|billing|paid|quota/i.test(rawMsg);
+      if (isPaidKeyError) {
+        return res.status(402).json({
+          error:
+            'Music generation with Lyria (lyria-3-clip-preview / lyria-3-pro-preview) requires a paid Gemini API key in Settings > Secrets.',
+        });
+      }
+      const formatted = formatGeminiError(error, 'Unable to generate music right now.');
+      res.status(formatted.status).json({ error: formatted.message });
+    }
+  });
+
+  // --- Text-to-Video & Image-to-Video (gemini-omni-1.2-flash via Interactions API) ---
   app.post('/api/ai/animate-video', rateLimit(6), async (req, res) => {
     try {
       const {
@@ -1055,8 +1123,13 @@ async function startServer() {
           return res.status(400).json({ error: 'Only JPEG, PNG, and WebP photos are supported.' });
         }
         safeMime = mimeType as 'image/jpeg' | 'image/png' | 'image/webp';
-      } else if (!previousInteractionId || typeof previousInteractionId !== 'string') {
-        return res.status(400).json({ error: 'Please upload a photo (JPEG, PNG, or WebP) to animate.' });
+      } else if (
+        (!previousInteractionId || typeof previousInteractionId !== 'string') &&
+        (!prompt || typeof prompt !== 'string' || !prompt.trim())
+      ) {
+        return res.status(400).json({
+          error: 'Enter a text prompt to generate a video, or upload a photo (JPEG, PNG, or WebP) to animate.',
+        });
       }
 
       const result = await startImageToVideoAnimation({

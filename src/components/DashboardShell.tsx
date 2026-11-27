@@ -16,10 +16,12 @@ import {
   Gamepad2,
   Globe,
   History,
+  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
   MapPin,
   Mic,
+  Music,
   PackageCheck,
   Route,
   Settings,
@@ -56,6 +58,8 @@ import { LiveVoicePanel } from './LiveVoicePanel';
 import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
 import { AudioTranscriberPanel } from './AudioTranscriber';
 import { ImageToVideoPanel } from './ImageToVideoPanel';
+import { ImageStudioPanel } from './ImageStudioPanel';
+import { MusicStudioPanel } from './MusicStudioPanel';
 import { UserProfilePanel } from './UserProfilePanel';
 import {
   COLLECTOR_ACCEPTED_STATUSES,
@@ -73,7 +77,9 @@ type DashTab =
   | 'targets'
   | 'voice'
   | 'transcribe'
+  | 'images'
   | 'animate'
+  | 'music'
   | 'intel'
   | 'schedule'
   | 'pickups'
@@ -342,7 +348,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
     { id: 'transcribe', label: 'Audio Transcribe', icon: Mic, visible: true },
-    { id: 'animate', label: 'Animate to Video', icon: Clapperboard, visible: true },
+    { id: 'images', label: 'Image Studio', icon: ImageIcon, visible: true },
+    { id: 'animate', label: 'Video Studio', icon: Clapperboard, visible: true },
+    { id: 'music', label: 'Music Studio', icon: Music, visible: true },
     { id: 'intel', label: 'Live Web Intel', icon: Globe, visible: true },
     { id: 'schedule', label: 'Schedule Pickup', icon: CalendarClock, visible: true },
     { id: 'pickups', label: 'Pickup Requests', icon: PackageCheck, visible: true },
@@ -945,7 +953,11 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
         {activeTab === 'transcribe' && <AudioTranscriberPanel />}
 
+        {activeTab === 'images' && <ImageStudioPanel />}
+
         {activeTab === 'animate' && <ImageToVideoPanel />}
+
+        {activeTab === 'music' && <MusicStudioPanel />}
 
         {activeTab === 'intel' && (
           <LiveSearchIntelPanel

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AudioLines, Clapperboard, Menu, Mic, Moon, Recycle, Sun, X } from 'lucide-react';
+import { AudioLines, Clapperboard, Image as ImageIcon, Menu, Mic, Moon, Music, Recycle, Sun, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { apiFetch } from './lib/api';
 import type { AnalyticsSummary, Facility } from './types';
@@ -13,6 +13,8 @@ import { LiveVoicePanel } from './components/LiveVoicePanel';
 import { LiveSearchIntelPanel } from './components/LiveSearchIntelPanel';
 import { AudioTranscriberPanel } from './components/AudioTranscriber';
 import { ImageToVideoPanel } from './components/ImageToVideoPanel';
+import { ImageStudioPanel } from './components/ImageStudioPanel';
+import { MusicStudioPanel } from './components/MusicStudioPanel';
 import { GlobalHeaderSearch, type GlobalSearchSelection } from './components/GlobalHeaderSearch';
 import { ScenesStudio } from './components/three/ScenesStudio';
 import { CircuitRushGame } from './components/CircuitRushGame';
@@ -27,7 +29,9 @@ export default function App() {
   const [inDashboard, setInDashboard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
-  const [aiStudioTab, setAiStudioTab] = useState<'voice' | 'transcribe' | 'animate'>('voice');
+  const [aiStudioTab, setAiStudioTab] = useState<
+    'voice' | 'transcribe' | 'images' | 'animate' | 'music'
+  >('voice');
   const [returnToDashboardAfterGame, setReturnToDashboardAfterGame] = useState(false);
 
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
@@ -393,12 +397,14 @@ export default function App() {
                         Multimodal Gemini AI Studio
                       </p>
                       <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-sky-50">
-                        Voice AI, Audio Transcription &amp; Video Animator
+                        Voice, Transcription, Images, Video &amp; Music Studio
                       </h1>
                       <p className="text-sm sm:text-base text-slate-600 dark:text-sky-100/80 leading-relaxed">
-                        Talk live with EcoBot Voice, transcribe microphone recordings verbatim with{' '}
-                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-3.5-transcribe</code>, or animate uploaded photos into 16:9 / 9:16 videos with{' '}
-                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-omni-1.2-flash</code>.
+                        Talk live with EcoBot Voice, transcribe audio with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-3.5-transcribe</code>, create &amp; edit artwork with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-nano-banana-2.1</code>, generate text/photo videos with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">gemini-omni-1.2-flash</code>, or compose soundtracks with{' '}
+                        <code className="font-mono text-xs text-sky-700 dark:text-sky-300">Lyria 3</code>.
                       </p>
                     </div>
 
@@ -407,7 +413,9 @@ export default function App() {
                         [
                           { id: 'voice', label: 'Live Voice & Search', icon: AudioLines },
                           { id: 'transcribe', label: 'Audio Transcribe', icon: Mic },
-                          { id: 'animate', label: 'Animate Photo to Video', icon: Clapperboard },
+                          { id: 'images', label: 'Create & Edit Images', icon: ImageIcon },
+                          { id: 'animate', label: 'Video Studio', icon: Clapperboard },
+                          { id: 'music', label: 'Music Studio', icon: Music },
                         ] as const
                       ).map((tab) => {
                         const Icon = tab.icon;
@@ -417,7 +425,7 @@ export default function App() {
                             key={tab.id}
                             type="button"
                             onClick={() => setAiStudioTab(tab.id)}
-                            className={`px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            className={`px-3 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                               active
                                 ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
                                 : 'text-slate-600 dark:text-sky-200/80 hover:bg-slate-100 dark:hover:bg-sky-900/40'
@@ -475,10 +483,24 @@ export default function App() {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => setAiStudioTab('images')}
+                                className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
+                              >
+                                Create &amp; Edit Images (Nano Banana 2.1) →
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setAiStudioTab('animate')}
                                 className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
                               >
-                                Animate Photo into 16:9 / 9:16 Video →
+                                Generate Text or Photo Video (16:9 / 9:16) →
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAiStudioTab('music')}
+                                className="w-full px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:border-sky-500 text-left transition-colors cursor-pointer"
+                              >
+                                Compose Music &amp; Clips (Lyria 3) →
                               </button>
                               <button
                                 type="button"
@@ -504,7 +526,11 @@ export default function App() {
 
                   {aiStudioTab === 'transcribe' && <AudioTranscriberPanel />}
 
+                  {aiStudioTab === 'images' && <ImageStudioPanel />}
+
                   {aiStudioTab === 'animate' && <ImageToVideoPanel />}
+
+                  {aiStudioTab === 'music' && <MusicStudioPanel />}
                 </div>
               </div>
             )}

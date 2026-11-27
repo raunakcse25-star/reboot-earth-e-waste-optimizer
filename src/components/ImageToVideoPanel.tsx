@@ -19,6 +19,7 @@ import { MicTranscribeButton } from './AudioTranscriber';
 type AspectRatioOption = '16:9' | '9:16';
 type DurationOption = '5s' | '8s' | '10s';
 type ResolutionOption = '720p' | '1080p';
+type VideoMode = 'text' | 'image';
 
 interface AnimatedClipRecord {
   id: string;
@@ -71,6 +72,24 @@ const MOTION_PRESETS = [
   },
 ];
 
+const TEXT_TO_VIDEO_PRESETS = [
+  {
+    label: 'Solar E-Waste Hub Aerial',
+    prompt:
+      'Cinematic golden-hour drone shot gliding over a clean solar-powered e-waste recycling campus as electric collection vans arrive at bright glass sorting bays, crisp architectural lighting.',
+  },
+  {
+    label: 'Circuit Board Recovery Macro',
+    prompt:
+      'Macro studio tracking shot gliding across gleaming emerald circuit boards and recovered copper traces, shallow depth of field, cool cyan rim lighting, ultra-smooth 24fps motion.',
+  },
+  {
+    label: 'Vertical Eco-Drive Reel',
+    prompt:
+      'Energetic vertical social video of diverse community volunteers dropping off old laptops and smartphones at a sleek urban recycling kiosk, sunlit trees swaying in background.',
+  },
+];
+
 function fileToBase64(file: Blob): Promise<{ base64: string; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -100,6 +119,7 @@ export const ImageToVideoPanel: React.FC = () => {
   const pollTimerRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<number | null>(null);
 
+  const [mode, setMode] = useState<VideoMode>('text');
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoMime, setPhotoMime] = useState<'image/jpeg' | 'image/png' | 'image/webp'>('image/jpeg');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -110,7 +130,7 @@ export const ImageToVideoPanel: React.FC = () => {
   const [duration, setDuration] = useState<DurationOption>('8s');
   const [resolution, setResolution] = useState<ResolutionOption>('720p');
   const [prompt, setPrompt] = useState(
-    'Slow cinematic camera push-in bringing this scene to life with realistic ambient light and gentle natural movement.'
+    'Cinematic golden-hour drone shot gliding over a clean solar-powered e-waste recycling campus as electric collection vans arrive at bright glass sorting bays, crisp architectural lighting.'
   );
   const [followUpPrompt, setFollowUpPrompt] = useState('');
 
@@ -262,14 +282,15 @@ export const ImageToVideoPanel: React.FC = () => {
 
   const startGeneration = async (opts?: { previousInteractionId?: string; overridePrompt?: string }) => {
     const isFollowUp = Boolean(opts?.previousInteractionId);
-    if (!isFollowUp && !photoBase64) {
-      setError('Upload a photo or choose a sample image first.');
+    const usePhotoInput = !isFollowUp && mode === 'image';
+    if (usePhotoInput && !photoBase64) {
+      setError('Upload a photo or choose a sample image first, or switch to Text-to-Video mode.');
       return;
     }
 
     const usedPrompt = (opts?.overridePrompt ?? prompt).trim();
     if (!usedPrompt) {
-      setError('Enter a motion prompt or dictate one using the microphone button.');
+      setError('Enter a video prompt or dictate one using the microphone button.');
       return;
     }
 
@@ -280,7 +301,9 @@ export const ImageToVideoPanel: React.FC = () => {
     setStatusMessage(
       isFollowUp
         ? 'Submitting multi-turn video edit/extension to gemini-omni-1.2-flash...'
-        : 'Uploading frame and starting Interactions API video job (gemini-omni-1.2-flash)...'
+        : usePhotoInput
+          ? 'Uploading frame and starting photo-to-video job (gemini-omni-1.2-flash)...'
+          : 'Submitting text-to-video job via Interactions API (gemini-omni-1.2-flash)...'
     );
 
     elapsedTimerRef.current = window.setInterval(() => {
@@ -301,8 +324,8 @@ export const ImageToVideoPanel: React.FC = () => {
         {
           method: 'POST',
           body: JSON.stringify({
-            imageBase64: isFollowUp ? undefined : photoBase64,
-            mimeType: isFollowUp ? undefined : photoMime,
+            imageBase64: usePhotoInput ? photoBase64 : undefined,
+            mimeType: usePhotoInput ? photoMime : undefined,
             prompt: usedPrompt,
             aspectRatio,
             duration,
@@ -327,7 +350,7 @@ export const ImageToVideoPanel: React.FC = () => {
           duration,
           resolution,
           prompt: usedPrompt,
-          sourcePreviewUrl: photoPreview || undefined,
+          sourcePreviewUrl: usePhotoInput ? photoPreview || undefined : undefined,
           createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setActiveClip(newClip);
@@ -347,7 +370,7 @@ export const ImageToVideoPanel: React.FC = () => {
         duration,
         resolution,
         prompt: usedPrompt,
-        sourcePreviewUrl: photoPreview || undefined,
+        sourcePreviewUrl: usePhotoInput ? photoPreview || undefined : undefined,
       });
     } catch (err: any) {
       stopTimers();
@@ -365,118 +388,148 @@ export const ImageToVideoPanel: React.FC = () => {
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-sky-50 inline-flex items-center gap-2">
               <Clapperboard className="w-4 h-4 text-sky-500" />
-              Photo-to-Video Animation Studio
+              AI Video Studio (Text &amp; Photo to Video)
             </h3>
             <p className="text-xs text-slate-600 dark:text-sky-200/75 max-w-2xl">
-              Upload any photo of collected electronics, recycling facilities, or campaign visuals and animate it into a smooth{' '}
+              Generate original videos directly from a text prompt or animate an uploaded photo into a{' '}
               <strong className="text-slate-800 dark:text-sky-100">16:9 Landscape</strong> or{' '}
-              <strong className="text-slate-800 dark:text-sky-100">9:16 Portrait</strong> video powered by{' '}
+              <strong className="text-slate-800 dark:text-sky-100">9:16 Portrait</strong> clip powered by{' '}
               <span className="font-mono text-sky-700 dark:text-sky-300">gemini-omni-1.2-flash</span> via the Gemini Interactions API.
             </p>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300">
-            Interactions API · Omni Flash
-          </span>
+          <div className="inline-flex rounded-lg border border-slate-200 dark:border-sky-800 p-0.5 bg-slate-100 dark:bg-[#061526]">
+            <button
+              type="button"
+              disabled={generating}
+              onClick={() => {
+                setMode('text');
+                setError(null);
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                mode === 'text'
+                  ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                  : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Text-to-Video
+            </button>
+            <button
+              type="button"
+              disabled={generating}
+              onClick={() => {
+                setMode('image');
+                setError(null);
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                mode === 'image'
+                  ? 'bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950'
+                  : 'text-slate-600 dark:text-sky-200/75 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Animate Photo
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Photo Upload + Controls */}
+          {/* Left Column: Optional Photo Upload + Controls */}
           <div className="lg:col-span-6 space-y-5">
-            {/* Dropzone */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-800 dark:text-sky-100">
-                  1. Starting Frame Photo
-                </label>
-                {photoPreview && (
-                  <button
-                    type="button"
-                    disabled={generating}
-                    onClick={() => {
-                      setPhotoBase64(null);
-                      setPhotoPreview(null);
-                      setPhotoName('');
-                    }}
-                    className="text-[11px] text-slate-500 dark:text-sky-300/75 hover:text-red-500 inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Remove
-                  </button>
-                )}
-              </div>
+            {mode === 'image' && (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-800 dark:text-sky-100">
+                    1. Starting Frame Photo
+                  </label>
+                  {photoPreview && (
+                    <button
+                      type="button"
+                      disabled={generating}
+                      onClick={() => {
+                        setPhotoBase64(null);
+                        setPhotoPreview(null);
+                        setPhotoName('');
+                      }}
+                      className="text-[11px] text-slate-500 dark:text-sky-300/75 hover:text-red-500 inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove
+                    </button>
+                  )}
+                </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
 
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragActive(true);
-                }}
-                onDragLeave={() => setDragActive(false)}
-                onDrop={handleDrop}
-                onClick={() => !generating && fileInputRef.current?.click()}
-                className={`relative rounded-xl border-2 border-dashed transition-colors cursor-pointer overflow-hidden ${
-                  dragActive
-                    ? 'border-sky-500 bg-sky-50/70 dark:bg-sky-950/40'
-                    : 'border-slate-300 dark:border-sky-800/80 bg-slate-50/70 dark:bg-[#061526] hover:border-sky-400'
-                }`}
-              >
-                {photoPreview ? (
-                  <div className="relative">
-                    <img
-                      src={photoPreview}
-                      alt="Uploaded starting frame"
-                      className="w-full max-h-60 object-cover"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent px-3.5 py-2.5 flex items-center justify-between text-xs text-white">
-                      <span className="truncate font-medium">{photoName || 'Uploaded photo'}</span>
-                      <span className="text-[11px] text-sky-300 shrink-0 ml-2">Click to replace</span>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragActive(true);
+                  }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={handleDrop}
+                  onClick={() => !generating && fileInputRef.current?.click()}
+                  className={`relative rounded-xl border-2 border-dashed transition-colors cursor-pointer overflow-hidden ${
+                    dragActive
+                      ? 'border-sky-500 bg-sky-50/70 dark:bg-sky-950/40'
+                      : 'border-slate-300 dark:border-sky-800/80 bg-slate-50/70 dark:bg-[#061526] hover:border-sky-400'
+                  }`}
+                >
+                  {photoPreview ? (
+                    <div className="relative">
+                      <img
+                        src={photoPreview}
+                        alt="Uploaded starting frame"
+                        className="w-full max-h-60 object-cover"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent px-3.5 py-2.5 flex items-center justify-between text-xs text-white">
+                        <span className="truncate font-medium">{photoName || 'Uploaded photo'}</span>
+                        <span className="text-[11px] text-sky-300 shrink-0 ml-2">Click to replace</span>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-9 px-4 text-center space-y-2">
-                    <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 mx-auto flex items-center justify-center">
-                      <ImagePlus className="w-5 h-5" />
+                  ) : (
+                    <div className="py-9 px-4 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 mx-auto flex items-center justify-center">
+                        <ImagePlus className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-sky-100">
+                        Click to upload a photo or drag and drop here
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
+                        JPEG, PNG, or WebP up to 10 MB
+                      </p>
                     </div>
-                    <p className="text-xs font-semibold text-slate-800 dark:text-sky-100">
-                      Click to upload a photo or drag and drop here
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-sky-200/65">
-                      JPEG, PNG, or WebP up to 10 MB
-                    </p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              {/* Sample Photos Quick Loader */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-slate-500 dark:text-sky-200/65 mr-1">
-                  Or try a sample:
-                </span>
-                {SAMPLE_PHOTOS.map((sample) => (
-                  <button
-                    key={sample.label}
-                    type="button"
-                    disabled={generating}
-                    onClick={() => void handleLoadSample(sample)}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-slate-200 dark:border-sky-800/80 bg-white dark:bg-[#061526] text-slate-700 dark:text-sky-200 hover:border-sky-500 hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {sample.label}
-                  </button>
-                ))}
+                {/* Sample Photos Quick Loader */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-slate-500 dark:text-sky-200/65 mr-1">
+                    Or try a sample:
+                  </span>
+                  {SAMPLE_PHOTOS.map((sample) => (
+                    <button
+                      key={sample.label}
+                      type="button"
+                      disabled={generating}
+                      onClick={() => void handleLoadSample(sample)}
+                      className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-slate-200 dark:border-sky-800/80 bg-white dark:bg-[#061526] text-slate-700 dark:text-sky-200 hover:border-sky-500 hover:text-sky-700 dark:hover:text-sky-300 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {sample.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Aspect Ratio Selector: Strict 16:9 or 9:16 */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-800 dark:text-sky-100 block">
-                2. Video Aspect Ratio
+                {mode === 'image' ? '2. Video Aspect Ratio' : '1. Video Aspect Ratio'}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -564,11 +617,13 @@ export const ImageToVideoPanel: React.FC = () => {
               </div>
             </div>
 
-            {/* Motion Prompt with Microphone Transcription */}
+            {/* Prompt with Microphone Transcription */}
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <label className="text-xs font-semibold text-slate-800 dark:text-sky-100">
-                  3. Animation &amp; Camera Motion Prompt
+                  {mode === 'image'
+                    ? '3. Animation & Camera Motion Prompt'
+                    : '2. Video Scene & Motion Prompt'}
                 </label>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-slate-500 dark:text-sky-200/65">
@@ -590,12 +645,16 @@ export const ImageToVideoPanel: React.FC = () => {
                 value={prompt}
                 disabled={generating}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the camera movement, lighting, or action you want in the animated video..."
+                placeholder={
+                  mode === 'image'
+                    ? 'Describe the camera movement, lighting, or action you want in the animated video...'
+                    : 'Describe the full scene, subject, camera angle, lighting, and motion to generate...'
+                }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-sky-900/70 bg-slate-50 dark:bg-[#061526] text-xs sm:text-sm text-slate-900 dark:text-sky-50 leading-relaxed focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
 
               <div className="flex flex-wrap gap-1.5">
-                {MOTION_PRESETS.map((preset) => (
+                {(mode === 'text' ? TEXT_TO_VIDEO_PRESETS : MOTION_PRESETS).map((preset) => (
                   <button
                     key={preset.label}
                     type="button"
@@ -617,19 +676,23 @@ export const ImageToVideoPanel: React.FC = () => {
 
             <button
               type="button"
-              disabled={generating || !photoBase64}
+              disabled={generating || !prompt.trim() || (mode === 'image' && !photoBase64)}
               onClick={() => void startGeneration()}
               className="w-full py-3 px-4 rounded-xl text-sm font-semibold bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 dark:hover:bg-sky-400 text-white dark:text-sky-950 disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
             >
               {generating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Animating Photo ({formatElapsed(elapsedSec)})...
+                  {mode === 'image'
+                    ? `Animating Photo (${formatElapsed(elapsedSec)})...`
+                    : `Generating Video (${formatElapsed(elapsedSec)})...`}
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Generate {aspectRatio} Video with Omni Flash
+                  {mode === 'image'
+                    ? `Animate Photo to ${aspectRatio} Video`
+                    : `Generate ${aspectRatio} Video from Text`}
                 </>
               )}
             </button>
@@ -746,11 +809,12 @@ export const ImageToVideoPanel: React.FC = () => {
                     <Clapperboard className="w-5 h-5" />
                   </div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-sky-100">
-                    Your animated video will appear here
+                    Your generated video will appear here
                   </p>
                   <p className="text-xs text-slate-500 dark:text-sky-200/65 max-w-xs leading-relaxed">
-                    Upload a photo on the left, choose <span className="font-mono">16:9</span> landscape or{' '}
-                    <span className="font-mono">9:16</span> portrait, and click Generate.
+                    {mode === 'text'
+                      ? 'Describe your scene on the left, choose 16:9 landscape or 9:16 portrait, and click Generate.'
+                      : 'Upload a photo on the left, choose 16:9 landscape or 9:16 portrait, and click Animate.'}
                   </p>
                 </div>
               )}

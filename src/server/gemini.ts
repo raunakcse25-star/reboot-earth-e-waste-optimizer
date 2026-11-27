@@ -210,11 +210,21 @@ export interface ChatTurn {
   text: string;
 }
 
+export type ChatModelMode = 'fast' | 'general' | 'complex' | 'deep';
+
+const CHAT_MODEL_MAP: Record<ChatModelMode, string> = {
+  fast: 'gemini-3.1-flash-lite',
+  general: 'gemini-4-hydrogen',
+  complex: 'gemini-4-neon',
+  deep: 'gemini-4-carbon',
+};
+
 export async function chatWithEcoBot(params: {
   message: string;
   history: ChatTurn[];
   language: string;
   useSearch?: boolean;
+  modelMode?: ChatModelMode;
 }) {
   const ai = getAiClient();
   const langDirective =
@@ -251,15 +261,26 @@ export async function chatWithEcoBot(params: {
     delayMs?: number;
   };
 
+  const selectedMode: ChatModelMode = params.modelMode && CHAT_MODEL_MAP[params.modelMode] ? params.modelMode : 'general';
+  const primaryModel = CHAT_MODEL_MAP[selectedMode];
+
   const attempts: AttemptSpec[] = params.useSearch
     ? [
-        { model: PRIMARY_TEXT_MODEL, useSearch: true },
-        { model: PRIMARY_TEXT_MODEL, useSearch: true, delayMs: 900 },
+        { model: primaryModel, useSearch: true },
+        ...(primaryModel !== PRIMARY_TEXT_MODEL ? [{ model: PRIMARY_TEXT_MODEL, useSearch: true }] : []),
+        { model: PRIMARY_TEXT_MODEL, useSearch: true, delayMs: 800 },
         { model: FALLBACK_TEXT_MODEL, useSearch: true },
         { model: FALLBACK_TEXT_MODEL, useSearch: false },
       ]
     : [
-        { model: PRIMARY_TEXT_MODEL, useSearch: false, thinkingLow: true },
+        {
+          model: primaryModel,
+          useSearch: false,
+          thinkingLow: selectedMode === 'general',
+        },
+        ...(primaryModel !== PRIMARY_TEXT_MODEL
+          ? [{ model: PRIMARY_TEXT_MODEL, useSearch: false, thinkingLow: true }]
+          : []),
         { model: FALLBACK_TEXT_MODEL, useSearch: false },
       ];
 
@@ -476,8 +497,8 @@ export async function mapsGroundedFacilitySearch(params: {
     tool: 'maps' | 'search' | 'none';
     thinkingLow?: boolean;
   }> = [
-    { model: 'gemini-2.5-flash', tool: 'maps' },
     { model: PRIMARY_TEXT_MODEL, tool: 'maps', thinkingLow: true },
+    { model: 'gemini-2.5-flash', tool: 'maps' },
     { model: PRIMARY_TEXT_MODEL, tool: 'search', thinkingLow: true },
     { model: FALLBACK_TEXT_MODEL, tool: 'search' },
     { model: FALLBACK_TEXT_MODEL, tool: 'none' },
@@ -683,22 +704,37 @@ export async function generateCampaignVisual(params: {
   prompt: string;
   imageSize: '1K' | '2K' | '4K';
   aspectRatio: '1:1' | '16:9' | '4:3' | '3:4' | '9:16';
+  sourceImageBase64?: string;
+  sourceMimeType?: 'image/jpeg' | 'image/png' | 'image/webp';
 }) {
   const ai = getAiClient();
+  const isEdit = Boolean(params.sourceImageBase64 && params.sourceMimeType);
   const attempts = [
-    { model: 'gemini-3-pro-image-preview', withImageSize: true },
-    { model: 'gemini-3.1-flash-image-preview', withImageSize: true },
-    { model: 'gemini-2.5-flash-image', withImageSize: false },
+    { model: 'gemini-nano-banana-2.1', withImageSize: true },
+    { model: 'gemini-3.1-flash-lite-image', withImageSize: false },
   ];
+
+  const parts: any[] = [];
+  if (isEdit && params.sourceImageBase64 && params.sourceMimeType) {
+    const cleanBase64 = params.sourceImageBase64.replace(/^data:[^;]+;base64,/, '').trim();
+    if (!cleanBase64) {
+      throw new Error('Source image data is empty.');
+    }
+    parts.push({
+      inlineData: {
+        data: cleanBase64,
+        mimeType: params.sourceMimeType,
+      },
+    });
+  }
+  parts.push({ text: params.prompt.trim() });
 
   let lastError: any = null;
   for (const attempt of attempts) {
     try {
       const response = await ai.models.generateContent({
         model: attempt.model,
-        contents: {
-          parts: [{ text: params.prompt }],
-        },
+        contents: { parts },
         config: {
           imageConfig: {
             aspectRatio: params.aspectRatio,
@@ -720,7 +756,13 @@ export async function generateCampaignVisual(params: {
       }
 
       if (imageUrl) {
-        return { imageUrl, dataUrl: imageUrl, caption };
+        return {
+          imageUrl,
+          dataUrl: imageUrl,
+          caption: caption.trim(),
+          model: attempt.model,
+          mode: isEdit ? 'edit' : 'create',
+        };
       }
 
       lastError = new Error('The image model completed without returning image bytes.');
@@ -734,6 +776,71 @@ export async function generateCampaignVisual(params: {
   }
 
   throw lastError || new Error('The image model completed without returning image bytes.');
+}
+
+export async function generateMusicTrack(params: {
+  prompt: string;
+  trackType: 'clip' | 'pro';
+  imageBase64?: string;
+  mimeType?: 'image/jpeg' | 'image/png' | 'image/webp';
+}) {
+  const ai = getAiClient();
+  const model = params.trackType === 'pro' ? 'lyria-3-pro-preview' : 'lyria-3-clip-preview';
+  const promptText = params.prompt.trim();
+  if (!promptText) {
+    throw new Error('Please enter a music prompt describing the style, instruments, or mood.');
+  }
+
+  let contents: any = promptText;
+  if (params.imageBase64 && params.mimeType) {
+    const cleanBase64 = params.imageBase64.replace(/^data:[^;]+;base64,/, '').trim();
+    if (cleanBase64) {
+      contents = {
+        parts: [
+          { text: promptText },
+          { inlineData: { data: cleanBase64, mimeType: params.mimeType } },
+        ],
+      };
+    }
+  }
+
+  const responseStream = await ai.models.generateContentStream({
+    model,
+    contents,
+  });
+
+  const audioChunks: Buffer[] = [];
+  let lyrics = '';
+  let mimeType = 'audio/mpeg';
+
+  for await (const chunk of responseStream) {
+    const parts = chunk.candidates?.[0]?.content?.parts;
+    if (!parts) continue;
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        if (audioChunks.length === 0 && part.inlineData.mimeType) {
+          mimeType = part.inlineData.mimeType;
+        }
+        audioChunks.push(Buffer.from(part.inlineData.data, 'base64'));
+      }
+      if (part.text) {
+        lyrics += part.text;
+      }
+    }
+  }
+
+  if (audioChunks.length === 0) {
+    throw new Error(`Lyria (${model}) completed without returning audio bytes.`);
+  }
+
+  const audioBase64 = Buffer.concat(audioChunks).toString('base64');
+  return {
+    audioDataUrl: `data:${mimeType};base64,${audioBase64}`,
+    mimeType,
+    lyrics: lyrics.trim(),
+    model,
+    trackType: params.trackType,
+  };
 }
 
 const TRANSCRIBE_MODEL = 'gemini-3.5-transcribe';
@@ -936,8 +1043,11 @@ export async function startImageToVideoAnimation(params: {
     ];
   } else if (params.previousInteractionId) {
     input = motionPrompt;
+  } else if (params.prompt.trim()) {
+    // Text-to-Video generation via gemini-omni-1.2-flash Interactions API
+    input = params.prompt.trim();
   } else {
-    throw new Error('Please upload a photo (JPEG, PNG, or WebP) to animate into a video.');
+    throw new Error('Provide a text video prompt or upload a photo (JPEG, PNG, or WebP) to animate.');
   }
 
   const createPayload: any = {
