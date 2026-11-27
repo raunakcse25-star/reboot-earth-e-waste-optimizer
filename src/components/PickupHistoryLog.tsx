@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpDown,
+  Award,
+  BatteryWarning,
   Building2,
   Calendar,
   Camera,
@@ -10,10 +12,12 @@ import {
   ChevronUp,
   Clock,
   Copy,
+  Cpu,
   ExternalLink,
   FileDown,
   History,
   Image as ImageIcon,
+  Layers,
   List,
   Loader2,
   MapPin,
@@ -23,13 +27,20 @@ import {
   Search,
   Share2,
   SlidersHorizontal,
+  Sparkles,
   Truck,
+  Wrench,
   X,
   ZoomIn,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { createScheduledPickup } from '../lib/firebase';
 import { generateRecyclingImpactPdf } from '../lib/recyclingReportPdf';
+import {
+  groupPickupsWithSmartFilter,
+  type SmartGroupId,
+  type SmartPickupGroup,
+} from '../lib/smartHistoryFilter';
 import { useAuth } from '../context/AuthContext';
 import {
   EWASTE_CATEGORIES,
@@ -88,6 +99,7 @@ interface PickupHistoryLogProps {
   vehicles: Vehicle[];
   onRefreshData: () => void;
   onCustomizeReorder: (template: PickupPrefillTemplate) => void;
+  onOpenLifetimeImpact?: () => void;
 }
 
 const PHOTO_STORAGE_KEY = 'reboot_earth_pickup_material_photos_v1';
@@ -249,6 +261,7 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
   vehicles,
   onRefreshData,
   onCustomizeReorder,
+  onOpenLifetimeImpact,
 }) => {
   const { firebaseUser, dbUser, firestoreProfile, pushNotification } = useAuth();
 
@@ -257,6 +270,9 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'weight_desc' | 'weight_asc'>('date_desc');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [smartFilterEnabled, setSmartFilterEnabled] = useState(false);
+  const [selectedSmartGroup, setSelectedSmartGroup] = useState<SmartGroupId | 'all'>('all');
+  const [collapsedSmartGroups, setCollapsedSmartGroups] = useState<Record<string, boolean>>({});
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -375,6 +391,41 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
       return diff !== 0 ? diff : b.id - a.id;
     });
   }, [pickups, statusTab, categoryFilter, searchText, sortBy]);
+
+  const smartGroups = useMemo(
+    () => groupPickupsWithSmartFilter(filteredPickups),
+    [filteredPickups]
+  );
+
+  const visibleSmartGroups = useMemo(() => {
+    const nonEmpty = smartGroups.filter((g) => g.items.length > 0);
+    if (selectedSmartGroup === 'all') return nonEmpty;
+    return nonEmpty.filter((g) => g.id === selectedSmartGroup);
+  }, [smartGroups, selectedSmartGroup]);
+
+  const effectivePickupsForMap = useMemo(() => {
+    if (!smartFilterEnabled || selectedSmartGroup === 'all') return filteredPickups;
+    const match = smartGroups.find((g) => g.id === selectedSmartGroup);
+    return match ? match.items.map((entry) => entry.pickup) : [];
+  }, [smartFilterEnabled, selectedSmartGroup, filteredPickups, smartGroups]);
+
+  const handleToggleSmartFilter = () => {
+    setSmartFilterEnabled((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSelectedSmartGroup('all');
+        setCollapsedSmartGroups({});
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSmartGroupCollapse = (groupId: SmartGroupId) => {
+    setCollapsedSmartGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
 
   const stats = useMemo(() => {
     const nonCancelled = pickups.filter((p) => p.status !== 'Cancelled');
@@ -647,6 +698,378 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
     }
   };
 
+  const getSmartGroupAccentStyles = (accent: SmartPickupGroup['accent']) => {
+    switch (accent) {
+      case 'emerald':
+        return {
+          icon: Cpu,
+          iconClass: 'text-emerald-600 dark:text-emerald-400',
+          headerBg: 'bg-emerald-50/70 dark:bg-emerald-950/30',
+          borderActive: 'border-emerald-500 ring-1 ring-emerald-500/40',
+          metricClass: 'text-emerald-700 dark:text-emerald-300',
+        };
+      case 'amber':
+        return {
+          icon: Wrench,
+          iconClass: 'text-amber-600 dark:text-amber-400',
+          headerBg: 'bg-amber-50/70 dark:bg-amber-950/25',
+          borderActive: 'border-amber-500 ring-1 ring-amber-500/40',
+          metricClass: 'text-amber-700 dark:text-amber-300',
+        };
+      case 'rose':
+        return {
+          icon: BatteryWarning,
+          iconClass: 'text-rose-600 dark:text-rose-400',
+          headerBg: 'bg-rose-50/75 dark:bg-rose-950/30',
+          borderActive: 'border-rose-500 ring-1 ring-rose-500/40',
+          metricClass: 'text-rose-700 dark:text-rose-300',
+        };
+      default:
+        return {
+          icon: Layers,
+          iconClass: 'text-sky-600 dark:text-sky-400',
+          headerBg: 'bg-sky-50/70 dark:bg-sky-950/30',
+          borderActive: 'border-sky-500 ring-1 ring-sky-500/40',
+          metricClass: 'text-sky-700 dark:text-sky-300',
+        };
+    }
+  };
+
+  const renderPickupCard = (pickup: PickupRequest, smartReason?: string) => {
+    const isExpanded = expandedId === pickup.id;
+    const facility = pickup.assignedFacilityId
+      ? facilityById.get(pickup.assignedFacilityId)
+      : undefined;
+    const vehicle = pickup.assignedVehicleId
+      ? vehicleById.get(pickup.assignedVehicleId)
+      : undefined;
+    const stageIndex = PICKUP_STATUS_FLOW.indexOf(pickup.status as any);
+    const isCancelled = pickup.status === 'Cancelled';
+    const userPhotos = storedPhotos[pickup.requestCode] || [];
+    const defaultPhotos = getCategoryMaterialPhotos(pickup);
+    const allPhotos = [
+      ...userPhotos.map((u) => ({ src: u.dataUrl, caption: u.caption, isUserPhoto: true })),
+      ...defaultPhotos.map((d) => ({ src: d.src, caption: d.caption, isUserPhoto: false })),
+    ];
+    const timeline = historyByPickupId[pickup.id];
+    const recKey = `${pickup.deviceName.trim().toLowerCase()}|${pickup.category.trim().toLowerCase()}`;
+    const repeatCount = recurrenceCounts.get(recKey) || 1;
+
+    return (
+      <article
+        key={pickup.id}
+        className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden"
+      >
+        {/* Top Summary Row */}
+        <div className="p-5 flex flex-col lg:flex-row gap-4 justify-between">
+          <div className="flex gap-4 min-w-0">
+            {/* Primary Material Photo Thumbnail */}
+            <button
+              type="button"
+              onClick={() =>
+                setLightbox({
+                  src: allPhotos[0].src,
+                  caption: allPhotos[0].caption,
+                  requestCode: pickup.requestCode,
+                  deviceName: pickup.deviceName,
+                })
+              }
+              className="group relative w-24 h-24 sm:w-28 sm:h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-sky-900/70 shrink-0 bg-slate-100 dark:bg-[#061526] cursor-pointer"
+              title="Inspect collected material photo"
+            >
+              <img
+                src={allPhotos[0].src}
+                alt={pickup.deviceName}
+                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              />
+              <span className="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/35 transition-colors flex items-center justify-center">
+                <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </span>
+              <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-slate-950/75 text-white text-[10px] font-mono">
+                {allPhotos.length} img
+              </span>
+            </button>
+
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs font-bold text-sky-700 dark:text-sky-400">
+                  {pickup.requestCode}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${statusBadgeStyle(
+                    pickup.status
+                  )}`}
+                >
+                  {pickup.status}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-sky-200/65">
+                  {pickup.category}
+                </span>
+                {repeatCount > 1 && (
+                  <span className="text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                    · Recurring ({repeatCount}×)
+                  </span>
+                )}
+              </div>
+
+              <h4 className="text-base font-semibold text-slate-900 dark:text-sky-50 leading-snug">
+                {pickup.deviceName}
+              </h4>
+
+              {smartReason && (
+                <p className="text-[11px] font-medium text-slate-600 dark:text-sky-300/85">
+                  Local classification: {smartReason}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-sky-200/75">
+                <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                  <Package className="w-3.5 h-3.5 text-sky-500" />
+                  {pickup.quantity} units · {pickup.estimatedWeightKg} kg
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-sky-500" />
+                  {pickup.preferredDate} ({pickup.timeSlot})
+                </span>
+                <span className="inline-flex items-center gap-1 truncate max-w-md">
+                  <MapPin className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span className="truncate">{pickup.pickupAddress}</span>
+                </span>
+              </div>
+
+              {(facility || vehicle) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-sky-200/65 pt-0.5">
+                  {facility && (
+                    <span className="inline-flex items-center gap-1">
+                      <Building2 className="w-3 h-3 text-emerald-500" />
+                      {facility.name} ({facility.city})
+                    </span>
+                  )}
+                  {vehicle && (
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Truck className="w-3 h-3 text-sky-500" />
+                      {vehicle.registrationNo} · {vehicle.vehicleType}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Controls */}
+          <div className="flex flex-wrap lg:flex-col items-center lg:items-end justify-start lg:justify-between gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {!isCancelled && (
+                <button
+                  type="button"
+                  onClick={() => openShareModal(pickup)}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-emerald-500/45 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title={`Share that you recycled ${pickup.estimatedWeightKg} kg of e-waste`}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => openQuickReorder(pickup)}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Quick Re-Order
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggleExpand(pickup.id)}
+                className="px-3 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                    Hide Details
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    Status &amp; Photos
+                  </>
+                )}
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-400 dark:text-sky-200/50 font-mono">
+              Updated {formatDateTime(pickup.updatedAt || pickup.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        {/* Expanded Panel: Status Updates Timeline + Collected Materials Gallery */}
+        {isExpanded && (
+          <div className="border-t border-slate-200 dark:border-sky-900/60 bg-slate-50/75 dark:bg-[#07182B] p-5 space-y-5">
+            {/* 9-Stage Progress Rail */}
+            {!isCancelled && (
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-sky-300/70">
+                  Chain-of-Custody Stage ({Math.max(1, stageIndex + 1)} of {PICKUP_STATUS_FLOW.length})
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
+                  {PICKUP_STATUS_FLOW.map((stage, idx) => {
+                    const done = idx <= stageIndex;
+                    return (
+                      <div key={stage} className="space-y-1">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            done ? 'bg-sky-500' : 'bg-slate-200 dark:bg-sky-950'
+                          }`}
+                        />
+                        <p
+                          className={`text-[10px] leading-tight ${
+                            done
+                              ? 'text-sky-800 dark:text-sky-300 font-medium'
+                              : 'text-slate-400 dark:text-sky-200/40'
+                          }`}
+                        >
+                          {stage}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Status Updates Audit Trail */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h5 className="text-xs font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-sky-500" />
+                    Status Updates Log
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => void fetchPickupTimeline(pickup.id)}
+                    className="text-[11px] text-sky-700 dark:text-sky-400 hover:underline cursor-pointer"
+                  >
+                    Sync updates
+                  </button>
+                </div>
+
+                {loadingHistoryId === pickup.id ? (
+                  <div className="p-4 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] flex items-center gap-2 text-xs text-slate-500 dark:text-sky-200/70">
+                    <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
+                    Loading chronological status updates...
+                  </div>
+                ) : timeline && timeline.length > 0 ? (
+                  <ol className="relative border-l-2 border-sky-200 dark:border-sky-800/80 ml-2 space-y-3 pl-4">
+                    {timeline.map((entry, idx) => (
+                      <li key={entry.id} className="relative">
+                        <span
+                          className={`absolute -left-[22px] top-1 w-3 h-3 rounded-full border-2 border-white dark:border-[#07182B] ${
+                            idx === 0 ? 'bg-sky-500' : 'bg-slate-400 dark:bg-sky-700'
+                          }`}
+                        />
+                        <div className="p-3 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] space-y-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-slate-900 dark:text-sky-50">
+                              {entry.fromStatus === 'New'
+                                ? entry.toStatus
+                                : `${entry.fromStatus} → ${entry.toStatus}`}
+                            </p>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-sky-200/60">
+                              {formatDateTime(entry.createdAt)}
+                            </span>
+                          </div>
+                          {entry.note && (
+                            <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
+                              {entry.note}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="p-3.5 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] text-xs text-slate-600 dark:text-sky-200/75 space-y-1">
+                    <p className="font-semibold text-slate-900 dark:text-sky-50">
+                      Current Stage: {pickup.status}
+                    </p>
+                    <p>
+                      Request logged on {formatDateTime(pickup.createdAt)} for {pickup.deviceName}.
+                      {pickup.instructions ? ` Note: ${pickup.instructions}` : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Collected Materials Photos Gallery */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h5 className="text-xs font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-sky-500" />
+                    Collected Material Images ({allPhotos.length})
+                  </h5>
+                  <label className="px-2.5 py-1 rounded-md border border-sky-600/50 text-[11px] font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1 cursor-pointer">
+                    {uploadingCode === pickup.requestCode ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Camera className="w-3 h-3" />
+                    )}
+                    Add Photo
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => void handleUploadPhoto(pickup.requestCode, e)}
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  {allPhotos.map((photo, pIdx) => (
+                    <button
+                      key={`${pickup.requestCode}_p_${pIdx}`}
+                      type="button"
+                      onClick={() =>
+                        setLightbox({
+                          src: photo.src,
+                          caption: photo.caption,
+                          requestCode: pickup.requestCode,
+                          deviceName: pickup.deviceName,
+                        })
+                      }
+                      className="group relative rounded-lg overflow-hidden border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] text-left cursor-pointer"
+                    >
+                      <div className="aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-[#061526]">
+                        <img
+                          src={photo.src}
+                          alt={photo.caption}
+                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="p-2">
+                        <p className="text-[10px] font-medium text-slate-700 dark:text-sky-100 line-clamp-2 leading-snug">
+                          {photo.caption}
+                        </p>
+                        {photo.isUserPhoto && (
+                          <span className="inline-block mt-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                            Uploaded proof
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </article>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -687,6 +1110,17 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
               Pickup Map
             </button>
           </div>
+          {onOpenLifetimeImpact && (
+            <button
+              type="button"
+              onClick={onOpenLifetimeImpact}
+              className="px-3.5 py-2 rounded-lg border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-xs font-semibold text-amber-800 dark:text-amber-300 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Open your shareable Lifetime Impact environmental infographic"
+            >
+              <Award className="w-3.5 h-3.5" />
+              Lifetime Impact
+            </button>
+          )}
           <button
             type="button"
             onClick={handleDownloadReport}
@@ -927,12 +1361,125 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
             <option value="weight_asc">Weight: Lightest First</option>
           </select>
         </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={smartFilterEnabled}
+          onClick={handleToggleSmartFilter}
+          className={`px-3.5 py-2 rounded-lg border text-xs font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer shrink-0 ${
+            smartFilterEnabled
+              ? 'border-emerald-500 bg-emerald-600 dark:bg-emerald-500 text-white dark:text-emerald-950'
+              : 'border-slate-300 dark:border-sky-900/70 bg-white dark:bg-[#0B223B] text-slate-700 dark:text-sky-100 hover:border-emerald-500/70'
+          }`}
+          title="Use local processing to automatically group pickups into Working Electronics, Scrap Metals, Hazardous Batteries, and General E-Waste"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Smart Filter</span>
+          <span
+            className={`w-7 h-4 rounded-full p-0.5 transition-colors inline-flex items-center ${
+              smartFilterEnabled
+                ? 'bg-emerald-900/35 dark:bg-emerald-950/40 justify-end'
+                : 'bg-slate-200 dark:bg-sky-950 justify-start'
+            }`}
+          >
+            <span className="w-3 h-3 rounded-full bg-white shadow-xs" />
+          </span>
+        </button>
       </div>
+
+      {/* Smart Filter Local Auto-Grouping Summary Strip */}
+      {smartFilterEnabled && (
+        <div className="p-4 rounded-xl border border-emerald-300/80 dark:border-emerald-800/70 bg-white dark:bg-[#0B223B] space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                Smart Filter Active · Local Automatic Grouping
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-sky-200/70">
+                Past pickups are classified on-device by condition, material stream, and safety keywords. Select a group to focus or view all groups stacked below.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedSmartGroup !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedSmartGroup('all')}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-200 hover:bg-slate-100 dark:hover:bg-sky-900/40 cursor-pointer"
+                >
+                  Show All Groups ({filteredPickups.length})
+                </button>
+              )}
+              {viewMode === 'list' && visibleSmartGroups.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const anyExpanded = visibleSmartGroups.some((g) => !collapsedSmartGroups[g.id]);
+                    if (anyExpanded) {
+                      const next: Record<string, boolean> = {};
+                      visibleSmartGroups.forEach((g) => {
+                        next[g.id] = true;
+                      });
+                      setCollapsedSmartGroups(next);
+                    } else {
+                      setCollapsedSmartGroups({});
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 cursor-pointer"
+                >
+                  {visibleSmartGroups.some((g) => !collapsedSmartGroups[g.id])
+                    ? 'Collapse All'
+                    : 'Expand All'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            {smartGroups.map((group) => {
+              const style = getSmartGroupAccentStyles(group.accent);
+              const Icon = style.icon;
+              const isSelected = selectedSmartGroup === group.id;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedSmartGroup((prev) => (prev === group.id ? 'all' : group.id))
+                  }
+                  className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? `${style.borderActive} ${style.headerBg}`
+                      : 'border-slate-200 dark:border-sky-900/60 bg-slate-50/70 dark:bg-[#071A2E] hover:border-slate-300 dark:hover:border-sky-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-sky-50">
+                      <Icon className={`w-4 h-4 shrink-0 ${style.iconClass}`} />
+                      {group.label}
+                    </span>
+                    <span className={`font-mono tabular-nums text-xs font-bold ${style.metricClass}`}>
+                      {group.items.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-sky-200/70 mt-1 line-clamp-2 leading-snug">
+                    {group.shortDescription}
+                  </p>
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-sky-900/50 flex items-center justify-between text-[11px] font-mono tabular-nums text-slate-600 dark:text-sky-200/80">
+                    <span>{group.totalWeightKg} kg</span>
+                    <span>{group.totalUnits} units</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Unified Successful Pickups Map View OR History Log List */}
       {viewMode === 'map' ? (
         <PickupHistoryMapView
-          pickups={filteredPickups}
+          pickups={effectivePickupsForMap}
           facilities={facilities}
           getThumbnail={(p) => {
             const userPhotos = storedPhotos[p.requestCode] || [];
@@ -957,336 +1504,79 @@ export const PickupHistoryLog: React.FC<PickupHistoryLogProps> = ({
             Adjust your filters or schedule a new doorstep e-waste pickup to begin building your chain-of-custody log.
           </p>
         </div>
+      ) : smartFilterEnabled ? (
+        visibleSmartGroups.length === 0 ? (
+          <div className="p-10 rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] text-center space-y-2">
+            <Layers className="w-8 h-8 text-slate-400 dark:text-sky-400/50 mx-auto" />
+            <p className="text-sm font-semibold text-slate-900 dark:text-sky-50">
+              No pickups classified in this smart group
+            </p>
+            <p className="text-xs text-slate-500 dark:text-sky-200/65">
+              Select another smart category card above or click Show All Groups to see your other logged pickups.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {visibleSmartGroups.map((group) => {
+              const style = getSmartGroupAccentStyles(group.accent);
+              const Icon = style.icon;
+              const isCollapsed = Boolean(collapsedSmartGroups[group.id]);
+
+              return (
+                <section
+                  key={group.id}
+                  className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-slate-50/50 dark:bg-[#07182B]/70 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSmartGroupCollapse(group.id)}
+                    className={`w-full px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left border-b border-slate-200 dark:border-sky-900/60 ${style.headerBg} cursor-pointer`}
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Icon className={`w-4 h-4 shrink-0 ${style.iconClass}`} />
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-sky-50">
+                          {group.label}
+                        </h4>
+                        <span className={`font-mono tabular-nums text-xs font-semibold ${style.metricClass}`}>
+                          {group.items.length} {group.items.length === 1 ? 'pickup' : 'pickups'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-sky-200/75">
+                        {group.handlingGuidance}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right font-mono tabular-nums">
+                        <p className="text-xs font-bold text-slate-900 dark:text-sky-50">
+                          {group.totalWeightKg} kg · {group.totalUnits} units
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-sky-300/70">
+                          ~{group.estimatedCo2Kg} kg CO₂e avoided
+                        </p>
+                      </div>
+                      {isCollapsed ? (
+                        <ChevronDown className="w-4 h-4 text-slate-500 dark:text-sky-300" />
+                      ) : (
+                        <ChevronUp className="w-4 h-4 text-slate-500 dark:text-sky-300" />
+                      )}
+                    </div>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="p-4 space-y-3.5">
+                      {group.items.map(({ pickup, reason }) => renderPickupCard(pickup, reason))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )
       ) : (
         <div className="space-y-4">
-          {filteredPickups.map((pickup) => {
-            const isExpanded = expandedId === pickup.id;
-            const facility = pickup.assignedFacilityId
-              ? facilityById.get(pickup.assignedFacilityId)
-              : undefined;
-            const vehicle = pickup.assignedVehicleId
-              ? vehicleById.get(pickup.assignedVehicleId)
-              : undefined;
-            const stageIndex = PICKUP_STATUS_FLOW.indexOf(pickup.status as any);
-            const isCancelled = pickup.status === 'Cancelled';
-            const userPhotos = storedPhotos[pickup.requestCode] || [];
-            const defaultPhotos = getCategoryMaterialPhotos(pickup);
-            const allPhotos = [
-              ...userPhotos.map((u) => ({ src: u.dataUrl, caption: u.caption, isUserPhoto: true })),
-              ...defaultPhotos.map((d) => ({ src: d.src, caption: d.caption, isUserPhoto: false })),
-            ];
-            const timeline = historyByPickupId[pickup.id];
-            const recKey = `${pickup.deviceName.trim().toLowerCase()}|${pickup.category.trim().toLowerCase()}`;
-            const repeatCount = recurrenceCounts.get(recKey) || 1;
-
-            return (
-              <article
-                key={pickup.id}
-                className="rounded-xl border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] overflow-hidden"
-              >
-                {/* Top Summary Row */}
-                <div className="p-5 flex flex-col lg:flex-row gap-4 justify-between">
-                  <div className="flex gap-4 min-w-0">
-                    {/* Primary Material Photo Thumbnail */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLightbox({
-                          src: allPhotos[0].src,
-                          caption: allPhotos[0].caption,
-                          requestCode: pickup.requestCode,
-                          deviceName: pickup.deviceName,
-                        })
-                      }
-                      className="group relative w-24 h-24 sm:w-28 sm:h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-sky-900/70 shrink-0 bg-slate-100 dark:bg-[#061526] cursor-pointer"
-                      title="Inspect collected material photo"
-                    >
-                      <img
-                        src={allPhotos[0].src}
-                        alt={pickup.deviceName}
-                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                      />
-                      <span className="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/35 transition-colors flex items-center justify-center">
-                        <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </span>
-                      <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-slate-950/75 text-white text-[10px] font-mono">
-                        {allPhotos.length} img
-                      </span>
-                    </button>
-
-                    <div className="min-w-0 space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-sky-700 dark:text-sky-400">
-                          {pickup.requestCode}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${statusBadgeStyle(
-                            pickup.status
-                          )}`}
-                        >
-                          {pickup.status}
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-sky-200/65">
-                          {pickup.category}
-                        </span>
-                        {repeatCount > 1 && (
-                          <span className="text-[11px] font-medium text-sky-700 dark:text-sky-300">
-                            · Recurring ({repeatCount}×)
-                          </span>
-                        )}
-                      </div>
-
-                      <h4 className="text-base font-semibold text-slate-900 dark:text-sky-50 leading-snug">
-                        {pickup.deviceName}
-                      </h4>
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-sky-200/75">
-                        <span className="inline-flex items-center gap-1 font-mono tabular-nums">
-                          <Package className="w-3.5 h-3.5 text-sky-500" />
-                          {pickup.quantity} units · {pickup.estimatedWeightKg} kg
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-sky-500" />
-                          {pickup.preferredDate} ({pickup.timeSlot})
-                        </span>
-                        <span className="inline-flex items-center gap-1 truncate max-w-md">
-                          <MapPin className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                          <span className="truncate">{pickup.pickupAddress}</span>
-                        </span>
-                      </div>
-
-                      {(facility || vehicle) && (
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-sky-200/65 pt-0.5">
-                          {facility && (
-                            <span className="inline-flex items-center gap-1">
-                              <Building2 className="w-3 h-3 text-emerald-500" />
-                              {facility.name} ({facility.city})
-                            </span>
-                          )}
-                          {vehicle && (
-                            <span className="inline-flex items-center gap-1 font-mono">
-                              <Truck className="w-3 h-3 text-sky-500" />
-                              {vehicle.registrationNo} · {vehicle.vehicleType}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action Controls */}
-                  <div className="flex flex-wrap lg:flex-col items-center lg:items-end justify-start lg:justify-between gap-2 shrink-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {!isCancelled && (
-                        <button
-                          type="button"
-                          onClick={() => openShareModal(pickup)}
-                          className="px-3 py-2 rounded-lg text-xs font-semibold border border-emerald-500/45 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                          title={`Share that you recycled ${pickup.estimatedWeightKg} kg of e-waste`}
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                          Share
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => openQuickReorder(pickup)}
-                        className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 dark:bg-sky-500 text-white dark:text-sky-950 hover:bg-sky-700 dark:hover:bg-sky-400 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        Quick Re-Order
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleToggleExpand(pickup.id)}
-                        className="px-3 py-2 rounded-lg text-xs font-medium border border-slate-300 dark:border-sky-800 text-slate-700 dark:text-sky-100 hover:bg-slate-100 dark:hover:bg-sky-900/40 inline-flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {isExpanded ? (
-                          <>
-                            <ChevronUp className="w-3.5 h-3.5" />
-                            Hide Details
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-3.5 h-3.5" />
-                            Status &amp; Photos
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 dark:text-sky-200/50 font-mono">
-                      Updated {formatDateTime(pickup.updatedAt || pickup.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Expanded Panel: Status Updates Timeline + Collected Materials Gallery */}
-                {isExpanded && (
-                  <div className="border-t border-slate-200 dark:border-sky-900/60 bg-slate-50/75 dark:bg-[#07182B] p-5 space-y-5">
-                    {/* 9-Stage Progress Rail */}
-                    {!isCancelled && (
-                      <div className="space-y-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-sky-300/70">
-                          Chain-of-Custody Stage ({Math.max(1, stageIndex + 1)} of {PICKUP_STATUS_FLOW.length})
-                        </p>
-                        <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
-                          {PICKUP_STATUS_FLOW.map((stage, idx) => {
-                            const done = idx <= stageIndex;
-                            return (
-                              <div key={stage} className="space-y-1">
-                                <div
-                                  className={`h-1.5 rounded-full ${
-                                    done ? 'bg-sky-500' : 'bg-slate-200 dark:bg-sky-950'
-                                  }`}
-                                />
-                                <p
-                                  className={`text-[10px] leading-tight ${
-                                    done
-                                      ? 'text-sky-800 dark:text-sky-300 font-medium'
-                                      : 'text-slate-400 dark:text-sky-200/40'
-                                  }`}
-                                >
-                                  {stage}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                      {/* Status Updates Audit Trail */}
-                      <div className="lg:col-span-7 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <h5 className="text-xs font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-sky-500" />
-                            Status Updates Log
-                          </h5>
-                          <button
-                            type="button"
-                            onClick={() => void fetchPickupTimeline(pickup.id)}
-                            className="text-[11px] text-sky-700 dark:text-sky-400 hover:underline cursor-pointer"
-                          >
-                            Sync updates
-                          </button>
-                        </div>
-
-                        {loadingHistoryId === pickup.id ? (
-                          <div className="p-4 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] flex items-center gap-2 text-xs text-slate-500 dark:text-sky-200/70">
-                            <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
-                            Loading chronological status updates...
-                          </div>
-                        ) : timeline && timeline.length > 0 ? (
-                          <ol className="relative border-l-2 border-sky-200 dark:border-sky-800/80 ml-2 space-y-3 pl-4">
-                            {timeline.map((entry, idx) => (
-                              <li key={entry.id} className="relative">
-                                <span
-                                  className={`absolute -left-[22px] top-1 w-3 h-3 rounded-full border-2 border-white dark:border-[#07182B] ${
-                                    idx === 0 ? 'bg-sky-500' : 'bg-slate-400 dark:bg-sky-700'
-                                  }`}
-                                />
-                                <div className="p-3 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] space-y-1">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-xs font-semibold text-slate-900 dark:text-sky-50">
-                                      {entry.fromStatus === 'New'
-                                        ? entry.toStatus
-                                        : `${entry.fromStatus} → ${entry.toStatus}`}
-                                    </p>
-                                    <span className="text-[10px] font-mono text-slate-500 dark:text-sky-200/60">
-                                      {formatDateTime(entry.createdAt)}
-                                    </span>
-                                  </div>
-                                  {entry.note && (
-                                    <p className="text-xs text-slate-600 dark:text-sky-200/75 leading-relaxed">
-                                      {entry.note}
-                                    </p>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <div className="p-3.5 rounded-lg border border-slate-200 dark:border-sky-900/50 bg-white dark:bg-[#0B223B] text-xs text-slate-600 dark:text-sky-200/75 space-y-1">
-                            <p className="font-semibold text-slate-900 dark:text-sky-50">
-                              Current Stage: {pickup.status}
-                            </p>
-                            <p>
-                              Request logged on {formatDateTime(pickup.createdAt)} for {pickup.deviceName}.
-                              {pickup.instructions ? ` Note: ${pickup.instructions}` : ''}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Collected Materials Photos Gallery */}
-                      <div className="lg:col-span-5 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <h5 className="text-xs font-semibold text-slate-900 dark:text-sky-50 inline-flex items-center gap-1.5">
-                            <ImageIcon className="w-3.5 h-3.5 text-sky-500" />
-                            Collected Material Images ({allPhotos.length})
-                          </h5>
-                          <label className="px-2.5 py-1 rounded-md border border-sky-600/50 text-[11px] font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-500/10 inline-flex items-center gap-1 cursor-pointer">
-                            {uploadingCode === pickup.requestCode ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Camera className="w-3 h-3" />
-                            )}
-                            Add Photo
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              onChange={(e) => void handleUploadPhoto(pickup.requestCode, e)}
-                            />
-                          </label>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {allPhotos.map((photo, pIdx) => (
-                            <button
-                              key={`${pickup.requestCode}_p_${pIdx}`}
-                              type="button"
-                              onClick={() =>
-                                setLightbox({
-                                  src: photo.src,
-                                  caption: photo.caption,
-                                  requestCode: pickup.requestCode,
-                                  deviceName: pickup.deviceName,
-                                })
-                              }
-                              className="group relative rounded-lg overflow-hidden border border-slate-200 dark:border-sky-900/60 bg-white dark:bg-[#0B223B] text-left cursor-pointer"
-                            >
-                              <div className="aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-[#061526]">
-                                <img
-                                  src={photo.src}
-                                  alt={photo.caption}
-                                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                />
-                              </div>
-                              <div className="p-2">
-                                <p className="text-[10px] font-medium text-slate-700 dark:text-sky-100 line-clamp-2 leading-snug">
-                                  {photo.caption}
-                                </p>
-                                {photo.isUserPhoto && (
-                                  <span className="inline-block mt-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-                                    Uploaded proof
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+          {filteredPickups.map((pickup) => renderPickupCard(pickup))}
         </div>
       )}
 

@@ -101,12 +101,15 @@ import {
 } from './NotificationCenterPanel';
 import { PickupHistoryLog, type PickupPrefillTemplate } from './PickupHistoryLog';
 import { CarbonSavedWidget } from './CarbonSavedWidget';
+import { EnergySavedWidget } from './EnergySavedWidget';
 import { CircularMarketplace } from './CircularMarketplace';
 import { BuyBackPriceAlertsPanel } from './BuyBackPriceAlertsPanel';
 import { DailyEwasteFactCard } from './DailyEwasteFactCard';
 import { BatteryHealthCalculator } from './BatteryHealthCalculator';
 import { CommunityLeaderboardWidget } from './CommunityLeaderboardWidget';
 import { CameraEwasteScanner } from './CameraEwasteScanner';
+import { LifetimeImpactPage } from './LifetimeImpactPage';
+import { CumulativeCircularImpactChart } from './CumulativeCircularImpactChart';
 import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
@@ -114,6 +117,7 @@ type DashTab =
   | 'notifications'
   | 'market-alerts'
   | 'impact'
+  | 'lifetime-impact'
   | 'targets'
   | 'leaderboard'
   | 'voice'
@@ -839,6 +843,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'notifications', label: 'Notification Center', icon: Bell, visible: true },
     { id: 'market-alerts', label: 'Buy-Back Price Alerts', icon: TrendingUp, visible: true },
     { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
+    { id: 'lifetime-impact', label: 'Lifetime Impact', icon: Award, visible: true },
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
     { id: 'leaderboard', label: 'Community Leaderboard', icon: Trophy, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
@@ -1339,6 +1344,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               onSchedulePickup={() => setActiveTab('schedule')}
             />
 
+            {/* Electricity & Megajoules Saved Widget (complementing Carbon Saved) */}
+            <EnergySavedWidget
+              pickups={recentPickups}
+              onOpenLifetimeImpact={() => setActiveTab('lifetime-impact')}
+              onSchedulePickup={() => setActiveTab('schedule')}
+            />
+
             {/* Daily E-Waste & Circular Economy Fact */}
             <DailyEwasteFactCard
               onSchedulePickup={() => setActiveTab('schedule')}
@@ -1453,6 +1465,14 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               onSchedulePickup={() => setActiveTab('schedule')}
             />
 
+            {/* D3.js Cumulative Circular Impact Multi-Year Line Chart */}
+            <CumulativeCircularImpactChart
+              analytics={analytics}
+              pickups={recentPickups}
+              compact
+              onOpenFullImpact={() => setActiveTab('impact')}
+            />
+
             {/* D3.js Recycling Impact Trends Preview */}
             <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} compact />
 
@@ -1549,7 +1569,24 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         )}
 
         {activeTab === 'impact' && (
-          <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} />
+          <div className="space-y-6">
+            <CumulativeCircularImpactChart
+              analytics={analytics}
+              pickups={recentPickups}
+            />
+            <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} />
+          </div>
+        )}
+
+        {activeTab === 'lifetime-impact' && (
+          <LifetimeImpactPage
+            pickups={recentPickups}
+            ecoExperience={ecoExperience}
+            userName={currentLeaderboardName}
+            userCity={currentLeaderboardCity}
+            onOpenHistory={() => setActiveTab('history')}
+            onSchedulePickup={() => setActiveTab('schedule')}
+          />
         )}
 
         {activeTab === 'targets' && (
@@ -1646,6 +1683,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               setReorderPrefill(template);
               setActiveTab('schedule');
             }}
+            onOpenLifetimeImpact={() => setActiveTab('lifetime-impact')}
           />
         )}
 
