@@ -28,6 +28,7 @@ import AnimatedList, { type AnimatedListItem } from './AnimatedList';
 import AnimatedContent from './AnimatedContent';
 import { ImpactDashboard } from './ImpactDashboard';
 import { LiveSearchIntelPanel } from './LiveSearchIntelPanel';
+import { RecyclingInsightsSection } from './RecyclingInsightsSection';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { createSupportTicketInFirestore } from '../lib/firebase';
@@ -909,6 +910,9 @@ export const KnowledgeHubPage: React.FC<{
         title="Live Regulatory, Market & Recycling Intelligence (Google Search Grounded)"
         subtitle="Query live Google Search results for CPCB & EPR regulatory updates, scrap metal recovery rates, circular economy news, and OEM take-back programs with verified web citations."
       />
+
+      {/* Recycling Insights: Weekly Blog Posts on Sustainable Living & DIY E-Waste Repurposing */}
+      <RecyclingInsightsSection />
 
       {/* Key Regulatory Pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

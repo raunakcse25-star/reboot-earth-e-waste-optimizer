@@ -482,3 +482,20 @@ export interface LivePricePushToast {
   timestampMs: number;
 }
 
+export interface LeaderboardProfile {
+  id: string;
+  userId: string;
+  displayName: string;
+  city: string;
+  cityKey: string;
+  verifiedRecycledKg: number;
+  pickupsCount: number;
+  ecoLevel: number;
+  levelTitle: string;
+  badgesCount: number;
+  visibility: 'community';
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+

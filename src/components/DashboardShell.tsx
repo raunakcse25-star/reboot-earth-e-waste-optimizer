@@ -32,6 +32,7 @@ import {
   Target,
   Trash2,
   TrendingUp,
+  Trophy,
   Truck,
   X,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ import {
   type BuyBackCategoryId,
   type BuyBackMarketQuote,
   type Facility,
+  type LeaderboardProfile,
   type LivePricePushToast,
   type MarketPriceAlert,
   type PickupRequest,
@@ -54,8 +56,11 @@ import {
   createUserPriceAlert,
   deleteUserPriceAlert,
   recordPriceAlertTrigger,
+  removeUserLeaderboardProfile,
+  subscribeCommunityLeaderboard,
   subscribeUserPriceAlerts,
   updateUserPriceAlertConfig,
+  upsertUserLeaderboardProfile,
 } from '../lib/firebase';
 import {
   createInitialMarketQuotes,
@@ -99,6 +104,7 @@ import { CircularMarketplace } from './CircularMarketplace';
 import { BuyBackPriceAlertsPanel } from './BuyBackPriceAlertsPanel';
 import { DailyEwasteFactCard } from './DailyEwasteFactCard';
 import { BatteryHealthCalculator } from './BatteryHealthCalculator';
+import { CommunityLeaderboardWidget } from './CommunityLeaderboardWidget';
 import { computeEcoExperience } from '../lib/ecoLevelSystem';
 
 type DashTab =
@@ -107,6 +113,7 @@ type DashTab =
   | 'market-alerts'
   | 'impact'
   | 'targets'
+  | 'leaderboard'
   | 'voice'
   | 'transcribe'
   | 'images'
@@ -175,6 +182,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [pushToasts, setPushToasts] = useState<LivePricePushToast[]>([]);
   const alertCooldownMapRef = useRef<Map<string, number>>(new Map());
 
+  // Community Leaderboard State (real-time Firestore + Eco Experience sync)
+  const [leaderboardProfiles, setLeaderboardProfiles] = useState<LeaderboardProfile[]>([]);
+  const [isListedOnLeaderboard, setIsListedOnLeaderboard] = useState<boolean>(true);
+  const [syncingLeaderboard, setSyncingLeaderboard] = useState(false);
+  const [leaderboardSyncNotice, setLeaderboardSyncNotice] = useState<string | null>(null);
+  const lastLeaderboardSigRef = useRef<string>('');
+
   const loadDashData = useCallback(async () => {
     try {
       const [vRows, pRows] = await Promise.all([
@@ -197,6 +211,154 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const role: UserRole = dbUser?.role || 'citizen';
   const unreadCount = notifications.filter((n) => !n.read).length;
   const ecoExperience = useMemo(() => computeEcoExperience(recentPickups, false), [recentPickups]);
+
+  const currentLeaderboardUid = firebaseUser?.uid || dbUser?.uid || 'local';
+  const currentLeaderboardName =
+    firestoreProfile?.fullName || dbUser?.fullName || firebaseUser?.displayName || 'Eco Recycler';
+  const currentLeaderboardCity =
+    (firestoreProfile?.city || dbUser?.city || '').trim() || 'New Delhi';
+
+  // Restore per-user leaderboard visibility preference
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    try {
+      const stored = localStorage.getItem(`reboot_earth_lb_visible_${currentLeaderboardUid}`);
+      setIsListedOnLeaderboard(stored === 'false' ? false : true);
+    } catch {
+      setIsListedOnLeaderboard(true);
+    }
+  }, [isAuthenticated, currentLeaderboardUid]);
+
+  // Subscribe to real-time community leaderboard profiles in Firestore
+  useEffect(() => {
+    if (!isAuthenticated || !firebaseUser) {
+      setLeaderboardProfiles([]);
+      return;
+    }
+    let unsub: (() => void) | undefined;
+    try {
+      unsub = subscribeCommunityLeaderboard((profiles) => {
+        setLeaderboardProfiles(profiles);
+      });
+    } catch {
+      // Non-fatal fallback
+    }
+    return () => unsub?.();
+  }, [isAuthenticated, firebaseUser]);
+
+  const handleSyncLeaderboardRank = useCallback(
+    async (cityOverride?: string) => {
+      const targetCity = (cityOverride || currentLeaderboardCity || 'New Delhi').trim();
+      setSyncingLeaderboard(true);
+      try {
+        if (firebaseUser && firebaseUser.emailVerified && isListedOnLeaderboard) {
+          await upsertUserLeaderboardProfile(firebaseUser.uid, {
+            displayName: currentLeaderboardName,
+            city: targetCity,
+            verifiedRecycledKg: ecoExperience.verifiedRecycledKg,
+            pickupsCount: ecoExperience.verifiedPickupsCount,
+            ecoLevel: ecoExperience.currentTier.level,
+            levelTitle: ecoExperience.currentTier.title,
+            badgesCount: ecoExperience.unlockedBadgesCount,
+          });
+          setLeaderboardSyncNotice('Synced to cloud');
+        } else {
+          setLeaderboardSyncNotice('Standing updated');
+        }
+        window.setTimeout(() => setLeaderboardSyncNotice(null), 2600);
+      } catch {
+        setLeaderboardSyncNotice('Sync unavailable');
+        window.setTimeout(() => setLeaderboardSyncNotice(null), 2600);
+      } finally {
+        setSyncingLeaderboard(false);
+      }
+    },
+    [
+      firebaseUser,
+      isListedOnLeaderboard,
+      currentLeaderboardName,
+      currentLeaderboardCity,
+      ecoExperience,
+    ]
+  );
+
+  const handleToggleLeaderboardVisibility = useCallback(
+    async (nextVisible: boolean, cityOverride: string) => {
+      setIsListedOnLeaderboard(nextVisible);
+      try {
+        localStorage.setItem(`reboot_earth_lb_visible_${currentLeaderboardUid}`, String(nextVisible));
+      } catch {
+        // Ignore storage errors
+      }
+      if (!firebaseUser || !firebaseUser.emailVerified) return;
+      setSyncingLeaderboard(true);
+      try {
+        if (nextVisible) {
+          await upsertUserLeaderboardProfile(firebaseUser.uid, {
+            displayName: currentLeaderboardName,
+            city: cityOverride || currentLeaderboardCity,
+            verifiedRecycledKg: ecoExperience.verifiedRecycledKg,
+            pickupsCount: ecoExperience.verifiedPickupsCount,
+            ecoLevel: ecoExperience.currentTier.level,
+            levelTitle: ecoExperience.currentTier.title,
+            badgesCount: ecoExperience.unlockedBadgesCount,
+          });
+          setLeaderboardSyncNotice('Listed on leaderboard');
+        } else {
+          await removeUserLeaderboardProfile(firebaseUser.uid);
+          lastLeaderboardSigRef.current = '';
+          setLeaderboardSyncNotice('Removed from leaderboard');
+        }
+        window.setTimeout(() => setLeaderboardSyncNotice(null), 2600);
+      } catch {
+        // Non-fatal
+      } finally {
+        setSyncingLeaderboard(false);
+      }
+    },
+    [
+      currentLeaderboardUid,
+      firebaseUser,
+      currentLeaderboardName,
+      currentLeaderboardCity,
+      ecoExperience,
+    ]
+  );
+
+  // Auto-sync user's verified recycling progress to Firestore leaderboardProfiles when stats change
+  useEffect(() => {
+    if (!isAuthenticated || !firebaseUser || !firebaseUser.emailVerified || !isListedOnLeaderboard) {
+      return;
+    }
+    const sig = [
+      firebaseUser.uid,
+      currentLeaderboardName,
+      currentLeaderboardCity,
+      ecoExperience.verifiedRecycledKg,
+      ecoExperience.verifiedPickupsCount,
+      ecoExperience.currentTier.level,
+      ecoExperience.unlockedBadgesCount,
+    ].join('|');
+    if (lastLeaderboardSigRef.current === sig) return;
+    lastLeaderboardSigRef.current = sig;
+
+    void upsertUserLeaderboardProfile(firebaseUser.uid, {
+      displayName: currentLeaderboardName,
+      city: currentLeaderboardCity,
+      verifiedRecycledKg: ecoExperience.verifiedRecycledKg,
+      pickupsCount: ecoExperience.verifiedPickupsCount,
+      ecoLevel: ecoExperience.currentTier.level,
+      levelTitle: ecoExperience.currentTier.title,
+      badgesCount: ecoExperience.unlockedBadgesCount,
+    }).catch(() => {});
+  }, [
+    isAuthenticated,
+    firebaseUser,
+    isListedOnLeaderboard,
+    currentLeaderboardName,
+    currentLeaderboardCity,
+    ecoExperience,
+  ]);
 
   const scanForPickupAndFacilityAlerts = useCallback(
     async (overrideCity?: string): Promise<number> => {
@@ -675,6 +837,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     { id: 'market-alerts', label: 'Buy-Back Price Alerts', icon: TrendingUp, visible: true },
     { id: 'impact', label: 'Impact Visualizer (D3)', icon: Activity, visible: true },
     { id: 'targets', label: 'Monthly Targets', icon: Target, visible: true },
+    { id: 'leaderboard', label: 'Community Leaderboard', icon: Trophy, visible: true },
     { id: 'voice', label: 'Live Voice AI', icon: AudioLines, visible: true },
     { id: 'transcribe', label: 'Audio Transcribe', icon: Mic, visible: true },
     { id: 'images', label: 'Image Studio', icon: ImageIcon, visible: true },
@@ -1254,6 +1417,25 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
               onOpenFullTab={() => setActiveTab('targets')}
             />
 
+            {/* City Community Recycling Leaderboard Widget */}
+            <CommunityLeaderboardWidget
+              compact
+              facilities={facilities}
+              liveProfiles={leaderboardProfiles}
+              currentUserId={currentLeaderboardUid}
+              currentUserName={currentLeaderboardName}
+              currentUserCity={currentLeaderboardCity}
+              ecoExperience={ecoExperience}
+              isListedOnLeaderboard={isListedOnLeaderboard}
+              canSyncCloud={Boolean(firebaseUser && firebaseUser.emailVerified)}
+              syncingRank={syncingLeaderboard}
+              syncNotice={leaderboardSyncNotice}
+              onSyncMyRank={handleSyncLeaderboardRank}
+              onToggleVisibility={handleToggleLeaderboardVisibility}
+              onOpenFullTab={() => setActiveTab('leaderboard')}
+              onSchedulePickup={() => setActiveTab('schedule')}
+            />
+
             {/* D3.js Recycling Impact Trends Preview */}
             <D3ImpactVisualizer analytics={analytics} pickups={recentPickups} compact />
 
@@ -1355,6 +1537,24 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
         {activeTab === 'targets' && (
           <MonthlyTargetsPanel pickups={recentPickups} />
+        )}
+
+        {activeTab === 'leaderboard' && (
+          <CommunityLeaderboardWidget
+            facilities={facilities}
+            liveProfiles={leaderboardProfiles}
+            currentUserId={currentLeaderboardUid}
+            currentUserName={currentLeaderboardName}
+            currentUserCity={currentLeaderboardCity}
+            ecoExperience={ecoExperience}
+            isListedOnLeaderboard={isListedOnLeaderboard}
+            canSyncCloud={Boolean(firebaseUser && firebaseUser.emailVerified)}
+            syncingRank={syncingLeaderboard}
+            syncNotice={leaderboardSyncNotice}
+            onSyncMyRank={handleSyncLeaderboardRank}
+            onToggleVisibility={handleToggleLeaderboardVisibility}
+            onSchedulePickup={() => setActiveTab('schedule')}
+          />
         )}
 
         {activeTab === 'voice' && (

@@ -42,6 +42,7 @@ import {
   type FirestoreNotification,
   type FirestoreOptimizationRun,
   type FirestoreUserProfile,
+  type LeaderboardProfile,
   type MarketPriceAlert,
   type MarketplaceComponentCategory,
   type MarketplaceCondition,
@@ -1629,6 +1630,119 @@ export async function deleteUserPriceAlert(alertId: string): Promise<void> {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
+
+// --- Community Leaderboard: Zero-PII City Recycling Rankings ---
+
+export function normalizeLeaderboardCityKey(city: string): string {
+  const slug = city
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug.length >= 2 ? slug : 'new-delhi';
+}
+
+export function subscribeCommunityLeaderboard(
+  onData: (profiles: LeaderboardProfile[]) => void
+) {
+  const path = 'leaderboardProfiles';
+  const q = query(collection(db, path), where('visibility', '==', 'community'));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: LeaderboardProfile[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<LeaderboardProfile, 'id'>),
+      }));
+      list.sort((a, b) => (b.verifiedRecycledKg || 0) - (a.verifiedRecycledKg || 0));
+      onData(list);
+    },
+    (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch {
+        // Structured Firestore error already logged without crashing observer
+      }
+    }
+  );
+}
+
+export async function upsertUserLeaderboardProfile(
+  uid: string,
+  payload: {
+    displayName: string;
+    city: string;
+    verifiedRecycledKg: number;
+    pickupsCount: number;
+    ecoLevel: number;
+    levelTitle: string;
+    badgesCount: number;
+  }
+): Promise<void> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `leaderboardProfiles/${safeUid}`;
+
+  const cleanName = (payload.displayName.trim() || 'Eco Recycler').slice(0, 80);
+  const rawCity = payload.city.trim().slice(0, 80);
+  const cleanCity = rawCity.length >= 2 ? rawCity : 'New Delhi';
+  const cleanCityKey = normalizeLeaderboardCityKey(cleanCity);
+  const cleanKg = Math.max(
+    0,
+    Math.min(1000000, Number((Number(payload.verifiedRecycledKg) || 0).toFixed(1)))
+  );
+  const cleanPickups = Math.max(0, Math.min(50000, Math.round(Number(payload.pickupsCount) || 0)));
+  const cleanLevel = Math.max(1, Math.min(7, Math.round(Number(payload.ecoLevel) || 1)));
+  const rawTitle = payload.levelTitle.trim().slice(0, 48);
+  const cleanTitle = rawTitle.length >= 2 ? rawTitle : 'Eco Starter';
+  const cleanBadges = Math.max(0, Math.min(32, Math.round(Number(payload.badgesCount) || 0)));
+
+  try {
+    const ref = doc(db, 'leaderboardProfiles', safeUid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await updateDoc(ref, {
+        displayName: cleanName,
+        city: cleanCity,
+        cityKey: cleanCityKey,
+        verifiedRecycledKg: cleanKg,
+        pickupsCount: cleanPickups,
+        ecoLevel: cleanLevel,
+        levelTitle: cleanTitle,
+        badgesCount: cleanBadges,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await setDoc(ref, {
+        userId: safeUid,
+        displayName: cleanName,
+        city: cleanCity,
+        cityKey: cleanCityKey,
+        verifiedRecycledKg: cleanKg,
+        pickupsCount: cleanPickups,
+        ecoLevel: cleanLevel,
+        levelTitle: cleanTitle,
+        badgesCount: cleanBadges,
+        visibility: 'community',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function removeUserLeaderboardProfile(uid: string): Promise<void> {
+  const safeUid = uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const path = `leaderboardProfiles/${safeUid}`;
+  try {
+    await deleteDoc(doc(db, 'leaderboardProfiles', safeUid));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 
 
 

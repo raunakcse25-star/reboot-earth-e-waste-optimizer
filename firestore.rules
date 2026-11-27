@@ -630,6 +630,50 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidLeaderboardProfile(data) {
+      return data.keys().hasAll([
+          'userId',
+          'displayName',
+          'city',
+          'cityKey',
+          'verifiedRecycledKg',
+          'pickupsCount',
+          'ecoLevel',
+          'levelTitle',
+          'badgesCount',
+          'visibility',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'displayName',
+          'city',
+          'cityKey',
+          'verifiedRecycledKg',
+          'pickupsCount',
+          'ecoLevel',
+          'levelTitle',
+          'badgesCount',
+          'visibility',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.cityKey is string && data.cityKey.size() >= 2 && data.cityKey.size() <= 80 && data.cityKey.matches('^[a-z0-9\\-]+$')
+        && data.verifiedRecycledKg is number && data.verifiedRecycledKg >= 0 && data.verifiedRecycledKg <= 1000000
+        && data.pickupsCount is int && data.pickupsCount >= 0 && data.pickupsCount <= 50000
+        && data.ecoLevel is int && data.ecoLevel >= 1 && data.ecoLevel <= 7
+        && data.levelTitle is string && data.levelTitle.size() >= 2 && data.levelTitle.size() <= 48
+        && data.badgesCount is int && data.badgesCount >= 0 && data.badgesCount <= 32
+        && data.visibility is string && data.visibility.size() <= 16 && data.visibility == 'community'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // Connection probe path (read-only ping)
     match /test/connection {
       allow get: if true;
@@ -1119,6 +1163,47 @@ service cloud.firestore {
       allow delete: if isValidId(alertId)
         && isVerified()
         && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Community Leaderboard: Zero-PII city-level recycling rankings synced with Eco Experience levels
+    match /leaderboardProfiles/{userId} {
+      allow get: if isValidId(userId)
+        && isSignedIn()
+        && (existing().visibility == 'community' || request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && resource.data.visibility == 'community';
+      allow create: if isValidId(userId)
+        && isVerified()
+        && request.auth.uid == userId
+        && isValidLeaderboardProfile(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidLeaderboardProfile(incoming())
+        && (
+          isAdmin() || (
+            request.auth.uid == userId
+            && incoming().userId == existing().userId
+            && incoming().visibility == existing().visibility
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName',
+              'city',
+              'cityKey',
+              'verifiedRecycledKg',
+              'pickupsCount',
+              'ecoLevel',
+              'levelTitle',
+              'badgesCount',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(userId)
+        && isVerified()
+        && (request.auth.uid == userId || isAdmin());
     }
   }
 }

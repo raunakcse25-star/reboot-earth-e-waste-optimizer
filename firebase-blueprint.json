@@ -970,6 +970,82 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "LeaderboardProfile": {
+      "title": "LeaderboardProfile",
+      "description": "Public zero-PII community leaderboard record keyed by userId for city-level e-waste recycling rankings and Eco Experience levels.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "cityKey": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9\\-]+$"
+        },
+        "verifiedRecycledKg": {
+          "type": "number",
+          "description": "Total verified e-waste weight recycled in kilograms (0 to 1000000)."
+        },
+        "pickupsCount": {
+          "type": "integer",
+          "description": "Count of verified completed pickups (0 to 50000)."
+        },
+        "ecoLevel": {
+          "type": "integer",
+          "description": "Current Eco Experience tier level (1 to 7)."
+        },
+        "levelTitle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "badgesCount": {
+          "type": "integer",
+          "description": "Number of unlocked Eco Experience badges (0 to 32)."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["community"],
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "city",
+        "cityKey",
+        "verifiedRecycledKg",
+        "pickupsCount",
+        "ecoLevel",
+        "levelTitle",
+        "badgesCount",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -1028,6 +1104,10 @@
     "/priceAlerts/{alertId}": {
       "schema": { "$ref": "#/entities/MarketPriceAlert" },
       "description": "Owner-scoped market buy-back price threshold alerts for push notifications."
+    },
+    "/leaderboardProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/LeaderboardProfile" },
+      "description": "Community-visible zero-PII recycler rankings by city tied to Eco Experience levels."
     }
   }
 }
